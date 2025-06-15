@@ -14,7 +14,7 @@ type MemoryService interface {
 	DeleteMemory(ctx context.Context, id domain.MemoryID) error
 	
 	// Search operations
-	SearchMemories(ctx context.Context, query SearchQuery) ([]MemorySearchResult, error)
+	SearchMemories(ctx context.Context, query SemanticSearchRequest) ([]MemorySearchResult, error)
 	FindSimilarMemories(ctx context.Context, memoryID domain.MemoryID, limit int) ([]MemorySearchResult, error)
 	
 	// Specialized operations

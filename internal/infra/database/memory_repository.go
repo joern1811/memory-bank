@@ -10,6 +10,82 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// NewSQLiteDatabase creates a new SQLite database connection and initializes tables
+func NewSQLiteDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
+	logger.WithField("db_path", dbPath).Info("Connecting to SQLite database")
+
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// Test connection
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	// Initialize tables
+	if err := initializeTables(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to initialize tables: %w", err)
+	}
+
+	logger.Info("SQLite database connected and initialized")
+	return db, nil
+}
+
+// initializeTables creates the necessary database tables
+func initializeTables(db *sql.DB) error {
+	createMemoriesTable := `
+	CREATE TABLE IF NOT EXISTS memories (
+		id TEXT PRIMARY KEY,
+		project_id TEXT NOT NULL,
+		session_id TEXT,
+		type TEXT NOT NULL,
+		title TEXT NOT NULL,
+		content TEXT NOT NULL,
+		tags TEXT, -- JSON array
+		metadata TEXT, -- JSON object
+		embedding BLOB, -- Binary embedding vector
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	createProjectsTable := `
+	CREATE TABLE IF NOT EXISTS projects (
+		id TEXT PRIMARY KEY,
+		name TEXT NOT NULL,
+		path TEXT UNIQUE NOT NULL,
+		description TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	createSessionsTable := `
+	CREATE TABLE IF NOT EXISTS sessions (
+		id TEXT PRIMARY KEY,
+		project_id TEXT NOT NULL,
+		name TEXT NOT NULL,
+		description TEXT,
+		status TEXT DEFAULT 'active',
+		started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		completed_at DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (project_id) REFERENCES projects (id)
+	);`
+
+	tables := []string{createMemoriesTable, createProjectsTable, createSessionsTable}
+	for _, table := range tables {
+		if _, err := db.Exec(table); err != nil {
+			return fmt.Errorf("failed to create table: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // SQLiteMemoryRepository implements MemoryRepository using SQLite
 type SQLiteMemoryRepository struct {
 	db     *sql.DB

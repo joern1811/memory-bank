@@ -106,15 +106,15 @@ func (s *MemoryService) DeleteMemory(ctx context.Context, id domain.MemoryID) er
 }
 
 // SearchMemories performs semantic search on memories
-func (s *MemoryService) SearchMemories(ctx context.Context, query ports.SearchQuery) ([]ports.MemorySearchResult, error) {
+func (s *MemoryService) SearchMemories(ctx context.Context, query ports.SemanticSearchRequest) ([]ports.MemorySearchResult, error) {
 	s.logger.WithFields(logrus.Fields{
-		"query":      query.Text,
+		"query":      query.Query,
 		"project_id": query.ProjectID,
 		"limit":      query.Limit,
 	}).Info("Searching memories")
 
 	// Generate embedding for query
-	queryVector, err := s.embeddingProvider.GenerateEmbedding(ctx, query.Text)
+	queryVector, err := s.embeddingProvider.GenerateEmbedding(ctx, query.Query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
 	}
@@ -157,8 +157,8 @@ func (s *MemoryService) FindSimilarMemories(ctx context.Context, memoryID domain
 	}
 
 	// Search for similar memories
-	query := ports.SearchQuery{
-		Text:      memory.GetEmbeddingText(),
+	query := ports.SemanticSearchRequest{
+		Query:     memory.GetEmbeddingText(),
 		ProjectID: &memory.ProjectID,
 		Limit:     limit + 1, // +1 because we'll exclude the original
 		Threshold: 0.1,       // Low threshold for similarity
@@ -319,14 +319,14 @@ func (s *MemoryService) generateAndStoreEmbedding(ctx context.Context, memory *d
 }
 
 // matchesFilters checks if a memory matches the search filters
-func (s *MemoryService) matchesFilters(memory *domain.Memory, query ports.SearchQuery) bool {
+func (s *MemoryService) matchesFilters(memory *domain.Memory, query ports.SemanticSearchRequest) bool {
 	// Project filter
 	if query.ProjectID != nil && memory.ProjectID != *query.ProjectID {
 		return false
 	}
 
 	// Type filter
-	if query.MemoryType != nil && memory.Type != *query.MemoryType {
+	if query.Type != nil && memory.Type != *query.Type {
 		return false
 	}
 
