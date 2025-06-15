@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/sirupsen/logrus"
 )
@@ -35,12 +37,19 @@ func NewMemoryBankServer(
 	}
 }
 
-// RegisterMethods registers all MCP methods for the Memory Bank server
+// RegisterMethods registers all MCP methods and resources for the Memory Bank server
 func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
-	// Note: The mark3labs/mcp-go library uses Tools instead of direct method registration
-	// We'll need to implement this as tools rather than RPC methods
+	// Register system prompt resource
+	systemPromptResource := mcp.NewResource(
+		"prompt://memory-bank/system",
+		"Memory Bank System Prompt",
+		mcp.WithResourceDescription("Dynamic system prompt for optimal Memory Bank integration with MCP clients"),
+		mcp.WithMIMEType("text/plain"),
+	)
+
+	mcpServer.AddResource(systemPromptResource, s.handleSystemPromptResource)
 	
-	s.logger.Info("MCP methods registered successfully")
+	s.logger.Info("MCP methods and resources registered successfully")
 }
 
 // CreateMemoryRequest represents a request to create a new memory
@@ -588,4 +597,620 @@ func (s *MemoryBankServer) handleCompleteSession(ctx context.Context, params jso
 func (s *MemoryBankServer) handleGetSession(ctx context.Context, params json.RawMessage) (interface{}, error) {
 	s.logger.Debug("Handling session/get request - not implemented yet")
 	return nil, fmt.Errorf("session/get not implemented yet")
+}
+
+// Advanced Search Features
+
+// FacetedSearchRequest represents a request for faceted search
+type FacetedSearchRequest struct {
+	Query         string                 `json:"query"`
+	ProjectID     *string                `json:"project_id,omitempty"`
+	Filters       *SearchFilters         `json:"filters,omitempty"`
+	Limit         *int                   `json:"limit,omitempty"`
+	Threshold     *float32               `json:"threshold,omitempty"`
+	IncludeFacets *bool                  `json:"include_facets,omitempty"`
+	SortBy        *SortOption            `json:"sort_by,omitempty"`
+}
+
+// SearchFilters represents comprehensive search filters
+type SearchFilters struct {
+	Types      []string     `json:"types,omitempty"`
+	Tags       []string     `json:"tags,omitempty"`
+	SessionIDs []string     `json:"session_ids,omitempty"`
+	TimeFilter *TimeFilter  `json:"time_filter,omitempty"`
+	HasContent *bool        `json:"has_content,omitempty"`
+	MinLength  *int         `json:"min_length,omitempty"`
+	MaxLength  *int         `json:"max_length,omitempty"`
+}
+
+// TimeFilter represents time-based filtering options
+type TimeFilter struct {
+	After  *string `json:"after,omitempty"`  // ISO 8601 format
+	Before *string `json:"before,omitempty"` // ISO 8601 format
+}
+
+// SortOption represents sorting options for search results
+type SortOption struct {
+	Field     string `json:"field"`     // "relevance", "created_at", "updated_at", "title", "type"
+	Direction string `json:"direction"` // "asc", "desc"
+}
+
+// FacetedSearchResponse represents search results with facets
+type FacetedSearchResponse struct {
+	Results []MemorySearchResult `json:"results"`
+	Facets  *SearchFacets        `json:"facets,omitempty"`
+	Total   int                  `json:"total"`
+}
+
+// SearchFacets represents faceted search results
+type SearchFacets struct {
+	Types       []TypeFacet       `json:"types,omitempty"`
+	Tags        []TagFacet        `json:"tags,omitempty"`
+	Projects    []ProjectFacet    `json:"projects,omitempty"`
+	Sessions    []SessionFacet    `json:"sessions,omitempty"`
+	TimePeriods []TimePeriodFacet `json:"time_periods,omitempty"`
+}
+
+// TypeFacet represents a memory type facet
+type TypeFacet struct {
+	Type  string `json:"type"`
+	Count int    `json:"count"`
+}
+
+// TagFacet represents a tag facet  
+type TagFacet struct {
+	Tag   string `json:"tag"`
+	Count int    `json:"count"`
+}
+
+// ProjectFacet represents a project facet
+type ProjectFacet struct {
+	ProjectID   string `json:"project_id"`
+	ProjectName string `json:"project_name"`
+	Count       int    `json:"count"`
+}
+
+// SessionFacet represents a session facet
+type SessionFacet struct {
+	SessionID    string `json:"session_id"`
+	SessionTitle string `json:"session_title"`
+	Count        int    `json:"count"`
+}
+
+// TimePeriodFacet represents a time period facet
+type TimePeriodFacet struct {
+	Period string `json:"period"`
+	Count  int    `json:"count"`
+}
+
+func (s *MemoryBankServer) handleFacetedSearch(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling memory/faceted-search request")
+
+	var req FacetedSearchRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.Query == "" {
+		return nil, fmt.Errorf("query is required")
+	}
+
+	// Set defaults
+	limit := 10
+	if req.Limit != nil {
+		limit = *req.Limit
+	}
+
+	threshold := float32(0.5)
+	if req.Threshold != nil {
+		threshold = *req.Threshold
+	}
+
+	includeFacets := false
+	if req.IncludeFacets != nil {
+		includeFacets = *req.IncludeFacets
+	}
+
+	// Build search request
+	searchReq := ports.FacetedSearchRequest{
+		Query:         req.Query,
+		Limit:         limit,
+		Threshold:     threshold,
+		IncludeFacets: includeFacets,
+	}
+
+	// Set project ID
+	if req.ProjectID != nil {
+		projectID := domain.ProjectID(*req.ProjectID)
+		searchReq.ProjectID = &projectID
+	}
+
+	// Convert filters
+	if req.Filters != nil {
+		filters := &ports.SearchFilters{}
+
+		// Convert types
+		if len(req.Filters.Types) > 0 {
+			for _, t := range req.Filters.Types {
+				filters.Types = append(filters.Types, domain.MemoryType(t))
+			}
+		}
+
+		// Convert tags
+		if len(req.Filters.Tags) > 0 {
+			filters.Tags = domain.Tags(req.Filters.Tags)
+		}
+
+		// Convert session IDs
+		if len(req.Filters.SessionIDs) > 0 {
+			for _, sid := range req.Filters.SessionIDs {
+				sessionID := domain.SessionID(sid)
+				filters.SessionIDs = append(filters.SessionIDs, sessionID)
+			}
+		}
+
+		// Convert time filter
+		if req.Filters.TimeFilter != nil {
+			filters.TimeFilter = &ports.TimeFilter{
+				After:  req.Filters.TimeFilter.After,
+				Before: req.Filters.TimeFilter.Before,
+			}
+		}
+
+		// Convert other filters
+		if req.Filters.HasContent != nil {
+			filters.HasContent = *req.Filters.HasContent
+		}
+		filters.MinLength = req.Filters.MinLength
+		filters.MaxLength = req.Filters.MaxLength
+
+		searchReq.Filters = filters
+	}
+
+	// Convert sort option
+	if req.SortBy != nil {
+		sortOption := &ports.SortOption{
+			Direction: ports.SortDirection(req.SortBy.Direction),
+		}
+
+		switch req.SortBy.Field {
+		case "relevance":
+			sortOption.Field = ports.SortByRelevance
+		case "created_at":
+			sortOption.Field = ports.SortByCreatedAt
+		case "updated_at":
+			sortOption.Field = ports.SortByUpdatedAt
+		case "title":
+			sortOption.Field = ports.SortByTitle
+		case "type":
+			sortOption.Field = ports.SortByType
+		default:
+			sortOption.Field = ports.SortByRelevance
+		}
+
+		searchReq.SortBy = sortOption
+	}
+
+	// Perform faceted search
+	searchResponse, err := s.memoryService.FacetedSearch(ctx, searchReq)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to perform faceted search")
+		return nil, fmt.Errorf("failed to perform faceted search: %w", err)
+	}
+
+	// Convert results
+	results := make([]MemorySearchResult, len(searchResponse.Results))
+	for i, result := range searchResponse.Results {
+		results[i] = MemorySearchResult{
+			ID:         string(result.Memory.ID),
+			ProjectID:  string(result.Memory.ProjectID),
+			Type:       string(result.Memory.Type),
+			Title:      result.Memory.Title,
+			Content:    result.Memory.Content,
+			Tags:       []string(result.Memory.Tags),
+			Metadata:   map[string]interface{}{"context": result.Memory.Context},
+			Similarity: float32(result.Similarity),
+			CreatedAt:  result.Memory.CreatedAt,
+			UpdatedAt:  result.Memory.UpdatedAt,
+		}
+	}
+
+	response := FacetedSearchResponse{
+		Results: results,
+		Total:   searchResponse.Total,
+	}
+
+	// Convert facets if included
+	if searchResponse.Facets != nil {
+		facets := &SearchFacets{}
+
+		// Convert type facets
+		for _, typeFacet := range searchResponse.Facets.Types {
+			facets.Types = append(facets.Types, TypeFacet{
+				Type:  string(typeFacet.Type),
+				Count: typeFacet.Count,
+			})
+		}
+
+		// Convert tag facets
+		for _, tagFacet := range searchResponse.Facets.Tags {
+			facets.Tags = append(facets.Tags, TagFacet{
+				Tag:   tagFacet.Tag,
+				Count: tagFacet.Count,
+			})
+		}
+
+		// Convert project facets
+		for _, projectFacet := range searchResponse.Facets.Projects {
+			facets.Projects = append(facets.Projects, ProjectFacet{
+				ProjectID:   string(projectFacet.ProjectID),
+				ProjectName: projectFacet.ProjectName,
+				Count:       projectFacet.Count,
+			})
+		}
+
+		// Convert session facets
+		for _, sessionFacet := range searchResponse.Facets.Sessions {
+			facets.Sessions = append(facets.Sessions, SessionFacet{
+				SessionID:    string(sessionFacet.SessionID),
+				SessionTitle: sessionFacet.SessionTitle,
+				Count:        sessionFacet.Count,
+			})
+		}
+
+		// Convert time period facets
+		for _, timeFacet := range searchResponse.Facets.TimePeriods {
+			facets.TimePeriods = append(facets.TimePeriods, TimePeriodFacet{
+				Period: timeFacet.Period,
+				Count:  timeFacet.Count,
+			})
+		}
+
+		response.Facets = facets
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"query":         req.Query,
+		"results_count": len(results),
+		"has_facets":    response.Facets != nil,
+	}).Info("Faceted search completed")
+
+	return response, nil
+}
+
+// EnhancedSearchRequest represents a request for enhanced search with relevance scoring
+type EnhancedSearchRequest struct {
+	Query     string   `json:"query"`
+	ProjectID *string  `json:"project_id,omitempty"`
+	Type      *string  `json:"type,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	Limit     *int     `json:"limit,omitempty"`
+	Threshold *float32 `json:"threshold,omitempty"`
+}
+
+// EnhancedSearchResponse represents enhanced search results
+type EnhancedSearchResponse struct {
+	Results []EnhancedMemorySearchResult `json:"results"`
+	Total   int                          `json:"total"`
+}
+
+// EnhancedMemorySearchResult represents a memory with enhanced relevance scoring
+type EnhancedMemorySearchResult struct {
+	ID             string                 `json:"id"`
+	ProjectID      string                 `json:"project_id"`
+	Type           string                 `json:"type"`
+	Title          string                 `json:"title"`
+	Content        string                 `json:"content"`
+	Tags           []string               `json:"tags"`
+	Metadata       map[string]interface{} `json:"metadata"`
+	Similarity     float32                `json:"similarity"`
+	RelevanceScore float64                `json:"relevance_score"`
+	MatchReasons   []string               `json:"match_reasons"`
+	Highlights     []string               `json:"highlights"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+func (s *MemoryBankServer) handleEnhancedSearch(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling memory/enhanced-search request")
+
+	var req EnhancedSearchRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.Query == "" {
+		return nil, fmt.Errorf("query is required")
+	}
+
+	// Set defaults
+	limit := 10
+	if req.Limit != nil {
+		limit = *req.Limit
+	}
+
+	threshold := float32(0.5)
+	if req.Threshold != nil {
+		threshold = *req.Threshold
+	}
+
+	// Build search request
+	searchQuery := ports.SemanticSearchRequest{
+		Query:     req.Query,
+		Limit:     limit,
+		Threshold: threshold,
+	}
+
+	// Set optional fields
+	if req.ProjectID != nil {
+		projectID := domain.ProjectID(*req.ProjectID)
+		searchQuery.ProjectID = &projectID
+	}
+	if req.Type != nil {
+		memoryType := domain.MemoryType(*req.Type)
+		searchQuery.Type = &memoryType
+	}
+	if len(req.Tags) > 0 {
+		searchQuery.Tags = domain.Tags(req.Tags)
+	}
+
+	// Perform enhanced search
+	searchResults, err := s.memoryService.SearchWithRelevanceScoring(ctx, searchQuery)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to perform enhanced search")
+		return nil, fmt.Errorf("failed to perform enhanced search: %w", err)
+	}
+
+	// Convert results
+	results := make([]EnhancedMemorySearchResult, len(searchResults))
+	for i, result := range searchResults {
+		results[i] = EnhancedMemorySearchResult{
+			ID:             string(result.Memory.ID),
+			ProjectID:      string(result.Memory.ProjectID),
+			Type:           string(result.Memory.Type),
+			Title:          result.Memory.Title,
+			Content:        result.Memory.Content,
+			Tags:           []string(result.Memory.Tags),
+			Metadata:       map[string]interface{}{"context": result.Memory.Context},
+			Similarity:     float32(result.Similarity),
+			RelevanceScore: result.RelevanceScore,
+			MatchReasons:   result.MatchReasons,
+			Highlights:     result.Highlights,
+			CreatedAt:      result.Memory.CreatedAt,
+			UpdatedAt:      result.Memory.UpdatedAt,
+		}
+	}
+
+	response := EnhancedSearchResponse{
+		Results: results,
+		Total:   len(results),
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"query":         req.Query,
+		"results_count": len(results),
+	}).Info("Enhanced search completed")
+
+	return response, nil
+}
+
+// SearchSuggestionsRequest represents a request for search suggestions
+type SearchSuggestionsRequest struct {
+	PartialQuery string  `json:"partial_query"`
+	ProjectID    *string `json:"project_id,omitempty"`
+	Limit        *int    `json:"limit,omitempty"`
+}
+
+// SearchSuggestionsResponse represents search suggestions
+type SearchSuggestionsResponse struct {
+	Suggestions []string `json:"suggestions"`
+}
+
+func (s *MemoryBankServer) handleSearchSuggestions(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling memory/search-suggestions request")
+
+	var req SearchSuggestionsRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.PartialQuery == "" {
+		return nil, fmt.Errorf("partial_query is required")
+	}
+
+	// Convert project ID
+	var projectID *domain.ProjectID
+	if req.ProjectID != nil {
+		pid := domain.ProjectID(*req.ProjectID)
+		projectID = &pid
+	}
+
+	// Get suggestions
+	suggestions, err := s.memoryService.GetSearchSuggestions(ctx, req.PartialQuery, projectID)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to get search suggestions")
+		return nil, fmt.Errorf("failed to get search suggestions: %w", err)
+	}
+
+	// Apply limit if specified
+	if req.Limit != nil && len(suggestions) > *req.Limit {
+		suggestions = suggestions[:*req.Limit]
+	}
+
+	response := SearchSuggestionsResponse{
+		Suggestions: suggestions,
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"partial_query":     req.PartialQuery,
+		"suggestions_count": len(suggestions),
+	}).Info("Search suggestions generated")
+
+	return response, nil
+}
+
+// handleSystemPromptResource handles requests for the system prompt resource
+func (s *MemoryBankServer) handleSystemPromptResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	s.logger.Debug("Handling system prompt resource request")
+
+	// Generate dynamic system prompt based on current context
+	prompt, err := s.generateSystemPrompt(ctx)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to generate system prompt")
+		return nil, fmt.Errorf("failed to generate system prompt: %w", err)
+	}
+
+	// Create text resource contents
+	textContent := mcp.TextResourceContents{
+		URI:      request.Params.URI,
+		MIMEType: "text/plain",
+		Text:     prompt,
+	}
+
+	s.logger.Info("System prompt resource generated successfully")
+	return []mcp.ResourceContents{textContent}, nil
+}
+
+// generateSystemPrompt creates a dynamic system prompt with current context
+func (s *MemoryBankServer) generateSystemPrompt(ctx context.Context) (string, error) {
+	// Get current project information and existing memories for context
+	projects, err := s.projectService.ListProjects(ctx)
+	if err != nil {
+		s.logger.WithError(err).Warn("Failed to load projects for system prompt")
+		projects = []*domain.Project{} // Continue with empty projects
+	}
+
+	// Build contextual information
+	var contextInfo strings.Builder
+	contextInfo.WriteString("# Memory Bank Integration Context\n\n")
+	
+	if len(projects) > 0 {
+		contextInfo.WriteString("## Current Projects\n")
+		for _, project := range projects {
+			contextInfo.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", 
+				project.Name, 
+				string(project.ID), 
+				project.Description))
+		}
+		contextInfo.WriteString("\n")
+	}
+
+	// Get recent memories for each project to provide context
+	memoryContext := s.buildMemoryContext(ctx, projects)
+	if memoryContext != "" {
+		contextInfo.WriteString("## Available Memory Types\n")
+		contextInfo.WriteString(memoryContext)
+		contextInfo.WriteString("\n")
+	}
+
+	// Generate the complete system prompt
+	systemPrompt := fmt.Sprintf(`# Memory Bank - MCP Integration System Prompt
+
+You are working with Memory Bank, a semantic memory management system that helps store and retrieve development knowledge. Use this system to maintain context across development sessions and build institutional knowledge.
+
+%s## How to Use Memory Bank Effectively
+
+### When to Store Memories
+- **Decisions**: Store architectural decisions with rationale and alternatives considered
+- **Patterns**: Save code patterns, design patterns, and best practices you discover
+- **Error Solutions**: Document errors encountered and their solutions for future reference
+- **Code Snippets**: Store reusable code examples with context
+- **Documentation**: Keep project-specific documentation and notes
+- **Session Progress**: Track development session progress and outcomes
+
+### Memory Creation Best Practices
+- **Use descriptive titles**: Clear, searchable titles help retrieval
+- **Add relevant tags**: Use consistent tagging for better organization (e.g., "auth", "api", "frontend")
+- **Include context**: Add enough context so the memory is useful later
+- **Structure content**: Use markdown formatting for readability
+- **Reference related memories**: Link to related decisions or patterns when relevant
+
+### Effective Search Strategies
+- **Semantic search**: Use natural language queries to find related content
+- **Faceted search**: Filter by type, tags, or project for precise results
+- **Enhanced search**: Get relevance scoring and match explanations
+- **Use search suggestions**: Get intelligent suggestions based on existing content
+
+### Memory Types Guide
+- **Decision**: type "decision" - For architectural and design decisions
+- **Pattern**: type "pattern" - For reusable code or design patterns  
+- **ErrorSolution**: type "error_solution" - For documented error fixes
+- **Code**: type "code" - For code snippets and examples
+- **Documentation**: type "documentation" - For project documentation
+
+### Available MCP Methods
+- memory/create: Create new memory entries
+- memory/search: Semantic search across memories
+- memory/faceted-search: Advanced search with filters and facets
+- memory/enhanced-search: Search with relevance scoring and highlights
+- memory/search-suggestions: Get intelligent search suggestions
+- memory/get: Retrieve specific memory by ID
+- memory/update: Update existing memories
+- memory/delete: Remove memories
+- memory/list: List memories with optional filters
+- project/init: Initialize new project
+- project/get: Get project information
+- project/list: List all projects
+- session/start: Start development session
+- session/log: Log session progress
+- session/complete: Complete session with outcome
+
+### Integration Tips
+1. **Start sessions**: Use session/start when beginning major development work
+2. **Document decisions**: Store important decisions as they're made
+3. **Search before implementing**: Check existing patterns and solutions first
+4. **Tag consistently**: Use consistent tags across related memories
+5. **Update memories**: Keep memories current as code evolves
+6. **Complete sessions**: Document outcomes when finishing work
+
+### Example Usage Patterns
+- Before starting a new feature, search for related patterns: memory/search "authentication patterns"
+- When encountering an error, check for solutions: memory/search "JWT token validation error"
+- After making a decision, document it: memory/create with type "decision"
+- Store useful code patterns: memory/create with type "pattern"
+- Track progress on complex tasks: session/start, session/log, session/complete
+
+Remember: The more you use Memory Bank consistently, the more valuable it becomes as your development knowledge base grows and evolves.
+`, contextInfo.String())
+
+	return systemPrompt, nil
+}
+
+// buildMemoryContext analyzes existing memories to provide context about available content
+func (s *MemoryBankServer) buildMemoryContext(ctx context.Context, projects []*domain.Project) string {
+	var context strings.Builder
+	
+	// Get sample of memories from each project to understand what's available
+	for _, project := range projects {
+		// Search for recent memories in this project
+		searchReq := ports.SemanticSearchRequest{
+			Query:     "", // Empty query to get all memories
+			ProjectID: &project.ID,
+			Limit:     10,
+			Threshold: 0.0,
+		}
+		
+		memories, err := s.memoryService.SearchMemories(ctx, searchReq)
+		if err != nil {
+			s.logger.WithError(err).Debug("Failed to load memories for context")
+			continue
+		}
+		
+		if len(memories) > 0 {
+			context.WriteString(fmt.Sprintf("### %s Project Memories (%d total)\n", project.Name, len(memories)))
+			
+			// Group by type to show what kinds of memories exist
+			typeCount := make(map[domain.MemoryType]int)
+			for _, memory := range memories {
+				typeCount[memory.Memory.Type]++
+			}
+			
+			for memType, count := range typeCount {
+				context.WriteString(fmt.Sprintf("- %s: %d entries\n", string(memType), count))
+			}
+			context.WriteString("\n")
+		}
+	}
+	
+	return context.String()
 }
