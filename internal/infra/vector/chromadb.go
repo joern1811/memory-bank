@@ -44,11 +44,19 @@ func NewChromaDBVectorStore(config ChromaDBConfig, logger *logrus.Logger) *Chrom
 		config = DefaultChromeDBConfig()
 	}
 
+	// Configure HTTP client with connection pooling
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+	}
+
 	return &ChromaDBVectorStore{
 		baseURL:    config.BaseURL,
 		collection: config.Collection,
 		client: &http.Client{
-			Timeout: config.Timeout,
+			Timeout:   config.Timeout,
+			Transport: transport,
 		},
 		logger: logger,
 	}
@@ -130,6 +138,109 @@ func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domai
 	}
 
 	c.logger.WithField("id", id).Debug("Vector stored successfully in ChromaDB")
+	return nil
+}
+
+// BatchStore stores multiple vectors with metadata in ChromaDB in a single request
+func (c *ChromaDBVectorStore) BatchStore(ctx context.Context, items []ports.BatchStoreItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"collection": c.collection,
+		"batch_size": len(items),
+	}).Debug("Batch storing vectors in ChromaDB")
+
+	// Prepare batch document
+	doc := chromaDBDocument{
+		IDs:        make([]string, len(items)),
+		Embeddings: make([][]float32, len(items)),
+		Metadatas:  make([]map[string]interface{}, len(items)),
+	}
+
+	for i, item := range items {
+		doc.IDs[i] = item.ID
+		doc.Embeddings[i] = item.Vector
+		doc.Metadatas[i] = item.Metadata
+	}
+
+	// Convert to JSON
+	jsonBody, err := json.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal batch document: %w", err)
+	}
+
+	// Create HTTP request
+	url := fmt.Sprintf("%s/api/v1/collections/%s/add", c.baseURL, c.collection)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	// Execute request
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute batch request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("chromadb batch API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	c.logger.WithField("batch_size", len(items)).Debug("Batch vectors stored successfully in ChromaDB")
+	return nil
+}
+
+// BatchDelete removes multiple vectors from ChromaDB in a single request
+func (c *ChromaDBVectorStore) BatchDelete(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"collection": c.collection,
+		"batch_size": len(ids),
+	}).Debug("Batch deleting vectors from ChromaDB")
+
+	// Prepare delete request
+	deleteDoc := map[string]interface{}{
+		"ids": ids,
+	}
+
+	jsonBody, err := json.Marshal(deleteDoc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal batch delete request: %w", err)
+	}
+
+	// Create HTTP request
+	url := fmt.Sprintf("%s/api/v1/collections/%s/delete", c.baseURL, c.collection)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	// Execute request
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute batch delete request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("chromadb batch delete API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	c.logger.WithField("batch_size", len(ids)).Debug("Batch vectors deleted successfully from ChromaDB")
 	return nil
 }
 
@@ -472,6 +583,31 @@ func (m *MockVectorStore) Store(ctx context.Context, id string, vector domain.Em
 	m.vectors[id] = mockVectorEntry{
 		Vector:   vector,
 		Metadata: metadata,
+	}
+
+	return nil
+}
+
+// BatchStore stores multiple vectors with metadata in the mock store
+func (m *MockVectorStore) BatchStore(ctx context.Context, items []ports.BatchStoreItem) error {
+	m.logger.WithField("batch_size", len(items)).Debug("Batch storing vectors in mock store")
+
+	for _, item := range items {
+		m.vectors[item.ID] = mockVectorEntry{
+			Vector:   item.Vector,
+			Metadata: item.Metadata,
+		}
+	}
+
+	return nil
+}
+
+// BatchDelete removes multiple vectors from the mock store
+func (m *MockVectorStore) BatchDelete(ctx context.Context, ids []string) error {
+	m.logger.WithField("batch_size", len(ids)).Debug("Batch deleting vectors from mock store")
+
+	for _, id := range ids {
+		delete(m.vectors, id)
 	}
 
 	return nil

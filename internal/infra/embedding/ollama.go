@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/sirupsen/logrus"
@@ -14,25 +15,29 @@ import (
 
 // OllamaProvider implements the EmbeddingProvider interface using Ollama
 type OllamaProvider struct {
-	baseURL   string
-	model     string
-	client    *http.Client
-	logger    *logrus.Logger
+	baseURL               string
+	model                 string
+	client                *http.Client
+	logger                *logrus.Logger
+	maxConcurrentRequests int
+	semaphore            chan struct{}
 }
 
 // OllamaConfig holds configuration for Ollama provider
 type OllamaConfig struct {
-	BaseURL string `json:"base_url"`
-	Model   string `json:"model"`
-	Timeout time.Duration `json:"timeout"`
+	BaseURL               string        `json:"base_url"`
+	Model                 string        `json:"model"`
+	Timeout               time.Duration `json:"timeout"`
+	MaxConcurrentRequests int           `json:"max_concurrent_requests"`
 }
 
 // DefaultOllamaConfig returns default configuration for Ollama
 func DefaultOllamaConfig() OllamaConfig {
 	return OllamaConfig{
-		BaseURL: "http://localhost:11434",
-		Model:   "nomic-embed-text",
-		Timeout: 30 * time.Second,
+		BaseURL:               "http://localhost:11434",
+		Model:                 "nomic-embed-text",
+		Timeout:               30 * time.Second,
+		MaxConcurrentRequests: 5,
 	}
 }
 
@@ -42,13 +47,23 @@ func NewOllamaProvider(config OllamaConfig, logger *logrus.Logger) *OllamaProvid
 		config = DefaultOllamaConfig()
 	}
 
+	// Configure HTTP client with connection pooling
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+	}
+
 	return &OllamaProvider{
-		baseURL: config.BaseURL,
-		model:   config.Model,
+		baseURL:               config.BaseURL,
+		model:                 config.Model,
 		client: &http.Client{
-			Timeout: config.Timeout,
+			Timeout:   config.Timeout,
+			Transport: transport,
 		},
-		logger: logger,
+		logger:                logger,
+		maxConcurrentRequests: config.MaxConcurrentRequests,
+		semaphore:            make(chan struct{}, config.MaxConcurrentRequests),
 	}
 }
 
@@ -128,22 +143,44 @@ func (p *OllamaProvider) GenerateEmbedding(ctx context.Context, text string) (do
 	return embedding, nil
 }
 
-// GenerateBatchEmbeddings generates embeddings for multiple texts
+// GenerateBatchEmbeddings generates embeddings for multiple texts with concurrent processing
 func (p *OllamaProvider) GenerateBatchEmbeddings(ctx context.Context, texts []string) ([]domain.EmbeddingVector, error) {
+	if len(texts) == 0 {
+		return nil, nil
+	}
+
 	p.logger.WithFields(logrus.Fields{
 		"model":       p.model,
 		"batch_size":  len(texts),
+		"concurrency": p.maxConcurrentRequests,
 	}).Debug("Generating batch embeddings")
 
 	embeddings := make([]domain.EmbeddingVector, len(texts))
+	errors := make([]error, len(texts))
 	
-	// Process each text individually (Ollama doesn't support batch embeddings yet)
+	var wg sync.WaitGroup
 	for i, text := range texts {
-		embedding, err := p.GenerateEmbedding(ctx, text)
+		wg.Add(1)
+		go func(index int, content string) {
+			defer wg.Done()
+			
+			// Acquire semaphore for concurrency control
+			p.semaphore <- struct{}{}
+			defer func() { <-p.semaphore }()
+			
+			embedding, err := p.GenerateEmbedding(ctx, content)
+			embeddings[index] = embedding
+			errors[index] = err
+		}(i, text)
+	}
+	
+	wg.Wait()
+	
+	// Check for any errors
+	for i, err := range errors {
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate embedding for text %d: %w", i, err)
 		}
-		embeddings[i] = embedding
 	}
 
 	p.logger.WithField("batch_size", len(embeddings)).Debug("Batch embeddings generated successfully")

@@ -125,21 +125,31 @@ func (s *MemoryService) SearchMemories(ctx context.Context, query ports.Semantic
 		return nil, fmt.Errorf("failed to search vector store: %w", err)
 	}
 
-	// Convert to memory search results
-	var results []ports.MemorySearchResult
-	for _, result := range searchResults {
-		memoryID := domain.MemoryID(result.ID)
-		memory, err := s.memoryRepo.GetByID(ctx, memoryID)
-		if err != nil {
-			s.logger.WithError(err).WithField("memory_id", memoryID).Warn("Failed to fetch memory for search result")
-			continue
-		}
+	// Batch retrieve memories instead of individual lookups
+	memoryIDs := make([]domain.MemoryID, len(searchResults))
+	for i, result := range searchResults {
+		memoryIDs[i] = domain.MemoryID(result.ID)
+	}
 
-		// Apply filters
-		if s.matchesFilters(memory, query) {
+	memories, err := s.memoryRepo.GetByIDs(ctx, memoryIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to batch retrieve memories: %w", err)
+	}
+
+	// Create lookup map for O(1) access
+	memoryMap := make(map[domain.MemoryID]*domain.Memory)
+	for _, memory := range memories {
+		memoryMap[memory.ID] = memory
+	}
+
+	// Build results maintaining search order
+	var results []ports.MemorySearchResult
+	for _, searchResult := range searchResults {
+		memoryID := domain.MemoryID(searchResult.ID)
+		if memory, exists := memoryMap[memoryID]; exists && s.matchesFilters(memory, query) {
 			results = append(results, ports.MemorySearchResult{
 				Memory:     memory,
-				Similarity: result.Similarity,
+				Similarity: searchResult.Similarity,
 			})
 		}
 	}

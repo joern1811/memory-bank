@@ -13,6 +13,10 @@ type MemoryRepository interface {
 	Update(ctx context.Context, memory *domain.Memory) error
 	Delete(ctx context.Context, id domain.MemoryID) error
 	
+	// Batch operations for performance
+	GetByIDs(ctx context.Context, ids []domain.MemoryID) ([]*domain.Memory, error)
+	GetMetadataByIDs(ctx context.Context, ids []domain.MemoryID) ([]*MemoryMetadata, error)
+	
 	// Query operations
 	ListByProject(ctx context.Context, projectID domain.ProjectID) ([]*domain.Memory, error)
 	ListByType(ctx context.Context, projectID domain.ProjectID, memoryType domain.MemoryType) ([]*domain.Memory, error)
@@ -20,6 +24,16 @@ type MemoryRepository interface {
 	
 	// Session-related operations
 	ListBySession(ctx context.Context, sessionID domain.SessionID) ([]*domain.Memory, error)
+}
+
+// MemoryMetadata represents lightweight memory metadata for efficient queries
+type MemoryMetadata struct {
+	ID        domain.MemoryID    `json:"id"`
+	ProjectID domain.ProjectID   `json:"project_id"`
+	Type      domain.MemoryType  `json:"type"`
+	Title     string             `json:"title"`
+	Tags      domain.Tags        `json:"tags"`
+	CreatedAt string             `json:"created_at"`
 }
 
 // ProjectRepository defines the interface for project storage
@@ -59,6 +73,10 @@ type VectorStore interface {
 	Delete(ctx context.Context, id string) error
 	Update(ctx context.Context, id string, vector domain.EmbeddingVector, metadata map[string]interface{}) error
 	
+	// Batch operations for performance
+	BatchStore(ctx context.Context, items []BatchStoreItem) error
+	BatchDelete(ctx context.Context, ids []string) error
+	
 	// Search operations
 	Search(ctx context.Context, vector domain.EmbeddingVector, limit int, threshold float32) ([]SearchResult, error)
 	SearchByText(ctx context.Context, text string, limit int, threshold float32) ([]SearchResult, error)
@@ -67,6 +85,13 @@ type VectorStore interface {
 	CreateCollection(ctx context.Context, name string) error
 	DeleteCollection(ctx context.Context, name string) error
 	ListCollections(ctx context.Context) ([]string, error)
+}
+
+// BatchStoreItem represents an item for batch storage operations
+type BatchStoreItem struct {
+	ID       string                 `json:"id"`
+	Vector   domain.EmbeddingVector `json:"vector"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 // SearchResult represents a result from vector similarity search

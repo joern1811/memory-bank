@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"github.com/joern1811/memory-bank/internal/domain"
+	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/sirupsen/logrus"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -434,6 +436,100 @@ func (r *SQLiteMemoryRepository) scanMemories(rows *sql.Rows) ([]*domain.Memory,
 	}
 
 	return memories, nil
+}
+
+// GetByIDs retrieves multiple memories by their IDs in a single batch query
+func (r *SQLiteMemoryRepository) GetByIDs(ctx context.Context, ids []domain.MemoryID) ([]*domain.Memory, error) {
+	if len(ids) == 0 {
+		return []*domain.Memory{}, nil
+	}
+
+	r.logger.WithField("batch_size", len(ids)).Debug("Batch retrieving memories by IDs")
+
+	// Build IN clause with placeholders
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = string(id)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, project_id, session_id, type, title, content, context, 
+		       tags, created_at, updated_at, has_embedding
+		FROM memories 
+		WHERE id IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to batch query memories: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanMemories(rows)
+}
+
+// GetMetadataByIDs retrieves lightweight metadata for multiple memories by their IDs
+func (r *SQLiteMemoryRepository) GetMetadataByIDs(ctx context.Context, ids []domain.MemoryID) ([]*ports.MemoryMetadata, error) {
+	if len(ids) == 0 {
+		return []*ports.MemoryMetadata{}, nil
+	}
+
+	r.logger.WithField("batch_size", len(ids)).Debug("Batch retrieving memory metadata by IDs")
+
+	// Build IN clause with placeholders
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = string(id)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, project_id, type, title, tags, created_at
+		FROM memories 
+		WHERE id IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to batch query memory metadata: %w", err)
+	}
+	defer rows.Close()
+
+	var metadata []*ports.MemoryMetadata
+	for rows.Next() {
+		var meta ports.MemoryMetadata
+		var tagsJSON string
+
+		err := rows.Scan(
+			&meta.ID,
+			&meta.ProjectID,
+			&meta.Type,
+			&meta.Title,
+			&tagsJSON,
+			&meta.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan metadata: %w", err)
+		}
+
+		// Parse tags JSON
+		if err := json.Unmarshal([]byte(tagsJSON), &meta.Tags); err != nil {
+			r.logger.WithField("memory_id", meta.ID).Warn("Failed to parse tags JSON, using empty tags")
+			meta.Tags = domain.Tags{}
+		}
+
+		metadata = append(metadata, &meta)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating metadata rows: %w", err)
+	}
+
+	r.logger.WithField("metadata_count", len(metadata)).Debug("Batch metadata retrieval completed")
+	return metadata, nil
 }
 
 // InitializeSchema creates the necessary tables
