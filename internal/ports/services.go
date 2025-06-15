@@ -15,8 +15,13 @@ type MemoryService interface {
 	
 	// Search operations
 	SearchMemories(ctx context.Context, query SemanticSearchRequest) ([]MemorySearchResult, error)
+	FacetedSearch(ctx context.Context, req FacetedSearchRequest) (*FacetedSearchResponse, error)
 	FindSimilarMemories(ctx context.Context, memoryID domain.MemoryID, limit int) ([]MemorySearchResult, error)
 	ListMemories(ctx context.Context, req ListMemoriesRequest) ([]*domain.Memory, error)
+	
+	// Advanced search operations
+	SearchWithRelevanceScoring(ctx context.Context, query SemanticSearchRequest) ([]EnhancedMemorySearchResult, error)
+	GetSearchSuggestions(ctx context.Context, partialQuery string, projectID *domain.ProjectID) ([]string, error)
 	
 	// Specialized operations
 	CreateDecision(ctx context.Context, req CreateDecisionRequest) (*domain.Decision, error)
@@ -136,4 +141,112 @@ type ListMemoriesRequest struct {
 	Type      *domain.MemoryType `json:"type,omitempty"`
 	Tags      domain.Tags        `json:"tags,omitempty"`
 	Limit     int                `json:"limit"`
+}
+
+// FacetedSearchRequest represents an advanced search with faceting
+type FacetedSearchRequest struct {
+	Query      string             `json:"query"`
+	ProjectID  *domain.ProjectID  `json:"project_id,omitempty"`
+	Filters    *SearchFilters     `json:"filters,omitempty"`
+	Limit      int                `json:"limit"`
+	Threshold  float32            `json:"threshold"`
+	IncludeFacets bool             `json:"include_facets"`
+	SortBy     *SortOption        `json:"sort_by,omitempty"`
+}
+
+// SearchFilters represents comprehensive search filters
+type SearchFilters struct {
+	Types      []domain.MemoryType `json:"types,omitempty"`
+	Tags       domain.Tags         `json:"tags,omitempty"`
+	SessionIDs []domain.SessionID  `json:"session_ids,omitempty"`
+	TimeFilter *TimeFilter         `json:"time_filter,omitempty"`
+	HasContent bool                `json:"has_content,omitempty"`
+	MinLength  *int                `json:"min_length,omitempty"`
+	MaxLength  *int                `json:"max_length,omitempty"`
+}
+
+// SortOption represents sorting options for search results
+type SortOption struct {
+	Field     SortField     `json:"field"`
+	Direction SortDirection `json:"direction"`
+}
+
+type SortField string
+const (
+	SortByRelevance  SortField = "relevance"
+	SortByCreatedAt  SortField = "created_at"
+	SortByUpdatedAt  SortField = "updated_at"
+	SortByTitle      SortField = "title"
+	SortByType       SortField = "type"
+)
+
+type SortDirection string
+const (
+	SortAsc  SortDirection = "asc"
+	SortDesc SortDirection = "desc"
+)
+
+// FacetedSearchResponse represents search results with facets
+type FacetedSearchResponse struct {
+	Results []MemorySearchResult `json:"results"`
+	Facets  *SearchFacets        `json:"facets,omitempty"`
+	Total   int                  `json:"total"`
+}
+
+// SearchFacets represents faceted search results
+type SearchFacets struct {
+	Types      []TypeFacet      `json:"types,omitempty"`
+	Tags       []TagFacet       `json:"tags,omitempty"`
+	Projects   []ProjectFacet   `json:"projects,omitempty"`
+	Sessions   []SessionFacet   `json:"sessions,omitempty"`
+	TimePeriods []TimePeriodFacet `json:"time_periods,omitempty"`
+}
+
+// TypeFacet represents a memory type facet
+type TypeFacet struct {
+	Type  domain.MemoryType `json:"type"`
+	Count int               `json:"count"`
+}
+
+// TagFacet represents a tag facet  
+type TagFacet struct {
+	Tag   string `json:"tag"`
+	Count int    `json:"count"`
+}
+
+// ProjectFacet represents a project facet
+type ProjectFacet struct {
+	ProjectID   domain.ProjectID `json:"project_id"`
+	ProjectName string           `json:"project_name"`
+	Count       int              `json:"count"`
+}
+
+// SessionFacet represents a session facet
+type SessionFacet struct {
+	SessionID    domain.SessionID `json:"session_id"`
+	SessionTitle string           `json:"session_title"`
+	Count        int              `json:"count"`
+}
+
+// TimePeriodFacet represents a time period facet
+type TimePeriodFacet struct {
+	Period string `json:"period"`
+	Count  int    `json:"count"`
+}
+
+// EnhancedMemorySearchResult represents a memory with enhanced relevance scoring
+type EnhancedMemorySearchResult struct {
+	Memory         *domain.Memory    `json:"memory"`
+	Similarity     domain.Similarity `json:"similarity"`
+	RelevanceScore float64           `json:"relevance_score"`
+	MatchReasons   []string          `json:"match_reasons"`
+	Highlights     []string          `json:"highlights"`
+}
+
+// SearchSuggestion represents a search suggestion
+type SearchSuggestion struct {
+	Query       string  `json:"query"`
+	Frequency   int     `json:"frequency"`
+	Relevance   float64 `json:"relevance"`
+	Type        string  `json:"type"` // "tag", "title", "content", "type"
 }
