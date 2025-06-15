@@ -77,6 +77,8 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 
 	// Initialize repositories
 	memoryRepo := database.NewSQLiteMemoryRepository(db, logger)
+	projectRepo := database.NewSQLiteProjectRepository(db, logger)
+	sessionRepo := database.NewSQLiteSessionRepository(db, logger)
 
 	// Initialize embedding provider
 	embeddingConfig := embedding.DefaultOllamaConfig()
@@ -120,8 +122,8 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 
 	// Initialize services
 	memoryService := app.NewMemoryService(memoryRepo, embeddingProvider, vectorStore, logger)
-	projectService := app.NewProjectService(nil, logger) // TODO: Add project repository
-	sessionService := app.NewSessionService(nil, nil, logger) // TODO: Add session and project repositories
+	projectService := app.NewProjectService(projectRepo, logger)
+	sessionService := app.NewSessionService(sessionRepo, projectRepo, logger)
 
 	// Initialize MCP server
 	mcpServer := server.NewMCPServer("memory-bank", serverVersion)
