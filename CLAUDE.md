@@ -243,12 +243,26 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
 ./memory-bank memory --help
 ```
 
-### Future Session CLI Usage (Not Yet Implemented)
+### Session CLI Usage ✅
 ```bash
-# These commands are planned but not yet implemented:
-# ./memory-bank session start "Implementing auth"
-# ./memory-bank session log "Added JWT middleware"  
-# ./memory-bank session complete
+# Start a new development session
+./memory-bank session start "Implementing user authentication" --project my_project
+
+# Log progress to the active session
+./memory-bank session log "Added JWT middleware for token validation"
+./memory-bank session log "Implemented login and registration endpoints"
+
+# Complete the session with outcome
+./memory-bank session complete "Successfully implemented JWT-based authentication"
+
+# List sessions for a project
+./memory-bank session list --project my_project --status active
+
+# Get detailed session information
+./memory-bank session get session_id_here
+
+# Abort an active session
+./memory-bank session abort --project my_project
 ```
 
 ## Testing Strategy
@@ -403,13 +417,13 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
 
 ## Implementation Progress
 
-### ✅ Completed (v1.1)
+### ✅ Completed (v1.2)
 - **Domain Layer**: Complete entities and value objects
 - **Application Layer**: Full service implementations with semantic search
 - **Infrastructure Layer**: 
   - ✅ Ollama embedding provider with health checks
   - ✅ ChromaDB vector store with HTTP API integration
-  - ✅ SQLite repository with auto-initialization
+  - ✅ SQLite repository with auto-initialization and schema migration
   - ✅ Mock providers for offline development
 - **MCP Server**: Complete JSON-RPC implementation
 - **CLI Interface**: Complete traditional CLI with Cobra framework
@@ -418,28 +432,32 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
   - ✅ Global search functionality
   - ✅ Comprehensive help system
   - ✅ Backward compatibility (runs as MCP server when no args)
+  - ✅ **CLI Service Integration**: Full integration with real services
+- **Service Integration**: 
+  - ✅ ServiceContainer with dependency injection
+  - ✅ Automatic health checks and fallback providers
+  - ✅ Environment-based configuration
+  - ✅ Database schema updates (context, has_embedding fields)
 - **Testing**: Vector store unit tests (100% pass rate) + CLI functionality verified
 - **Documentation**: Comprehensive project documentation with dual-mode usage
 
 ### 🔄 In Progress
-- Service integration for CLI commands (currently using placeholders)
 - Session operations implementation (framework ready)
 - Project repository implementation (interface defined)
 
 ### 📋 Next Steps (Priority Order)
-1. **CLI Service Integration**: Connect CLI commands to actual services
-2. **Session CLI Commands**: Implement `session start/log/complete` commands
-3. **Project Repository Implementation**: Complete project operations
-4. **Database Migrations**: Schema versioning system  
-5. **Configuration Management**: YAML/JSON config files
-6. **Integration Testing**: Real ChromaDB + Ollama testing
+1. **Session CLI Commands**: Implement `session start/log/complete` commands
+2. **Project Repository Implementation**: Complete project operations
+3. **Database Migrations**: Schema versioning system  
+4. **Configuration Management**: YAML/JSON config files
+5. **Integration Testing**: Real ChromaDB + Ollama testing
 
 ### Known Issues & Limitations
-- **CLI Service Integration**: CLI commands show placeholders, need service connection
 - **Session and Project repositories**: Use nil placeholders
 - **MCP server implementation**: Uses context blocking instead of proper serve method
 - **Limited configuration**: Environment variables only, no config files
 - **No database migrations**: Schema changes require manual intervention
+- **Mock vector search**: Semantic search only works with ChromaDB (mock returns empty results)
 
 ### Performance Considerations ⚡
 - **Mock Fallbacks**: Automatic fallback to mock providers ensures reliability
