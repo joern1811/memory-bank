@@ -96,13 +96,19 @@ memory-bank/
 - **Error Handling**: Structured error responses
 - **Request Validation**: Input validation and sanitization
 
+### ✅ CLI Commands (Traditional CLI Interface)
+- **Interactive memory management commands**: Complete CLI with Cobra framework
+- **Project setup and configuration**: `init` command implemented
+- **Search and query utilities**: Global search and memory-specific search
+- **Memory management tools**: Create, list, search commands
+- **Help system**: Comprehensive help for all commands
+- **Backward compatibility**: Runs as MCP server when no args provided
+
 ## Key Features (TODO)
 
-### 🔲 CLI Commands (Traditional CLI Interface)
-- Interactive memory management commands
-- Project setup and configuration
-- Search and query utilities  
-- Session management tools
+### 🔲 Session Management Tools (CLI)
+- Session start, log, and complete commands
+- Integration with existing session service framework
 
 ### 🔲 Database Migrations
 - Schema versioning system
@@ -117,27 +123,39 @@ memory-bank/
 
 ## Current Status 🚀
 
-**✅ FUNCTIONAL MCP SERVER**: Memory Bank is now a fully functional MCP server that can be integrated with Claude Code!
+**✅ FUNCTIONAL MCP SERVER + CLI**: Memory Bank is now a fully functional MCP server with complete CLI interface!
 
 ### What Works Now
 - **MCP Server Mode**: Complete JSON-RPC protocol implementation for Claude Code integration
+- **CLI Interface**: Full command-line interface with Cobra framework
 - **Semantic Search**: Vector-based similarity search with ChromaDB integration
 - **Automatic Fallbacks**: Works without external dependencies (uses mock providers)
-- **Memory Operations**: Full CRUD operations via MCP protocol
+- **Memory Operations**: Full CRUD operations via both MCP protocol and CLI
 - **SQLite Storage**: Persistent memory storage with automatic schema setup
 - **Health Monitoring**: Automatic health checks for Ollama and ChromaDB services
+- **Backward Compatibility**: Runs as MCP server when no arguments provided
 
-### Integration Ready (MCP Protocol Only)
+### Integration Ready (Both MCP Protocol and CLI)
+The application can now be used in two ways:
+
+#### MCP Protocol (Claude Code Integration)
 The server can be started and immediately used by Claude Code via MCP protocol for:
 - Storing development decisions and patterns
 - Searching existing knowledge semantically
 - Managing project-specific memory contexts
 - Tracking development sessions (framework ready)
 
+#### CLI Usage (Direct Command Line)
+The application can now be used directly from command line for:
+- Creating and managing memory entries (`./memory-bank memory create`)
+- Searching knowledge base (`./memory-bank search "term"`)
+- Initializing projects (`./memory-bank init`)
+- All operations available through intuitive CLI commands
+
 ### What's Missing
-- **CLI Commands**: No traditional command-line interface (`./memory-bank search "term"`)
-- **Interactive Usage**: Cannot be used directly from command line for queries
-- **Standalone Operations**: Requires MCP client (like Claude Code) to function
+- **Service Integration**: CLI commands display placeholders, need integration with actual services
+- **Session CLI Commands**: Session start/log/complete commands not yet implemented
+- **Configuration Files**: No YAML/JSON config file support yet
 
 ## Getting Started
 
@@ -187,9 +205,13 @@ export CHROMADB_COLLECTION="memory_bank"
 export MEMORY_BANK_DB_PATH="./memory_bank.db"
 ```
 
-### Current Usage (MCP Server Only)
+### Current Usage (Both MCP Server and CLI)
+
+#### MCP Server Mode
 ```bash
 # Start MCP server (blocks and waits for MCP protocol requests)
+./memory-bank server
+# OR (default when no arguments provided)
 ./memory-bank
 
 # Server logs indicate startup:
@@ -197,13 +219,36 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
 # {"level":"info","msg":"Context cancelled, shutting down server"}
 ```
 
-### Future CLI Usage (Not Yet Implemented)
+#### CLI Usage ✅
+```bash
+# Initialize a new project
+./memory-bank init /path/to/project --name "My Project" --description "Project description"
+
+# Create memory entries
+./memory-bank memory create --type decision --title "Use JWT for Authentication" \
+  --content "We decided to implement JWT-based authentication..." \
+  --tags "auth,security,api"
+
+# Search memory entries
+./memory-bank search "authentication patterns" --limit 10 --threshold 0.5
+
+# List memory entries
+./memory-bank memory list --project proj_123 --type decision --limit 20
+
+# Search within specific memory context
+./memory-bank memory search "JWT implementation" --project proj_123
+
+# Show help for any command
+./memory-bank --help
+./memory-bank memory --help
+```
+
+### Future Session CLI Usage (Not Yet Implemented)
 ```bash
 # These commands are planned but not yet implemented:
-# ./memory-bank init /path/to/project
-# ./memory-bank search "authentication patterns"  
-# ./memory-bank memory create --type decision --title "Use JWT"
 # ./memory-bank session start "Implementing auth"
+# ./memory-bank session log "Added JWT middleware"  
+# ./memory-bank session complete
 ```
 
 ## Testing Strategy
