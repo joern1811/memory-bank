@@ -120,19 +120,24 @@ memory-bank/
 **✅ FUNCTIONAL MCP SERVER**: Memory Bank is now a fully functional MCP server that can be integrated with Claude Code!
 
 ### What Works Now
-- **Complete MCP Protocol Support**: All memory operations via JSON-RPC
+- **MCP Server Mode**: Complete JSON-RPC protocol implementation for Claude Code integration
 - **Semantic Search**: Vector-based similarity search with ChromaDB integration
 - **Automatic Fallbacks**: Works without external dependencies (uses mock providers)
-- **Project Management**: Initialize and manage development projects
+- **Memory Operations**: Full CRUD operations via MCP protocol
 - **SQLite Storage**: Persistent memory storage with automatic schema setup
 - **Health Monitoring**: Automatic health checks for Ollama and ChromaDB services
 
-### Integration Ready
-The server can be started and immediately used by Claude Code for:
+### Integration Ready (MCP Protocol Only)
+The server can be started and immediately used by Claude Code via MCP protocol for:
 - Storing development decisions and patterns
 - Searching existing knowledge semantically
 - Managing project-specific memory contexts
 - Tracking development sessions (framework ready)
+
+### What's Missing
+- **CLI Commands**: No traditional command-line interface (`./memory-bank search "term"`)
+- **Interactive Usage**: Cannot be used directly from command line for queries
+- **Standalone Operations**: Requires MCP client (like Claude Code) to function
 
 ## Getting Started
 
@@ -182,24 +187,23 @@ export CHROMADB_COLLECTION="memory_bank"
 export MEMORY_BANK_DB_PATH="./memory_bank.db"
 ```
 
-### Basic Usage (Planned)
+### Current Usage (MCP Server Only)
 ```bash
-# Initialize project
-./memory-bank init /path/to/project
+# Start MCP server (blocks and waits for MCP protocol requests)
+./memory-bank
 
-# Start session
-./memory-bank session start "Implementing authentication"
+# Server logs indicate startup:
+# {"level":"info","msg":"Memory Bank MCP Server started successfully"}
+# {"level":"info","msg":"Context cancelled, shutting down server"}
+```
 
-# Add decision
-./memory-bank memory add decision "Use JWT for authentication" \
-  --rationale "Stateless, scalable, industry standard" \
-  --options "JWT,Sessions,OAuth2"
-
-# Search memories
-./memory-bank search "authentication patterns"
-
-# Complete session
-./memory-bank session complete "JWT authentication implemented successfully"
+### Future CLI Usage (Not Yet Implemented)
+```bash
+# These commands are planned but not yet implemented:
+# ./memory-bank init /path/to/project
+# ./memory-bank search "authentication patterns"  
+# ./memory-bank memory create --type decision --title "Use JWT"
+# ./memory-bank session start "Implementing auth"
 ```
 
 ## Testing Strategy
@@ -370,18 +374,20 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
 - Session operations implementation (framework ready)
 - Project repository implementation (interface defined)
 
-### 📋 Next Steps
-- **CLI Enhancement**: Traditional command-line interface
-- **Database Migrations**: Schema versioning system  
-- **Configuration Management**: YAML/JSON config files
-- **Integration Testing**: Real ChromaDB + Ollama testing
-- **Performance Optimization**: Batch processing and caching
+### 📋 Next Steps (Priority Order)
+1. **Traditional CLI Interface**: Commands like `init`, `search`, `memory create`
+2. **Session Repository Implementation**: Complete session management
+3. **Project Repository Implementation**: Complete project operations
+4. **Database Migrations**: Schema versioning system  
+5. **Configuration Management**: YAML/JSON config files
+6. **Integration Testing**: Real ChromaDB + Ollama testing
 
 ### Known Issues & Limitations
-- Session and Project repositories use nil placeholders
-- MCP server uses context blocking instead of proper serve method
-- Limited configuration options (environment variables only)
-- No database migration system yet
+- **No CLI Interface**: Only MCP server mode, no traditional command-line interface
+- **Session and Project repositories**: Use nil placeholders
+- **MCP server implementation**: Uses context blocking instead of proper serve method
+- **Limited configuration**: Environment variables only, no config files
+- **No database migrations**: Schema changes require manual intervention
 
 ### Performance Considerations ⚡
 - **Mock Fallbacks**: Automatic fallback to mock providers ensures reliability
