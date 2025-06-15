@@ -9,6 +9,23 @@ type ProjectID string
 // SessionID is a unique identifier for a development session
 type SessionID string
 
+// SessionStatus represents the status of a development session
+type SessionStatus string
+
+const (
+	SessionStatusActive    SessionStatus = "active"
+	SessionStatusCompleted SessionStatus = "completed"
+	SessionStatusAborted   SessionStatus = "aborted"
+	SessionStatusPaused    SessionStatus = "paused"
+)
+
+// ProgressEntry represents a single progress entry in a session
+type ProgressEntry struct {
+	Timestamp string `json:"timestamp"`
+	Message   string `json:"message"`
+	Type      string `json:"type,omitempty"` // info, milestone, issue, solution
+}
+
 // EmbeddingVector represents a vector embedding
 type EmbeddingVector []float32
 

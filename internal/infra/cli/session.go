@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -73,59 +74,64 @@ The session will be created and set as active for the project.`,
 }
 
 var sessionLogCmd = &cobra.Command{
-	Use:   "log [progress-entry]",
-	Short: "Log progress to current session",
-	Long: `Log progress to the currently active session for the project.
-If no active session exists, you will be prompted to start one.`,
-	Args: cobra.ExactArgs(1),
+	Use:   "log [message]",
+	Short: "Log progress to the active session",
+	Long:  `Log a progress message to the currently active development session.`,
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		progressEntry := args[0]
-		projectID, _ := cmd.Flags().GetString("project")
-		sessionID, _ := cmd.Flags().GetString("session")
+		message := args[0]
+		projectPath, _ := cmd.Flags().GetString("project")
+		entryType, _ := cmd.Flags().GetString("type")
 
-		if progressEntry == "" {
-			return fmt.Errorf("progress entry is required")
-		}
-
-		// Get services
-		services, err := GetServices()
+		// Initialize services
+		services, err := NewServiceContainer()
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
 
-		ctx := context.Background()
-		
-		var targetSessionID domain.SessionID
-
-		// If session ID provided, use it directly
-		if sessionID != "" {
-			targetSessionID = domain.SessionID(sessionID)
-		} else {
-			// Find active session for project
-			var pid domain.ProjectID
-			if projectID != "" {
-				pid = domain.ProjectID(projectID)
-			} else {
-				pid = domain.ProjectID("default")
-			}
-
-			activeSession, err := services.SessionService.GetActiveSession(ctx, pid)
+		// Get project by path
+		var project *domain.Project
+		if projectPath != "" {
+			project, err = services.ProjectService.GetByPath(context.Background(), projectPath)
 			if err != nil {
-				return fmt.Errorf("no active session found for project %s. Start a session first with 'session start'", pid)
+				return fmt.Errorf("failed to get project: %w", err)
 			}
-			targetSessionID = activeSession.ID
+		} else {
+			// Try to detect project from current directory
+			currentDir, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get current directory: %w", err)
+			}
+			project, err = services.ProjectService.GetByPath(context.Background(), currentDir)
+			if err != nil {
+				return fmt.Errorf("no project found. Run 'memory-bank init' first or specify --project")
+			}
 		}
 
-		fmt.Printf("Logging progress to session %s:\n", targetSessionID)
-		fmt.Printf("  Entry: %s\n", progressEntry)
-
-		// Log progress
-		err = services.SessionService.LogProgress(ctx, targetSessionID, progressEntry)
+		// Get active session
+		session, err := services.SessionService.GetActiveSession(context.Background(), project.ID)
 		if err != nil {
-			return fmt.Errorf("failed to log progress: %w", err)
+			return fmt.Errorf("no active session found. Start a session first with 'memory-bank session start'")
 		}
-		
-		fmt.Printf("✓ Progress logged successfully\n")
+
+		// Log progress with type
+		switch entryType {
+		case "milestone":
+			session.LogMilestone(message)
+		case "issue":
+			session.LogIssue(message)
+		case "solution":
+			session.LogSolution(message)
+		default:
+			session.LogInfo(message)
+		}
+
+		// Update session
+		if err := services.SessionService.Update(context.Background(), session); err != nil {
+			return fmt.Errorf("failed to update session: %w", err)
+		}
+
+		fmt.Printf("✓ Progress logged to session '%s': %s\n", session.Name, message)
 		return nil
 	},
 }
@@ -270,11 +276,11 @@ var sessionListCmd = &cobra.Command{
 					fmt.Printf("   Outcome: %s\n", truncateString(session.Outcome, 100))
 				}
 				
-				if len(session.ProgressLog) > 0 {
-					fmt.Printf("   Progress entries: %d\n", len(session.ProgressLog))
+				if len(session.Progress) > 0 {
+					fmt.Printf("   Progress entries: %d\n", len(session.Progress))
 					// Show last progress entry
-					lastEntry := session.ProgressLog[len(session.ProgressLog)-1]
-					fmt.Printf("   Latest: %s\n", truncateString(lastEntry, 80))
+					lastEntry := session.Progress[len(session.Progress)-1]
+					fmt.Printf("   Latest: [%s] %s\n", lastEntry.Type, truncateString(lastEntry.Message, 80))
 				}
 			}
 		}
@@ -329,13 +335,31 @@ var sessionGetCmd = &cobra.Command{
 			fmt.Printf("  Outcome: %s\n", session.Outcome)
 		}
 		
-		if len(session.ProgressLog) > 0 {
-			fmt.Printf("\nProgress Log (%d entries):\n", len(session.ProgressLog))
-			for i, entry := range session.ProgressLog {
-				fmt.Printf("  %d. %s\n", i+1, entry)
+		if len(session.Progress) > 0 {
+			fmt.Printf("\nProgress Log (%d entries):\n", len(session.Progress))
+			for i, entry := range session.Progress {
+				fmt.Printf("  %d. [%s] %s - %s\n", i+1, entry.Type, entry.Timestamp, entry.Message)
 			}
+			
+			// Show progress breakdown
+			milestones := session.GetMilestones()
+			issues := session.GetIssues()
+			solutions := session.GetSolutions()
+			
+			fmt.Printf("\nProgress Summary:\n")
+			fmt.Printf("  Milestones: %d\n", len(milestones))
+			fmt.Printf("  Issues: %d\n", len(issues))
+			fmt.Printf("  Solutions: %d\n", len(solutions))
 		} else {
 			fmt.Printf("\nProgress Log: No entries yet\n")
+		}
+		
+		if len(session.Tags) > 0 {
+			fmt.Printf("\nTags: %s\n", strings.Join(session.Tags, ", "))
+		}
+		
+		if session.Summary != "" {
+			fmt.Printf("\nSummary: %s\n", session.Summary)
 		}
 		
 		return nil
@@ -414,6 +438,7 @@ func init() {
 	// Flags for log command
 	sessionLogCmd.Flags().StringP("project", "p", "", "project ID (if no session ID provided)")
 	sessionLogCmd.Flags().StringP("session", "s", "", "specific session ID")
+	sessionLogCmd.Flags().StringP("type", "t", "info", "entry type (info, milestone, issue, solution)")
 	
 	// Flags for complete command
 	sessionCompleteCmd.Flags().StringP("project", "p", "", "project ID (if no session ID provided)")

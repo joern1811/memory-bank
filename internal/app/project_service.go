@@ -59,8 +59,8 @@ func (s *ProjectService) GetProject(ctx context.Context, id domain.ProjectID) (*
 	return s.projectRepo.GetByID(ctx, id)
 }
 
-// GetProjectByPath retrieves a project by path
-func (s *ProjectService) GetProjectByPath(ctx context.Context, path string) (*domain.Project, error) {
+// GetByPath retrieves a project by path
+func (s *ProjectService) GetByPath(ctx context.Context, path string) (*domain.Project, error) {
 	// Normalize path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -68,6 +68,11 @@ func (s *ProjectService) GetProjectByPath(ctx context.Context, path string) (*do
 	}
 
 	return s.projectRepo.GetByPath(ctx, absPath)
+}
+
+// GetProjectByPath retrieves a project by path (deprecated alias)
+func (s *ProjectService) GetProjectByPath(ctx context.Context, path string) (*domain.Project, error) {
+	return s.GetByPath(ctx, path)
 }
 
 // UpdateProject updates an existing project

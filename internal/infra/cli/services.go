@@ -3,10 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
+	"strings"
 
 	"github.com/joern1811/memory-bank/internal/app"
+	"github.com/joern1811/memory-bank/internal/infra/config"
 	"github.com/joern1811/memory-bank/internal/infra/database"
 	"github.com/joern1811/memory-bank/internal/infra/embedding"
 	"github.com/joern1811/memory-bank/internal/infra/vector"
@@ -20,27 +20,53 @@ type ServiceContainer struct {
 	ProjectService *app.ProjectService
 	SessionService *app.SessionService
 	Logger         *logrus.Logger
+	Config         *config.Config
 }
 
 // NewServiceContainer creates a new service container with all dependencies
 func NewServiceContainer() (*ServiceContainer, error) {
-	// Initialize logger
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{})
-	logger.SetLevel(logrus.InfoLevel)
+	return NewServiceContainerWithConfig("")
+}
 
-	// Get database path from environment or use default
-	dbPath := os.Getenv("MEMORY_BANK_DB_PATH")
-	if dbPath == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get home directory: %w", err)
-		}
-		dbPath = filepath.Join(homeDir, ".memory_bank.db")
+// NewServiceContainerWithConfig creates a service container with specified config file
+func NewServiceContainerWithConfig(configPath string) (*ServiceContainer, error) {
+	// Load configuration
+	cfg, err := config.LoadConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Initialize database
-	db, err := database.NewSQLiteDatabase(dbPath, logger)
+	// Validate configuration
+	if err := cfg.ValidateConfig(); err != nil {
+		return nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
+
+	// Initialize logger with config
+	logger := logrus.New()
+	
+	// Set log format
+	if cfg.Logging.Format == "text" {
+		logger.SetFormatter(&logrus.TextFormatter{})
+	} else {
+		logger.SetFormatter(&logrus.JSONFormatter{})
+	}
+	
+	// Set log level
+	switch strings.ToLower(cfg.Logging.Level) {
+	case "debug":
+		logger.SetLevel(logrus.DebugLevel)
+	case "info":
+		logger.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logger.SetLevel(logrus.WarnLevel)
+	case "error":
+		logger.SetLevel(logrus.ErrorLevel)
+	default:
+		logger.SetLevel(logrus.InfoLevel)
+	}
+
+	// Initialize database using config
+	db, err := database.NewSQLiteDatabase(cfg.Database.Path, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
@@ -50,10 +76,10 @@ func NewServiceContainer() (*ServiceContainer, error) {
 	sessionRepo := database.NewSQLiteSessionRepository(db, logger)
 	projectRepo := database.NewSQLiteProjectRepository(db, logger)
 
-	// Initialize embedding provider (Ollama with Mock fallback)
+	// Initialize embedding provider using config
 	ollamaConfig := embedding.OllamaConfig{
-		BaseURL: getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
-		Model:   getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
+		BaseURL: cfg.Ollama.BaseURL,
+		Model:   cfg.Ollama.Model,
 	}
 	ollamaProvider := embedding.NewOllamaProvider(ollamaConfig, logger)
 
@@ -65,10 +91,10 @@ func NewServiceContainer() (*ServiceContainer, error) {
 		embeddingProvider = embedding.NewMockEmbeddingProvider(768, logger)
 	}
 
-	// Initialize vector store (ChromaDB with Mock fallback)
+	// Initialize vector store using config
 	chromaConfig := vector.ChromaDBConfig{
-		BaseURL:    getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
-		Collection: getEnvOrDefault("CHROMADB_COLLECTION", "memory_bank"),
+		BaseURL:    cfg.ChromaDB.BaseURL,
+		Collection: cfg.ChromaDB.Collection,
 	}
 	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, logger)
 
@@ -88,6 +114,7 @@ func NewServiceContainer() (*ServiceContainer, error) {
 		ProjectService: projectService,
 		SessionService: sessionService,
 		Logger:         logger,
+		Config:         cfg,
 	}, nil
 }
 

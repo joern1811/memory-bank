@@ -57,40 +57,122 @@ func (p *Project) GetConfig(key string) (string, bool) {
 
 // Session represents a development session
 type Session struct {
-	ID              SessionID `json:"id"`
-	ProjectID       ProjectID `json:"project_id"`
-	TaskDescription string    `json:"task_description"`
-	StartTime       time.Time `json:"start_time"`
-	EndTime         *time.Time `json:"end_time,omitempty"`
-	ProgressLog     []string  `json:"progress_log"`
-	Outcome         string    `json:"outcome,omitempty"`
-	Status          SessionStatus `json:"status"`
+	ID              SessionID       `json:"id"`
+	ProjectID       ProjectID       `json:"project_id"`
+	Name            string          `json:"name"`
+	TaskDescription string          `json:"task_description"`
+	StartTime       time.Time       `json:"start_time"`
+	EndTime         *time.Time      `json:"end_time,omitempty"`
+	Progress        []ProgressEntry `json:"progress"`
+	Outcome         string          `json:"outcome,omitempty"`
+	Status          SessionStatus   `json:"status"`
+	Tags            Tags            `json:"tags,omitempty"`
+	Summary         string          `json:"summary,omitempty"`
+	SessionDuration *time.Duration  `json:"duration,omitempty"`
 }
 
-// SessionStatus represents the status of a session
-type SessionStatus string
-
-const (
-	SessionStatusActive    SessionStatus = "active"
-	SessionStatusCompleted SessionStatus = "completed"
-	SessionStatusAborted   SessionStatus = "aborted"
-)
-
 // NewSession creates a new development session
-func NewSession(projectID ProjectID, taskDescription string) *Session {
+func NewSession(projectID ProjectID, name, taskDescription string) *Session {
 	return &Session{
 		ID:              SessionID(generateID()),
 		ProjectID:       projectID,
+		Name:            name,
 		TaskDescription: taskDescription,
 		StartTime:       time.Now(),
-		ProgressLog:     make([]string, 0),
+		Progress:        make([]ProgressEntry, 0),
 		Status:          SessionStatusActive,
+		Tags:            make(Tags, 0),
 	}
 }
 
 // LogProgress adds a progress entry to the session
-func (s *Session) LogProgress(entry string) {
-	s.ProgressLog = append(s.ProgressLog, entry)
+func (s *Session) LogProgress(message, entryType string) {
+	entry := ProgressEntry{
+		Timestamp: time.Now().Format(time.RFC3339),
+		Message:   message,
+		Type:      entryType,
+	}
+	s.Progress = append(s.Progress, entry)
+}
+
+// LogInfo logs an informational progress entry
+func (s *Session) LogInfo(message string) {
+	s.LogProgress(message, "info")
+}
+
+// LogMilestone logs a milestone progress entry
+func (s *Session) LogMilestone(message string) {
+	s.LogProgress(message, "milestone")
+}
+
+// LogIssue logs an issue progress entry
+func (s *Session) LogIssue(message string) {
+	s.LogProgress(message, "issue")
+}
+
+// LogSolution logs a solution progress entry
+func (s *Session) LogSolution(message string) {
+	s.LogProgress(message, "solution")
+}
+
+// AddTag adds a tag to the session
+func (s *Session) AddTag(tag string) {
+	s.Tags.Add(tag)
+}
+
+// SetSummary sets the session summary
+func (s *Session) SetSummary(summary string) {
+	s.Summary = summary
+}
+
+// GetProgressByType returns progress entries of a specific type
+func (s *Session) GetProgressByType(entryType string) []ProgressEntry {
+	var filtered []ProgressEntry
+	for _, entry := range s.Progress {
+		if entry.Type == entryType {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}
+
+// GetMilestones returns all milestone entries
+func (s *Session) GetMilestones() []ProgressEntry {
+	return s.GetProgressByType("milestone")
+}
+
+// GetIssues returns all issue entries
+func (s *Session) GetIssues() []ProgressEntry {
+	return s.GetProgressByType("issue")
+}
+
+// GetSolutions returns all solution entries
+func (s *Session) GetSolutions() []ProgressEntry {
+	return s.GetProgressByType("solution")
+}
+
+// CalculateDuration calculates the session duration
+func (s *Session) CalculateDuration() time.Duration {
+	if s.EndTime != nil {
+		return s.EndTime.Sub(s.StartTime)
+	}
+	return time.Since(s.StartTime)
+}
+
+// Pause pauses the session
+func (s *Session) Pause() {
+	if s.Status == SessionStatusActive {
+		s.Status = SessionStatusPaused
+		s.LogInfo("Session paused")
+	}
+}
+
+// Resume resumes a paused session
+func (s *Session) Resume() {
+	if s.Status == SessionStatusPaused {
+		s.Status = SessionStatusActive
+		s.LogInfo("Session resumed")
+	}
 }
 
 // Complete marks the session as completed
@@ -99,13 +181,23 @@ func (s *Session) Complete(outcome string) {
 	s.EndTime = &now
 	s.Outcome = outcome
 	s.Status = SessionStatusCompleted
+	duration := s.CalculateDuration()
+	s.SessionDuration = &duration
+	s.LogMilestone("Session completed: " + outcome)
 }
 
 // Abort marks the session as aborted
-func (s *Session) Abort() {
+func (s *Session) Abort(reason string) {
 	now := time.Now()
 	s.EndTime = &now
 	s.Status = SessionStatusAborted
+	duration := s.CalculateDuration()
+	s.SessionDuration = &duration
+	if reason != "" {
+		s.LogInfo("Session aborted: " + reason)
+	} else {
+		s.LogInfo("Session aborted")
+	}
 }
 
 // IsActive checks if the session is currently active

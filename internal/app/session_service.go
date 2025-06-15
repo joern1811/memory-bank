@@ -45,14 +45,14 @@ func (s *SessionService) StartSession(ctx context.Context, req ports.StartSessio
 	activeSession, err := s.sessionRepo.GetActiveSession(ctx, req.ProjectID)
 	if err == nil && activeSession != nil {
 		s.logger.WithField("existing_session_id", activeSession.ID).Warn("Active session already exists, aborting it")
-		activeSession.Abort()
+		activeSession.Abort("Starting new session")
 		if err := s.sessionRepo.Update(ctx, activeSession); err != nil {
 			s.logger.WithError(err).Warn("Failed to abort existing session")
 		}
 	}
 
 	// Create new session
-	session := domain.NewSession(req.ProjectID, req.TaskDescription)
+	session := domain.NewSession(req.ProjectID, req.TaskDescription, req.TaskDescription)
 
 	// Store session
 	if err := s.sessionRepo.Store(ctx, session); err != nil {
@@ -97,7 +97,7 @@ func (s *SessionService) LogProgress(ctx context.Context, sessionID domain.Sessi
 	}
 
 	// Add progress entry
-	session.LogProgress(entry)
+	session.LogInfo(entry)
 
 	// Update session
 	if err := s.sessionRepo.Update(ctx, session); err != nil {
@@ -157,7 +157,7 @@ func (s *SessionService) AbortSession(ctx context.Context, sessionID domain.Sess
 	}
 
 	// Abort session
-	session.Abort()
+	session.Abort("Manually aborted")
 
 	// Update session
 	if err := s.sessionRepo.Update(ctx, session); err != nil {
@@ -170,6 +170,11 @@ func (s *SessionService) AbortSession(ctx context.Context, sessionID domain.Sess
 	}).Info("Session aborted")
 
 	return nil
+}
+
+// Update updates an existing session
+func (s *SessionService) Update(ctx context.Context, session *domain.Session) error {
+	return s.sessionRepo.Update(ctx, session)
 }
 
 // ListSessions lists all sessions for a project

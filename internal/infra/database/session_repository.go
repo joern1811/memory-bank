@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -39,25 +40,23 @@ func (r *SQLiteSessionRepository) Store(ctx context.Context, session *domain.Ses
 	}
 
 	// Build description with outcome and progress information
-	description := ""
+	description := session.TaskDescription
 	if session.Outcome != "" {
-		description = "Outcome: " + session.Outcome
+		description += " | Outcome: " + session.Outcome
 	}
-	if len(session.ProgressLog) > 0 {
-		if description != "" {
-			description += " | "
-		}
-		description += fmt.Sprintf("Progress: %s", strings.Join(session.ProgressLog, "; "))
+	if len(session.Progress) > 0 {
+		progressJSON, _ := json.Marshal(session.Progress)
+		description += " | Progress: " + string(progressJSON)
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		session.ID,
 		session.ProjectID,
-		session.TaskDescription, // name = task description
-		description,             // description = outcome + progress
+		session.Name,        // name 
+		description,         // description = task + outcome + progress
 		session.Status,
-		session.StartTime, // started_at
-		completedAt,       // completed_at
+		session.StartTime,   // started_at
+		completedAt,         // completed_at
 	)
 
 	if err != nil {
@@ -86,10 +85,10 @@ func (r *SQLiteSessionRepository) GetByID(ctx context.Context, id domain.Session
 	err := row.Scan(
 		&session.ID,
 		&session.ProjectID,
-		&session.TaskDescription, // name -> TaskDescription
+		&session.Name,        // name -> Name
 		&description,
 		&session.Status,
-		&session.StartTime, // started_at -> StartTime
+		&session.StartTime,   // started_at -> StartTime
 		&completedAt,
 	)
 
@@ -113,42 +112,46 @@ func (r *SQLiteSessionRepository) GetByID(ctx context.Context, id domain.Session
 	return session, nil
 }
 
-// parseDescription extracts outcome and progress from stored description
+// parseDescription extracts task description, outcome and progress from stored description
 func (r *SQLiteSessionRepository) parseDescription(description string, session *domain.Session) {
 	if description == "" {
-		session.ProgressLog = []string{}
+		session.Progress = []domain.ProgressEntry{}
 		return
 	}
 
 	parts := strings.Split(description, " | ")
-	for _, part := range parts {
-		if strings.HasPrefix(part, "Outcome: ") {
+	for i, part := range parts {
+		if i == 0 {
+			// First part is task description
+			session.TaskDescription = part
+		} else if strings.HasPrefix(part, "Outcome: ") {
 			session.Outcome = strings.TrimPrefix(part, "Outcome: ")
 		} else if strings.HasPrefix(part, "Progress: ") {
 			progressStr := strings.TrimPrefix(part, "Progress: ")
 			if progressStr != "" {
-				session.ProgressLog = strings.Split(progressStr, "; ")
+				var progress []domain.ProgressEntry
+				if err := json.Unmarshal([]byte(progressStr), &progress); err == nil {
+					session.Progress = progress
+				}
 			}
 		}
 	}
 	
-	// Ensure ProgressLog is never nil
-	if session.ProgressLog == nil {
-		session.ProgressLog = []string{}
+	// Ensure Progress is never nil
+	if session.Progress == nil {
+		session.Progress = []domain.ProgressEntry{}
 	}
 }
 
-// buildDescription creates description string from outcome and progress
+// buildDescription creates description string from task, outcome and progress
 func (r *SQLiteSessionRepository) buildDescription(session *domain.Session) string {
-	description := ""
+	description := session.TaskDescription
 	if session.Outcome != "" {
-		description = "Outcome: " + session.Outcome
+		description += " | Outcome: " + session.Outcome
 	}
-	if len(session.ProgressLog) > 0 {
-		if description != "" {
-			description += " | "
-		}
-		description += fmt.Sprintf("Progress: %s", strings.Join(session.ProgressLog, "; "))
+	if len(session.Progress) > 0 {
+		progressJSON, _ := json.Marshal(session.Progress)
+		description += " | Progress: " + string(progressJSON)
 	}
 	return description
 }

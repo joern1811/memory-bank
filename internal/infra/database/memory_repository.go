@@ -10,7 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// NewSQLiteDatabase creates a new SQLite database connection and initializes tables
+// NewSQLiteDatabase creates a new SQLite database connection and runs migrations
 func NewSQLiteDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
 	logger.WithField("db_path", dbPath).Info("Connecting to SQLite database")
 
@@ -25,13 +25,14 @@ func NewSQLiteDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	// Initialize tables
-	if err := initializeTables(db); err != nil {
+	// Run database migrations
+	migrator := NewMigrator(db, logger)
+	if err := migrator.Run(); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("failed to initialize tables: %w", err)
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	logger.Info("SQLite database connected and initialized")
+	logger.Info("SQLite database connected and migrated")
 	return db, nil
 }
 
