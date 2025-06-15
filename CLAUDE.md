@@ -144,6 +144,7 @@ The server can be started and immediately used by Claude Code via MCP protocol f
 - Searching existing knowledge semantically
 - Managing project-specific memory contexts
 - Tracking development sessions (framework ready)
+- **System Prompt Resource**: Dynamic system prompt with usage guidelines and current project context
 
 #### CLI Usage (Direct Command Line)
 The application can now be used directly from command line for:
@@ -229,8 +230,26 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
   --content "We decided to implement JWT-based authentication..." \
   --tags "auth,security,api"
 
-# Search memory entries
+# Basic search
 ./memory-bank search "authentication patterns" --limit 10 --threshold 0.5
+
+# Advanced faceted search with filters
+./memory-bank search faceted "authentication patterns" \
+  --project proj_123 \
+  --types decision,pattern \
+  --tags auth,security \
+  --facets \
+  --sort relevance \
+  --sort-dir desc
+
+# Enhanced search with relevance scoring and highlights
+./memory-bank search enhanced "JWT implementation" \
+  --project proj_123 \
+  --type decision \
+  --limit 5
+
+# Get intelligent search suggestions
+./memory-bank search suggestions "auth" --project proj_123 --limit 10
 
 # List memory entries
 ./memory-bank memory list --project proj_123 --type decision --limit 20
@@ -240,7 +259,8 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
 
 # Show help for any command
 ./memory-bank --help
-./memory-bank memory --help
+./memory-bank search --help
+./memory-bank search faceted --help
 ```
 
 ### Session CLI Usage ✅
@@ -359,6 +379,37 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
 
 ## API Reference ✅
 
+### MCP Resources (Implemented)
+
+#### System Prompt Resource ✅
+- **URI**: `prompt://memory-bank/system`
+- **Type**: Dynamic system prompt resource
+- **Description**: Context-aware system prompt for optimal Memory Bank integration
+- **MIME Type**: `text/plain`
+- **Features**:
+  - **Dynamic Context**: Includes current project information and available memories
+  - **Usage Guidelines**: Best practices for different memory types and search strategies
+  - **Method Documentation**: Complete reference of available MCP methods
+  - **Integration Tips**: Workflow optimization suggestions
+  - **Real-time Examples**: Usage patterns based on existing project content
+
+Example resource access:
+```json
+{
+  "method": "resources/read",
+  "params": {
+    "uri": "prompt://memory-bank/system"
+  }
+}
+```
+
+Returns comprehensive system prompt with:
+- Project-specific memory summaries
+- Memory type usage guidelines  
+- MCP method reference
+- Best practices for development workflow integration
+- Context-aware usage examples
+
 ### MCP Methods (Implemented)
 
 #### Memory Operations
@@ -381,6 +432,44 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
     "project_id": "proj_123",
     "limit": 10,
     "threshold": 0.5
+  }
+  ```
+
+- **`memory/faceted-search`**: Advanced search with facets and filters ✅
+  ```json
+  {
+    "query": "authentication patterns",
+    "project_id": "proj_123",
+    "filters": {
+      "types": ["decision", "pattern"],
+      "tags": ["auth", "security"],
+      "min_length": 100,
+      "has_content": true
+    },
+    "include_facets": true,
+    "sort_by": {"field": "relevance", "direction": "desc"},
+    "limit": 10,
+    "threshold": 0.5
+  }
+  ```
+
+- **`memory/enhanced-search`**: Enhanced search with relevance scoring ✅
+  ```json
+  {
+    "query": "JWT implementation",
+    "project_id": "proj_123",
+    "type": "decision",
+    "limit": 5,
+    "threshold": 0.7
+  }
+  ```
+
+- **`memory/search-suggestions`**: Get intelligent search suggestions ✅
+  ```json
+  {
+    "partial_query": "auth",
+    "project_id": "proj_123",
+    "limit": 10
   }
   ```
 
@@ -460,17 +549,45 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
 - **Batch Vector Operations**: Bulk storage/deletion operations for ChromaDB and MockVectorStore
 - **Memory Usage Optimization**: Lightweight metadata queries for performance-sensitive operations
 
-### 🔄 In Progress
-- Enhanced documentation and advanced search features
+### ✅ Enhanced Documentation & Search Features (v1.6)
+- **Complete API Documentation**: 
+  - Comprehensive MCP protocol reference with all methods and examples
+  - Complete CLI commands reference with usage patterns and workflows
+  - Getting started guide with step-by-step setup and basic usage
+  - Real-world examples and use cases for different development scenarios
+  - Central documentation hub with navigation and feature overview
+- **Advanced Search Features**:
+  - **Faceted Search**: Multi-dimensional filtering with type, tag, content length, and time facets
+  - **Enhanced Relevance Scoring**: Intelligent scoring based on title matches, content relevance, and tag alignment
+  - **Search Suggestions**: AI-powered suggestions based on existing content patterns
+  - **Content Highlighting**: Automatic highlighting of matched terms in search results
+  - **Match Reasoning**: Detailed explanations of why results were matched
+  - **Advanced Filtering**: Comprehensive filters for types, tags, sessions, content properties
+  - **Flexible Sorting**: Multiple sort options (relevance, date, title, type) with direction control
 
-### 📋 Next Steps (Priority Order)
+### ✅ MCP System Prompt Resource (v1.7)
+- **Dynamic System Prompt Resource**: MCP resource that provides context-aware system prompts
+  - **Smart Integration Guidelines**: Automatically generated best practices for Memory Bank usage
+  - **Project Context**: Dynamic inclusion of current project information and available memories
+  - **Usage Examples**: Real-time examples based on existing memory content
+  - **Memory Type Guidance**: Detailed explanations of when and how to use different memory types
+  - **MCP Method Documentation**: Complete reference of available MCP methods with examples
+  - **Integration Tips**: Best practices for development workflow integration
+
+### ✅ All Major Features Completed (v1.7)
+- **✅ Enhanced Documentation**: Complete API documentation and comprehensive user guides
+- **✅ Advanced Search Features**: Faceted search, enhanced relevance scoring, and intelligent suggestions
+- **✅ MCP System Prompt Resource**: Dynamic, context-aware system prompts for optimal MCP client integration
+
+### 📋 Completed Features (All Next Steps)
 1. ✅ **Database Migrations**: Schema versioning system with migration scripts
 2. ✅ **Configuration Management**: YAML/JSON config files support
 3. ✅ **Integration Testing**: Real ChromaDB + Ollama testing
 4. ✅ **Enhanced Session Features**: Better progress tracking and session templates
 5. ✅ **Performance Optimization**: Caching and batch operations
-6. **Enhanced Documentation**: API documentation and user guides
-7. **Advanced Search Features**: Filters, faceted search, and relevance scoring
+6. ✅ **Enhanced Documentation**: Complete API documentation and user guides
+7. ✅ **Advanced Search Features**: Faceted search, enhanced relevance scoring, and intelligent suggestions
+8. ✅ **MCP System Prompt Resource**: Dynamic system prompts with project context and usage guidance
 
 ### Known Issues & Limitations
 - **MCP server implementation**: Uses context blocking instead of proper serve method
