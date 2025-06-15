@@ -16,6 +16,7 @@ type MemoryService interface {
 	// Search operations
 	SearchMemories(ctx context.Context, query SemanticSearchRequest) ([]MemorySearchResult, error)
 	FindSimilarMemories(ctx context.Context, memoryID domain.MemoryID, limit int) ([]MemorySearchResult, error)
+	ListMemories(ctx context.Context, req ListMemoriesRequest) ([]*domain.Memory, error)
 	
 	// Specialized operations
 	CreateDecision(ctx context.Context, req CreateDecisionRequest) (*domain.Decision, error)
@@ -127,4 +128,12 @@ type SemanticSearchRequest struct {
 	Limit      int                `json:"limit"`
 	Threshold  float32            `json:"threshold"`
 	TimeFilter *TimeFilter        `json:"time_filter,omitempty"`
+}
+
+// ListMemoriesRequest represents a request to list memories
+type ListMemoriesRequest struct {
+	ProjectID *domain.ProjectID  `json:"project_id,omitempty"`
+	Type      *domain.MemoryType `json:"type,omitempty"`
+	Tags      domain.Tags        `json:"tags,omitempty"`
+	Limit     int                `json:"limit"`
 }

@@ -1,11 +1,22 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/joern1811/memory-bank/internal/domain"
+	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/spf13/cobra"
 )
+
+// truncateString truncates a string to maxLen characters
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
 
 var memoryCmd = &cobra.Command{
 	Use:   "memory",
@@ -37,8 +48,13 @@ Supported types: decision, pattern, error-solution, code, documentation`,
 			}
 		}
 
-		// TODO: Call memory service to create memory
-		// ctx := context.Background()
+		// Get services
+		services, err := GetServices()
+		if err != nil {
+			return fmt.Errorf("failed to initialize services: %w", err)
+		}
+
+		ctx := context.Background()
 		
 		fmt.Printf("Creating memory entry:\n")
 		fmt.Printf("  Type: %s\n", memoryType)
@@ -51,10 +67,30 @@ Supported types: decision, pattern, error-solution, code, documentation`,
 			fmt.Printf("  Project: %s\n", projectID)
 		}
 
-		// TODO: Call memory service to create memory
-		// memoryService.CreateMemory(ctx, memoryType, title, content, tags, projectID)
+		// Create memory request
+		req := ports.CreateMemoryRequest{
+			Type:    domain.MemoryType(memoryType),
+			Title:   title,
+			Content: content,
+			Tags:    tags,
+		}
+
+		// Set project ID if provided
+		if projectID != "" {
+			pid := domain.ProjectID(projectID)
+			req.ProjectID = pid
+		} else {
+			// Use default project if none specified
+			req.ProjectID = domain.ProjectID("default")
+		}
+
+		// Create memory
+		memory, err := services.MemoryService.CreateMemory(ctx, req)
+		if err != nil {
+			return fmt.Errorf("failed to create memory: %w", err)
+		}
 		
-		fmt.Println("✓ Memory entry created successfully")
+		fmt.Printf("✓ Memory entry created successfully (ID: %s)\n", memory.ID)
 		return nil
 	},
 }
@@ -70,8 +106,13 @@ var memorySearchCmd = &cobra.Command{
 		limit, _ := cmd.Flags().GetInt("limit")
 		threshold, _ := cmd.Flags().GetFloat32("threshold")
 
-		// TODO: Call memory service to search memories
-		// ctx := context.Background()
+		// Get services
+		services, err := GetServices()
+		if err != nil {
+			return fmt.Errorf("failed to initialize services: %w", err)
+		}
+
+		ctx := context.Background()
 		
 		fmt.Printf("Searching for: %s\n", query)
 		if projectID != "" {
@@ -79,11 +120,38 @@ var memorySearchCmd = &cobra.Command{
 		}
 		fmt.Printf("Limit: %d, Threshold: %.2f\n", limit, threshold)
 
-		// TODO: Call memory service to search memories
-		// results := memoryService.SearchMemories(ctx, query, projectID, limit, threshold)
+		// Create search request
+		searchReq := ports.SemanticSearchRequest{
+			Query:     query,
+			Limit:     limit,
+			Threshold: threshold,
+		}
+
+		// Set project filter if provided
+		if projectID != "" {
+			pid := domain.ProjectID(projectID)
+			searchReq.ProjectID = &pid
+		}
+
+		// Search memories
+		results, err := services.MemoryService.SearchMemories(ctx, searchReq)
+		if err != nil {
+			return fmt.Errorf("failed to search memories: %w", err)
+		}
 		
-		fmt.Println("\nSearch Results:")
-		fmt.Println("(No results - service integration pending)")
+		fmt.Printf("\nSearch Results (%d found):\n", len(results))
+		if len(results) == 0 {
+			fmt.Println("No memories found matching your query.")
+		} else {
+			for i, result := range results {
+				fmt.Printf("\n%d. %s (Score: %.3f)\n", i+1, result.Memory.Title, result.Similarity)
+				fmt.Printf("   Type: %s, Project: %s\n", result.Memory.Type, result.Memory.ProjectID)
+				fmt.Printf("   Content: %s\n", truncateString(result.Memory.Content, 100))
+				if len(result.Memory.Tags) > 0 {
+					fmt.Printf("   Tags: %s\n", strings.Join(result.Memory.Tags, ", "))
+				}
+			}
+		}
 		
 		return nil
 	},
@@ -98,8 +166,13 @@ var memoryListCmd = &cobra.Command{
 		memoryType, _ := cmd.Flags().GetString("type")
 		limit, _ := cmd.Flags().GetInt("limit")
 
-		// TODO: Call memory service to list memories
-		// ctx := context.Background()
+		// Get services
+		services, err := GetServices()
+		if err != nil {
+			return fmt.Errorf("failed to initialize services: %w", err)
+		}
+
+		ctx := context.Background()
 		
 		fmt.Printf("Listing memory entries")
 		if projectID != "" {
@@ -110,11 +183,48 @@ var memoryListCmd = &cobra.Command{
 		}
 		fmt.Printf(" (limit: %d)\n", limit)
 
-		// TODO: Call memory service to list memories
-		// memories := memoryService.ListMemories(ctx, projectID, memoryType, limit)
+		// Create list request
+		listReq := ports.ListMemoriesRequest{
+			Limit: limit,
+		}
+
+		// Set project filter if provided
+		if projectID != "" {
+			pid := domain.ProjectID(projectID)
+			listReq.ProjectID = &pid
+		}
+
+		// Set type filter if provided
+		if memoryType != "" {
+			mtype := domain.MemoryType(memoryType)
+			listReq.Type = &mtype
+		}
+
+		// List memories
+		memories, err := services.MemoryService.ListMemories(ctx, listReq)
+		if err != nil {
+			return fmt.Errorf("failed to list memories: %w", err)
+		}
 		
-		fmt.Println("\nMemory Entries:")
-		fmt.Println("(No entries - service integration pending)")
+		fmt.Printf("\nMemory Entries (%d found):\n", len(memories))
+		if len(memories) == 0 {
+			if projectID == "" {
+				fmt.Println("No memories found. Try specifying a project with --project flag.")
+			} else {
+				fmt.Println("No memories found for the specified filters.")
+			}
+		} else {
+			for i, memory := range memories {
+				fmt.Printf("\n%d. %s\n", i+1, memory.Title)
+				fmt.Printf("   ID: %s\n", memory.ID)
+				fmt.Printf("   Type: %s, Project: %s\n", memory.Type, memory.ProjectID)
+				fmt.Printf("   Content: %s\n", truncateString(memory.Content, 100))
+				if len(memory.Tags) > 0 {
+					fmt.Printf("   Tags: %s\n", strings.Join(memory.Tags, ", "))
+				}
+				fmt.Printf("   Created: %s\n", memory.CreatedAt.Format("2006-01-02 15:04:05"))
+			}
+		}
 		
 		return nil
 	},

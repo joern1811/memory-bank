@@ -180,6 +180,62 @@ func (s *MemoryService) FindSimilarMemories(ctx context.Context, memoryID domain
 	return filtered, nil
 }
 
+// ListMemories lists memories based on filters
+func (s *MemoryService) ListMemories(ctx context.Context, req ports.ListMemoriesRequest) ([]*domain.Memory, error) {
+	s.logger.WithFields(logrus.Fields{
+		"project_id": req.ProjectID,
+		"type":       req.Type,
+		"limit":      req.Limit,
+	}).Info("Listing memories")
+
+	// Use repository's ListByProject if project filter is specified
+	if req.ProjectID != nil {
+		memories, err := s.memoryRepo.ListByProject(ctx, *req.ProjectID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get memories by project: %w", err)
+		}
+
+		// Apply additional filters
+		var filtered []*domain.Memory
+		for _, memory := range memories {
+			if s.matchesListFilters(memory, req) {
+				filtered = append(filtered, memory)
+			}
+		}
+
+		// Apply limit
+		if req.Limit > 0 && len(filtered) > req.Limit {
+			filtered = filtered[:req.Limit]
+		}
+
+		return filtered, nil
+	}
+
+	// For now, if no project filter, return empty list
+	// TODO: Implement GetAll method in repository for global listing
+	s.logger.Warn("Listing all memories across projects not yet implemented")
+	return []*domain.Memory{}, nil
+}
+
+// matchesListFilters checks if a memory matches the list filters
+func (s *MemoryService) matchesListFilters(memory *domain.Memory, req ports.ListMemoriesRequest) bool {
+	// Type filter
+	if req.Type != nil && memory.Type != *req.Type {
+		return false
+	}
+
+	// Tags filter
+	if len(req.Tags) > 0 {
+		for _, requiredTag := range req.Tags {
+			if !memory.Tags.Contains(requiredTag) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
 // CreateDecision creates a new decision memory
 func (s *MemoryService) CreateDecision(ctx context.Context, req ports.CreateDecisionRequest) (*domain.Decision, error) {
 	decision := domain.NewDecision(

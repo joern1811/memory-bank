@@ -45,9 +45,11 @@ func initializeTables(db *sql.DB) error {
 		type TEXT NOT NULL,
 		title TEXT NOT NULL,
 		content TEXT NOT NULL,
+		context TEXT,
 		tags TEXT, -- JSON array
 		metadata TEXT, -- JSON object
 		embedding BLOB, -- Binary embedding vector
+		has_embedding BOOLEAN DEFAULT FALSE,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
