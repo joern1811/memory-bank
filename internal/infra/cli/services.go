@@ -45,8 +45,10 @@ func NewServiceContainer() (*ServiceContainer, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	// Initialize memory repository
+	// Initialize repositories
 	memoryRepo := database.NewSQLiteMemoryRepository(db, logger)
+	sessionRepo := database.NewSQLiteSessionRepository(db, logger)
+	projectRepo := database.NewSQLiteProjectRepository(db, logger)
 
 	// Initialize embedding provider (Ollama with Mock fallback)
 	ollamaConfig := embedding.OllamaConfig{
@@ -78,8 +80,8 @@ func NewServiceContainer() (*ServiceContainer, error) {
 
 	// Initialize services
 	memoryService := app.NewMemoryService(memoryRepo, embeddingProvider, vectorStore, logger)
-	projectService := app.NewProjectService(nil, logger) // TODO: Implement project repository
-	sessionService := app.NewSessionService(nil, nil, logger) // TODO: Implement repositories
+	projectService := app.NewProjectService(projectRepo, logger)
+	sessionService := app.NewSessionService(sessionRepo, projectRepo, logger)
 
 	return &ServiceContainer{
 		MemoryService:  memoryService,
