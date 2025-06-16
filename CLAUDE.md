@@ -179,6 +179,194 @@ ollama pull nomic-embed-text
 docker run -p 8000:8000 chromadb/chroma
 ```
 
+## MCP Client Configuration
+
+Memory Bank can be integrated with various MCP clients. Below are configuration examples for the most popular clients:
+
+### Claude Desktop (Anthropic Official)
+
+Add to your Claude Desktop configuration file (`~/.config/claude-desktop/config.json` on Linux/macOS, `%APPDATA%\claude-desktop\config.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "memory-bank": {
+      "command": "/path/to/memory-bank/memory-bank",
+      "args": ["server"],
+      "env": {
+        "OLLAMA_BASE_URL": "http://localhost:11434",
+        "OLLAMA_MODEL": "nomic-embed-text",
+        "CHROMADB_BASE_URL": "http://localhost:8000",
+        "CHROMADB_COLLECTION": "memory_bank",
+        "MEMORY_BANK_DB_PATH": "/path/to/memory_bank.db"
+      }
+    }
+  }
+}
+```
+
+### Claude Code (VS Code Extension)
+
+Add to your VS Code settings (`settings.json`):
+
+```json
+{
+  "claude-code.mcpServers": {
+    "memory-bank": {
+      "command": "/path/to/memory-bank/memory-bank",
+      "args": ["server"],
+      "env": {
+        "OLLAMA_BASE_URL": "http://localhost:11434",
+        "OLLAMA_MODEL": "nomic-embed-text",
+        "CHROMADB_BASE_URL": "http://localhost:8000",
+        "CHROMADB_COLLECTION": "memory_bank",
+        "MEMORY_BANK_DB_PATH": "/path/to/memory_bank.db"
+      }
+    }
+  }
+}
+```
+
+### MCP Inspector (Development/Testing)
+
+For development and debugging, use the MCP Inspector:
+
+```bash
+# Install MCP Inspector
+npm install -g @modelcontextprotocol/inspector
+
+# Start Memory Bank server
+./memory-bank server &
+
+# Connect with inspector
+mcp-inspector --transport stdio --command "./memory-bank server"
+```
+
+### Generic MCP Client Configuration
+
+For any MCP client that supports stdio transport:
+
+```json
+{
+  "name": "memory-bank",
+  "transport": {
+    "type": "stdio",
+    "command": "/path/to/memory-bank/memory-bank",
+    "args": ["server"]
+  },
+  "environment": {
+    "OLLAMA_BASE_URL": "http://localhost:11434",
+    "OLLAMA_MODEL": "nomic-embed-text",
+    "CHROMADB_BASE_URL": "http://localhost:8000",
+    "CHROMADB_COLLECTION": "memory_bank",
+    "MEMORY_BANK_DB_PATH": "/path/to/memory_bank.db"
+  }
+}
+```
+
+### Docker-based Configuration
+
+For containerized environments, create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+services:
+  memory-bank:
+    build: .
+    command: ["./memory-bank", "server"]
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMADB_BASE_URL=http://chromadb:8000
+      - MEMORY_BANK_DB_PATH=/data/memory_bank.db
+    volumes:
+      - ./data:/data
+    depends_on:
+      - ollama
+      - chromadb
+  
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+  
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+
+volumes:
+  ollama_data:
+  chromadb_data:
+```
+
+### Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_MODEL` | `nomic-embed-text` | Embedding model name |
+| `CHROMADB_BASE_URL` | `http://localhost:8000` | ChromaDB server URL |
+| `CHROMADB_COLLECTION` | `memory_bank` | ChromaDB collection name |
+| `MEMORY_BANK_DB_PATH` | `./memory_bank.db` | SQLite database path |
+| `MEMORY_BANK_LOG_LEVEL` | `info` | Logging level (debug, info, warn, error) |
+
+### Client-Specific Features
+
+#### Resource Access
+All MCP clients can access the dynamic system prompt resource:
+```json
+{
+  "method": "resources/read",
+  "params": {
+    "uri": "prompt://memory-bank/system"
+  }
+}
+```
+
+#### Tool Discovery
+Memory Bank exposes all operations as MCP tools that can be discovered via:
+```json
+{
+  "method": "tools/list"
+}
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Server fails to start**: Check if the binary path is correct and executable
+2. **Ollama connection fails**: Verify Ollama is running and accessible
+3. **ChromaDB connection fails**: Ensure ChromaDB is running or disable for mock fallback
+4. **Permission errors**: Check file permissions for the database path
+5. **Port conflicts**: Verify ports 11434 (Ollama) and 8000 (ChromaDB) are available
+
+#### Debug Mode
+
+Enable debug logging in any client:
+```json
+{
+  "env": {
+    "MEMORY_BANK_LOG_LEVEL": "debug"
+  }
+}
+```
+
+#### Health Check
+
+Test the MCP server manually:
+```bash
+# Start server
+./memory-bank server
+
+# In another terminal, test with echo
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | ./memory-bank server
+```
+
 ### Development Setup
 ```bash
 cd /Users/jdombrowski/git/claude/projects/memory-bank
