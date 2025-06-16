@@ -181,7 +181,9 @@ docker run -p 8000:8000 chromadb/chroma
 
 ## MCP Client Configuration
 
-Memory Bank can be integrated with various MCP clients. Below are configuration examples for the most popular clients:
+⚠️ **Important**: The MCP server implementation currently has critical bugs and is not functional. The server starts but cannot process MCP requests. Use CLI mode instead until the MCP implementation is fixed.
+
+Below are the intended configuration examples for when the MCP server is working:
 
 ### Claude Desktop (Anthropic Official)
 
@@ -789,9 +791,15 @@ Returns comprehensive system prompt with:
 8. ✅ **MCP System Prompt Resource**: Dynamic system prompts with project context and usage guidance
 
 ### Known Issues & Limitations
-- **MCP server implementation**: Uses context blocking instead of proper serve method
+- **🚨 MCP server not functional**: Server starts but doesn't process MCP requests due to implementation issues:
+  - JSON-RPC method handlers are implemented but not registered with the MCP server
+  - Missing stdio transport setup - server blocks on context instead of serving MCP protocol
+  - Only the system prompt resource is registered, no actual MCP methods
 - **Mock vector search**: Semantic search only works with ChromaDB (mock returns empty results)
 - **Session progress storage**: Progress stored as JSON in description field (legacy schema compatibility)
+
+### Current MCP Status
+❌ **MCP Integration Currently Broken**: The server starts and logs success but cannot process MCP requests. CLI mode works perfectly.
 
 ### Performance Considerations ⚡
 - **Mock Fallbacks**: Automatic fallback to mock providers ensures reliability
