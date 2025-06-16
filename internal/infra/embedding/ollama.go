@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/joern1811/memory-bank/internal/domain"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"sync"
 	"time"
-	"github.com/joern1811/memory-bank/internal/domain"
-	"github.com/sirupsen/logrus"
 )
 
 // OllamaProvider implements the EmbeddingProvider interface using Ollama
@@ -20,7 +20,7 @@ type OllamaProvider struct {
 	client                *http.Client
 	logger                *logrus.Logger
 	maxConcurrentRequests int
-	semaphore            chan struct{}
+	semaphore             chan struct{}
 }
 
 // OllamaConfig holds configuration for Ollama provider
@@ -55,15 +55,15 @@ func NewOllamaProvider(config OllamaConfig, logger *logrus.Logger) *OllamaProvid
 	}
 
 	return &OllamaProvider{
-		baseURL:               config.BaseURL,
-		model:                 config.Model,
+		baseURL: config.BaseURL,
+		model:   config.Model,
 		client: &http.Client{
 			Timeout:   config.Timeout,
 			Transport: transport,
 		},
 		logger:                logger,
 		maxConcurrentRequests: config.MaxConcurrentRequests,
-		semaphore:            make(chan struct{}, config.MaxConcurrentRequests),
+		semaphore:             make(chan struct{}, config.MaxConcurrentRequests),
 	}
 }
 
@@ -82,7 +82,7 @@ type ollamaEmbeddingResponse struct {
 // GenerateEmbedding generates an embedding for a single text
 func (p *OllamaProvider) GenerateEmbedding(ctx context.Context, text string) (domain.EmbeddingVector, error) {
 	p.logger.WithFields(logrus.Fields{
-		"model":      p.model,
+		"model":       p.model,
 		"text_length": len(text),
 	}).Debug("Generating embedding")
 
@@ -157,25 +157,25 @@ func (p *OllamaProvider) GenerateBatchEmbeddings(ctx context.Context, texts []st
 
 	embeddings := make([]domain.EmbeddingVector, len(texts))
 	errors := make([]error, len(texts))
-	
+
 	var wg sync.WaitGroup
 	for i, text := range texts {
 		wg.Add(1)
 		go func(index int, content string) {
 			defer wg.Done()
-			
+
 			// Acquire semaphore for concurrency control
 			p.semaphore <- struct{}{}
 			defer func() { <-p.semaphore }()
-			
+
 			embedding, err := p.GenerateEmbedding(ctx, content)
 			embeddings[index] = embedding
 			errors[index] = err
 		}(i, text)
 	}
-	
+
 	wg.Wait()
-	
+
 	// Check for any errors
 	for i, err := range errors {
 		if err != nil {
@@ -236,22 +236,22 @@ func NewMockEmbeddingProvider(dimensions int, logger *logrus.Logger) *MockEmbedd
 // GenerateEmbedding generates a mock embedding
 func (m *MockEmbeddingProvider) GenerateEmbedding(ctx context.Context, text string) (domain.EmbeddingVector, error) {
 	m.logger.Debug("Generating mock embedding")
-	
+
 	// Generate deterministic mock embedding based on text hash
 	embedding := make(domain.EmbeddingVector, m.dimensions)
 	hash := simpleHash(text)
-	
+
 	for i := range embedding {
-		embedding[i] = float32((hash + i) % 100) / 100.0
+		embedding[i] = float32((hash+i)%100) / 100.0
 	}
-	
+
 	return embedding, nil
 }
 
 // GenerateBatchEmbeddings generates mock embeddings for multiple texts
 func (m *MockEmbeddingProvider) GenerateBatchEmbeddings(ctx context.Context, texts []string) ([]domain.EmbeddingVector, error) {
 	embeddings := make([]domain.EmbeddingVector, len(texts))
-	
+
 	for i, text := range texts {
 		embedding, err := m.GenerateEmbedding(ctx, text)
 		if err != nil {
@@ -259,7 +259,7 @@ func (m *MockEmbeddingProvider) GenerateBatchEmbeddings(ctx context.Context, tex
 		}
 		embeddings[i] = embedding
 	}
-	
+
 	return embeddings, nil
 }
 

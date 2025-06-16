@@ -3,11 +3,11 @@ package app
 import (
 	"context"
 	"fmt"
-	"sort"
-	"strings"
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/sirupsen/logrus"
+	"sort"
+	"strings"
 )
 
 // MemoryService implements the memory service use cases
@@ -46,7 +46,7 @@ func (s *MemoryService) CreateMemory(ctx context.Context, req ports.CreateMemory
 	if req.SessionID != nil {
 		memory.SessionID = req.SessionID
 	}
-	
+
 	// Add tags
 	for _, tag := range req.Tags {
 		memory.AddTag(tag)
@@ -743,13 +743,13 @@ func (s *MemoryService) generateFacets(ctx context.Context, results []ports.Memo
 func (s *MemoryService) generateTimePeriodFacets(results []ports.MemorySearchResult) []ports.TimePeriodFacet {
 	// Simplified time period implementation
 	// In a real implementation, this would use actual timestamps from memories
-	
+
 	periods := map[string]int{
-		"Today":     0,
-		"This week": 0,
+		"Today":      0,
+		"This week":  0,
 		"This month": 0,
-		"This year": 0,
-		"Older":     0,
+		"This year":  0,
+		"Older":      0,
 	}
 
 	// For now, simulate distribution
@@ -899,7 +899,7 @@ func (s *MemoryService) extractContentSnippets(content string, queryTerms []stri
 		if index != -1 {
 			start := max(0, index-50)
 			end := min(len(content), index+len(term)+50)
-			
+
 			snippet := content[start:end]
 			if start > 0 {
 				snippet = "..." + snippet
@@ -907,10 +907,10 @@ func (s *MemoryService) extractContentSnippets(content string, queryTerms []stri
 			if end < len(content) {
 				snippet = snippet + "..."
 			}
-			
+
 			highlighted := s.highlightText(snippet, queryTerms)
 			snippets = append(snippets, highlighted)
-			
+
 			if len(snippets) >= maxSnippets {
 				break
 			}

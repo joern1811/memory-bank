@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
-	"github.com/sirupsen/logrus"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sirupsen/logrus"
+	"strings"
 )
 
 // NewSQLiteDatabase creates a new SQLite database connection and runs migrations

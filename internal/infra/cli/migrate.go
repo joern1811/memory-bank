@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/joern1811/memory-bank/internal/infra/database"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // migrateCmd represents the migrate command

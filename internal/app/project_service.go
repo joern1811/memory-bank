@@ -3,10 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/sirupsen/logrus"
+	"path/filepath"
 )
 
 // ProjectService implements the project service use cases
@@ -167,15 +167,15 @@ func (s *ProjectService) InitializeProject(ctx context.Context, path string, req
 func (s *ProjectService) detectLanguage(path string) string {
 	// Simple heuristics based on common files
 	commonFiles := map[string]string{
-		"go.mod":         "go",
-		"package.json":   "javascript",
-		"pom.xml":        "java",
-		"build.gradle":   "java",
-		"Cargo.toml":     "rust",
+		"go.mod":           "go",
+		"package.json":     "javascript",
+		"pom.xml":          "java",
+		"build.gradle":     "java",
+		"Cargo.toml":       "rust",
 		"requirements.txt": "python",
-		"setup.py":       "python",
-		"Gemfile":        "ruby",
-		"composer.json":  "php",
+		"setup.py":         "python",
+		"Gemfile":          "ruby",
+		"composer.json":    "php",
 	}
 
 	for file, language := range commonFiles {
