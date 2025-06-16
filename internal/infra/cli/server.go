@@ -132,11 +132,24 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 
 	logger.Info("Memory Bank MCP Server started successfully")
 
-	// Block on the context
-	<-ctx.Done()
-	logger.Info("Context cancelled, shutting down server")
+	// Start serving MCP protocol over stdio in a goroutine
+	serverErr := make(chan error, 1)
+	go func() {
+		logger.Debug("Starting MCP server stdio transport")
+		if err := server.ServeStdio(mcpServer); err != nil {
+			serverErr <- fmt.Errorf("MCP server failed: %w", err)
+		}
+	}()
 
-	return nil
+	// Wait for either context cancellation or server error
+	select {
+	case <-ctx.Done():
+		logger.Info("Context cancelled, shutting down server")
+		return nil
+	case err := <-serverErr:
+		logger.WithError(err).Error("MCP server failed")
+		return err
+	}
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

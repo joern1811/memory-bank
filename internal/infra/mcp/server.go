@@ -37,7 +37,7 @@ func NewMemoryBankServer(
 	}
 }
 
-// RegisterMethods registers all MCP methods and resources for the Memory Bank server
+// RegisterMethods registers all MCP tools and resources for the Memory Bank server
 func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	// Register system prompt resource
 	systemPromptResource := mcp.NewResource(
@@ -49,7 +49,127 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 
 	mcpServer.AddResource(systemPromptResource, s.handleSystemPromptResource)
 	
-	s.logger.Info("MCP methods and resources registered successfully")
+	// Register Memory operations as tools
+	mcpServer.AddTool(mcp.NewTool("memory/create",
+		mcp.WithDescription("Create a new memory entry"),
+		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
+		mcp.WithString("type", mcp.Description("Memory type"), mcp.Required()),
+		mcp.WithString("title", mcp.Description("Memory title"), mcp.Required()),
+		mcp.WithString("content", mcp.Description("Memory content"), mcp.Required()),
+		mcp.WithArray("tags", mcp.Description("Memory tags")),
+		mcp.WithString("session_id", mcp.Description("Session ID")),
+	), s.handleCreateMemoryTool)
+	
+	mcpServer.AddTool(mcp.NewTool("memory/search",
+		mcp.WithDescription("Search memories semantically"),
+		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
+		mcp.WithString("type", mcp.Description("Memory type to filter by")),
+		mcp.WithArray("tags", mcp.Description("Tags to filter by")),
+		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
+		mcp.WithNumber("threshold", mcp.Description("Similarity threshold")),
+	), s.handleSearchMemoriesTool)
+	
+	mcpServer.AddTool(mcp.NewTool("memory/get",
+		mcp.WithDescription("Get a specific memory by ID"),
+		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
+	), s.handleGetMemoryTool)
+	
+	mcpServer.AddTool(mcp.NewTool("memory/update",
+		mcp.WithDescription("Update an existing memory"),
+		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
+		mcp.WithString("title", mcp.Description("New title")),
+		mcp.WithString("content", mcp.Description("New content")),
+		mcp.WithArray("tags", mcp.Description("New tags")),
+	), s.handleUpdateMemoryTool)
+	
+	mcpServer.AddTool(mcp.NewTool("memory/delete",
+		mcp.WithDescription("Delete a memory"),
+		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
+	), s.handleDeleteMemoryTool)
+	
+	mcpServer.AddTool(mcp.NewTool("memory/list",
+		mcp.WithDescription("List memories with optional filters"),
+		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
+		mcp.WithString("type", mcp.Description("Memory type to filter by")),
+		mcp.WithArray("tags", mcp.Description("Tags to filter by")),
+	), s.handleListMemoriesTool)
+	
+	// Register advanced search operations
+	mcpServer.AddTool(mcp.NewTool("memory/faceted-search",
+		mcp.WithDescription("Advanced search with facets and filters"),
+		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
+		mcp.WithObject("filters", mcp.Description("Search filters")),
+		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
+		mcp.WithNumber("threshold", mcp.Description("Similarity threshold")),
+		mcp.WithBoolean("include_facets", mcp.Description("Include facets in response")),
+		mcp.WithObject("sort_by", mcp.Description("Sort options")),
+	), s.handleFacetedSearchTool)
+	
+	mcpServer.AddTool(mcp.NewTool("memory/enhanced-search",
+		mcp.WithDescription("Enhanced search with relevance scoring and highlights"),
+		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
+		mcp.WithString("type", mcp.Description("Memory type to filter by")),
+		mcp.WithArray("tags", mcp.Description("Tags to filter by")),
+		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
+		mcp.WithNumber("threshold", mcp.Description("Similarity threshold")),
+	), s.handleEnhancedSearchTool)
+	
+	mcpServer.AddTool(mcp.NewTool("memory/search-suggestions",
+		mcp.WithDescription("Get intelligent search suggestions"),
+		mcp.WithString("partial_query", mcp.Description("Partial query for suggestions"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
+		mcp.WithNumber("limit", mcp.Description("Maximum number of suggestions")),
+	), s.handleSearchSuggestionsTool)
+	
+	// Register Project operations
+	mcpServer.AddTool(mcp.NewTool("project/init",
+		mcp.WithDescription("Initialize a new project"),
+		mcp.WithString("name", mcp.Description("Project name"), mcp.Required()),
+		mcp.WithString("path", mcp.Description("Project path"), mcp.Required()),
+		mcp.WithString("description", mcp.Description("Project description")),
+	), s.handleInitProjectTool)
+	
+	mcpServer.AddTool(mcp.NewTool("project/get",
+		mcp.WithDescription("Get project information"),
+		mcp.WithString("id", mcp.Description("Project ID")),
+		mcp.WithString("path", mcp.Description("Project path")),
+	), s.handleGetProjectTool)
+	
+	mcpServer.AddTool(mcp.NewTool("project/list",
+		mcp.WithDescription("List all projects"),
+	), s.handleListProjectsTool)
+	
+	// Register Session operations
+	mcpServer.AddTool(mcp.NewTool("session/start",
+		mcp.WithDescription("Start a new development session"),
+		mcp.WithString("title", mcp.Description("Session title"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
+		mcp.WithString("description", mcp.Description("Session description")),
+	), s.handleStartSessionTool)
+	
+	mcpServer.AddTool(mcp.NewTool("session/log",
+		mcp.WithDescription("Log progress to the active session"),
+		mcp.WithString("message", mcp.Description("Progress message"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID")),
+		mcp.WithString("session_id", mcp.Description("Session ID")),
+	), s.handleLogSessionTool)
+	
+	mcpServer.AddTool(mcp.NewTool("session/complete",
+		mcp.WithDescription("Complete a development session"),
+		mcp.WithString("outcome", mcp.Description("Session outcome"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID")),
+		mcp.WithString("session_id", mcp.Description("Session ID")),
+	), s.handleCompleteSessionTool)
+	
+	mcpServer.AddTool(mcp.NewTool("session/get",
+		mcp.WithDescription("Get session details"),
+		mcp.WithString("id", mcp.Description("Session ID"), mcp.Required()),
+	), s.handleGetSessionTool)
+	
+	s.logger.Info("MCP tools and resources registered successfully")
 }
 
 // CreateMemoryRequest represents a request to create a new memory
@@ -67,6 +187,58 @@ type CreateMemoryRequest struct {
 type CreateMemoryResponse struct {
 	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// Tool handlers that wrap the existing handlers to match MCP tool interface
+func (s *MemoryBankServer) handleCreateMemoryTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Debug("Handling memory/create tool request")
+	
+	// Convert tool arguments to JSON for reuse with existing handler
+	params, err := json.Marshal(request.Params.Arguments)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error marshaling arguments: %v", err),
+				},
+			},
+		}, nil
+	}
+	
+	result, err := s.handleCreateMemory(ctx, params)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error: %v", err),
+				},
+			},
+		}, nil
+	}
+	
+	// Convert result to JSON string for MCP response
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error marshaling result: %v", err),
+				},
+			},
+		}, nil
+	}
+	
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: string(resultJSON),
+			},
+		},
+	}, nil
 }
 
 func (s *MemoryBankServer) handleCreateMemory(ctx context.Context, params json.RawMessage) (interface{}, error) {
@@ -1213,4 +1385,132 @@ func (s *MemoryBankServer) buildMemoryContext(ctx context.Context, projects []*d
 	}
 	
 	return context.String()
+}
+
+// Additional tool wrapper functions
+func (s *MemoryBankServer) handleSearchMemoriesTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	params, err := json.Marshal(request.Params.Arguments)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error marshaling arguments: %v", err)},
+			},
+		}, nil
+	}
+	
+	result, err := s.handleSearchMemories(ctx, params)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)},
+			},
+		}, nil
+	}
+	
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error marshaling result: %v", err)},
+			},
+		}, nil
+	}
+	
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{Type: "text", Text: string(resultJSON)},
+		},
+	}, nil
+}
+
+// Utility function to wrap existing handlers for MCP tool interface
+func (s *MemoryBankServer) wrapHandler(ctx context.Context, request mcp.CallToolRequest, handler func(context.Context, json.RawMessage) (interface{}, error)) (*mcp.CallToolResult, error) {
+	params, err := json.Marshal(request.Params.Arguments)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error marshaling arguments: %v", err)},
+			},
+		}, nil
+	}
+	
+	result, err := handler(ctx, params)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error: %v", err)},
+			},
+		}, nil
+	}
+	
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{Type: "text", Text: fmt.Sprintf("Error marshaling result: %v", err)},
+			},
+		}, nil
+	}
+	
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{Type: "text", Text: string(resultJSON)},
+		},
+	}, nil
+}
+
+func (s *MemoryBankServer) handleGetMemoryTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleGetMemory)
+}
+
+func (s *MemoryBankServer) handleUpdateMemoryTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleUpdateMemory)
+}
+
+func (s *MemoryBankServer) handleDeleteMemoryTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleDeleteMemory)
+}
+
+func (s *MemoryBankServer) handleListMemoriesTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleListMemories)
+}
+
+func (s *MemoryBankServer) handleFacetedSearchTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleFacetedSearch)
+}
+
+func (s *MemoryBankServer) handleEnhancedSearchTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleEnhancedSearch)
+}
+
+func (s *MemoryBankServer) handleSearchSuggestionsTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleSearchSuggestions)
+}
+
+func (s *MemoryBankServer) handleInitProjectTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleInitProject)
+}
+
+func (s *MemoryBankServer) handleGetProjectTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleGetProject)
+}
+
+func (s *MemoryBankServer) handleListProjectsTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleListProjects)
+}
+
+func (s *MemoryBankServer) handleStartSessionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleStartSession)
+}
+
+func (s *MemoryBankServer) handleLogSessionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleLogSession)
+}
+
+func (s *MemoryBankServer) handleCompleteSessionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleCompleteSession)
+}
+
+func (s *MemoryBankServer) handleGetSessionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleGetSession)
 }
