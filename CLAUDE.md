@@ -229,18 +229,20 @@ Add to your VS Code settings (`settings.json`):
 
 ### MCP Inspector (Development/Testing)
 
-For development and debugging, use the MCP Inspector:
+For development and debugging, test the MCP server manually:
 
 ```bash
-# Install MCP Inspector
-npm install -g @modelcontextprotocol/inspector
-
-# Connect with inspector using stdio transport
-mcp-inspector --transport stdio --command "./memory-bank"
-
-# Or test manually with JSON-RPC
+# Test tools discovery
 echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | ./memory-bank
+
+# Test memory search
+echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "memory/search", "arguments": {"query": "authentication"}}}' | ./memory-bank
+
+# Test project listing  
+echo '{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "project/list", "arguments": {}}}' | ./memory-bank
 ```
+
+**Note**: The `@modelcontextprotocol/inspector` tool may have compatibility issues. Manual JSON-RPC testing works reliably.
 
 ### Generic MCP Client Configuration
 
