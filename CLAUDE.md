@@ -192,7 +192,6 @@ Add to your Claude Desktop configuration file (`~/.config/claude-desktop/config.
   "mcpServers": {
     "memory-bank": {
       "command": "/path/to/memory-bank/memory-bank",
-      "args": ["server"],
       "env": {
         "OLLAMA_BASE_URL": "http://localhost:11434",
         "OLLAMA_MODEL": "nomic-embed-text",
@@ -214,7 +213,6 @@ Add to your VS Code settings (`settings.json`):
   "claude-code.mcpServers": {
     "memory-bank": {
       "command": "/path/to/memory-bank/memory-bank",
-      "args": ["server"],
       "env": {
         "OLLAMA_BASE_URL": "http://localhost:11434",
         "OLLAMA_MODEL": "nomic-embed-text",
@@ -235,11 +233,11 @@ For development and debugging, use the MCP Inspector:
 # Install MCP Inspector
 npm install -g @modelcontextprotocol/inspector
 
-# Start Memory Bank server
-./memory-bank server &
+# Connect with inspector using stdio transport
+mcp-inspector --transport stdio --command "./memory-bank"
 
-# Connect with inspector
-mcp-inspector --transport stdio --command "./memory-bank server"
+# Or test manually with JSON-RPC
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | ./memory-bank
 ```
 
 ### Generic MCP Client Configuration
@@ -251,8 +249,7 @@ For any MCP client that supports stdio transport:
   "name": "memory-bank",
   "transport": {
     "type": "stdio",
-    "command": "/path/to/memory-bank/memory-bank",
-    "args": ["server"]
+    "command": "/path/to/memory-bank/memory-bank"
   },
   "environment": {
     "OLLAMA_BASE_URL": "http://localhost:11434",
@@ -358,14 +355,28 @@ Enable debug logging in any client:
 
 #### Health Check
 
-Test the MCP server manually:
+Test the MCP server manually using stdio transport:
 ```bash
-# Start server
-./memory-bank server
+# Test MCP server directly via stdio
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | ./memory-bank
 
-# In another terminal, test with echo
-echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | ./memory-bank server
+# The response should be a JSON-RPC response with available tools
 ```
+
+#### Understanding MCP Transport
+
+**Important**: MCP (Model Context Protocol) always uses **stdio transport**:
+
+- **Client** starts the server process and communicates via stdin/stdout
+- **Server** reads JSON-RPC requests from stdin, writes responses to stdout  
+- **No separate server process** - each client spawns its own server instance
+- **Process lifecycle** - server runs only while client needs it
+
+This is why:
+- No `args: ["server"]` needed in client configuration
+- No persistent server process running in background
+- Each MCP client starts its own server instance
+- Communication happens through standard input/output streams
 
 ### Development Setup
 ```bash
