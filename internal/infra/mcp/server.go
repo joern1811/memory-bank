@@ -50,7 +50,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	mcpServer.AddResource(systemPromptResource, s.handleSystemPromptResource)
 	
 	// Register Memory operations as tools
-	mcpServer.AddTool(mcp.NewTool("memory/create",
+	mcpServer.AddTool(mcp.NewTool("memory_create",
 		mcp.WithDescription("Create a new memory entry"),
 		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
 		mcp.WithString("type", mcp.Description("Memory type"), mcp.Required()),
@@ -60,7 +60,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithString("session_id", mcp.Description("Session ID")),
 	), s.handleCreateMemoryTool)
 	
-	mcpServer.AddTool(mcp.NewTool("memory/search",
+	mcpServer.AddTool(mcp.NewTool("memory_search",
 		mcp.WithDescription("Search memories semantically"),
 		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
@@ -70,12 +70,12 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithNumber("threshold", mcp.Description("Similarity threshold")),
 	), s.handleSearchMemoriesTool)
 	
-	mcpServer.AddTool(mcp.NewTool("memory/get",
+	mcpServer.AddTool(mcp.NewTool("memory_get",
 		mcp.WithDescription("Get a specific memory by ID"),
 		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
 	), s.handleGetMemoryTool)
 	
-	mcpServer.AddTool(mcp.NewTool("memory/update",
+	mcpServer.AddTool(mcp.NewTool("memory_update",
 		mcp.WithDescription("Update an existing memory"),
 		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
 		mcp.WithString("title", mcp.Description("New title")),
@@ -83,12 +83,12 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithArray("tags", mcp.Description("New tags")),
 	), s.handleUpdateMemoryTool)
 	
-	mcpServer.AddTool(mcp.NewTool("memory/delete",
+	mcpServer.AddTool(mcp.NewTool("memory_delete",
 		mcp.WithDescription("Delete a memory"),
 		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
 	), s.handleDeleteMemoryTool)
 	
-	mcpServer.AddTool(mcp.NewTool("memory/list",
+	mcpServer.AddTool(mcp.NewTool("memory_list",
 		mcp.WithDescription("List memories with optional filters"),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
 		mcp.WithString("type", mcp.Description("Memory type to filter by")),
@@ -96,7 +96,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	), s.handleListMemoriesTool)
 	
 	// Register advanced search operations
-	mcpServer.AddTool(mcp.NewTool("memory/faceted-search",
+	mcpServer.AddTool(mcp.NewTool("memory_faceted-search",
 		mcp.WithDescription("Advanced search with facets and filters"),
 		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
@@ -107,7 +107,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithObject("sort_by", mcp.Description("Sort options")),
 	), s.handleFacetedSearchTool)
 	
-	mcpServer.AddTool(mcp.NewTool("memory/enhanced-search",
+	mcpServer.AddTool(mcp.NewTool("memory_enhanced-search",
 		mcp.WithDescription("Enhanced search with relevance scoring and highlights"),
 		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
@@ -117,7 +117,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithNumber("threshold", mcp.Description("Similarity threshold")),
 	), s.handleEnhancedSearchTool)
 	
-	mcpServer.AddTool(mcp.NewTool("memory/search-suggestions",
+	mcpServer.AddTool(mcp.NewTool("memory_search-suggestions",
 		mcp.WithDescription("Get intelligent search suggestions"),
 		mcp.WithString("partial_query", mcp.Description("Partial query for suggestions"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
@@ -125,46 +125,46 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	), s.handleSearchSuggestionsTool)
 	
 	// Register Project operations
-	mcpServer.AddTool(mcp.NewTool("project/init",
+	mcpServer.AddTool(mcp.NewTool("project_init",
 		mcp.WithDescription("Initialize a new project"),
 		mcp.WithString("name", mcp.Description("Project name"), mcp.Required()),
 		mcp.WithString("path", mcp.Description("Project path"), mcp.Required()),
 		mcp.WithString("description", mcp.Description("Project description")),
 	), s.handleInitProjectTool)
 	
-	mcpServer.AddTool(mcp.NewTool("project/get",
+	mcpServer.AddTool(mcp.NewTool("project_get",
 		mcp.WithDescription("Get project information"),
 		mcp.WithString("id", mcp.Description("Project ID")),
 		mcp.WithString("path", mcp.Description("Project path")),
 	), s.handleGetProjectTool)
 	
-	mcpServer.AddTool(mcp.NewTool("project/list",
+	mcpServer.AddTool(mcp.NewTool("project_list",
 		mcp.WithDescription("List all projects"),
 	), s.handleListProjectsTool)
 	
 	// Register Session operations
-	mcpServer.AddTool(mcp.NewTool("session/start",
+	mcpServer.AddTool(mcp.NewTool("session_start",
 		mcp.WithDescription("Start a new development session"),
 		mcp.WithString("title", mcp.Description("Session title"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
 		mcp.WithString("description", mcp.Description("Session description")),
 	), s.handleStartSessionTool)
 	
-	mcpServer.AddTool(mcp.NewTool("session/log",
+	mcpServer.AddTool(mcp.NewTool("session_log",
 		mcp.WithDescription("Log progress to the active session"),
 		mcp.WithString("message", mcp.Description("Progress message"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID")),
 		mcp.WithString("session_id", mcp.Description("Session ID")),
 	), s.handleLogSessionTool)
 	
-	mcpServer.AddTool(mcp.NewTool("session/complete",
+	mcpServer.AddTool(mcp.NewTool("session_complete",
 		mcp.WithDescription("Complete a development session"),
 		mcp.WithString("outcome", mcp.Description("Session outcome"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID")),
 		mcp.WithString("session_id", mcp.Description("Session ID")),
 	), s.handleCompleteSessionTool)
 	
-	mcpServer.AddTool(mcp.NewTool("session/get",
+	mcpServer.AddTool(mcp.NewTool("session_get",
 		mcp.WithDescription("Get session details"),
 		mcp.WithString("id", mcp.Description("Session ID"), mcp.Required()),
 	), s.handleGetSessionTool)
