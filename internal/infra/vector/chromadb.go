@@ -116,7 +116,7 @@ func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domai
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections/%s/add", c.baseURL, c.collection)
+	url := fmt.Sprintf("%s/api/v2/collections/%s/add", c.baseURL, c.collection)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -172,7 +172,7 @@ func (c *ChromaDBVectorStore) BatchStore(ctx context.Context, items []ports.Batc
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections/%s/add", c.baseURL, c.collection)
+	url := fmt.Sprintf("%s/api/v2/collections/%s/add", c.baseURL, c.collection)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -219,7 +219,7 @@ func (c *ChromaDBVectorStore) BatchDelete(ctx context.Context, ids []string) err
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections/%s/delete", c.baseURL, c.collection)
+	url := fmt.Sprintf("%s/api/v2/collections/%s/delete", c.baseURL, c.collection)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -262,7 +262,7 @@ func (c *ChromaDBVectorStore) Delete(ctx context.Context, id string) error {
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections/%s/delete", c.baseURL, c.collection)
+	url := fmt.Sprintf("%s/api/v2/collections/%s/delete", c.baseURL, c.collection)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -309,7 +309,7 @@ func (c *ChromaDBVectorStore) Update(ctx context.Context, id string, vector doma
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections/%s/update", c.baseURL, c.collection)
+	url := fmt.Sprintf("%s/api/v2/collections/%s/update", c.baseURL, c.collection)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -356,7 +356,7 @@ func (c *ChromaDBVectorStore) Search(ctx context.Context, vector domain.Embeddin
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections/%s/query", c.baseURL, c.collection)
+	url := fmt.Sprintf("%s/api/v2/collections/%s/query", c.baseURL, c.collection)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -440,7 +440,7 @@ func (c *ChromaDBVectorStore) CreateCollection(ctx context.Context, name string)
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections", c.baseURL)
+	url := fmt.Sprintf("%s/api/v2/collections", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -470,7 +470,7 @@ func (c *ChromaDBVectorStore) DeleteCollection(ctx context.Context, name string)
 	c.logger.WithField("collection", name).Debug("Deleting collection from ChromaDB")
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections/%s", c.baseURL, name)
+	url := fmt.Sprintf("%s/api/v2/collections/%s", c.baseURL, name)
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -498,7 +498,7 @@ func (c *ChromaDBVectorStore) ListCollections(ctx context.Context) ([]string, er
 	c.logger.Debug("Listing collections from ChromaDB")
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v1/collections", c.baseURL)
+	url := fmt.Sprintf("%s/api/v2/collections", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -541,10 +541,24 @@ func (c *ChromaDBVectorStore) ListCollections(ctx context.Context) ([]string, er
 func (c *ChromaDBVectorStore) HealthCheck(ctx context.Context) error {
 	c.logger.Debug("Performing ChromaDB health check")
 
-	// Try to list collections as a health check
-	_, err := c.ListCollections(ctx)
+	// Use the dedicated heartbeat endpoint for health checks
+	url := fmt.Sprintf("%s/api/v2/heartbeat", c.baseURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create health check request: %w", err)
+	}
+
+	// Execute request
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("chromadb health check failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("chromadb health check failed (status %d): %s", resp.StatusCode, string(body))
 	}
 
 	c.logger.Info("ChromaDB health check passed")

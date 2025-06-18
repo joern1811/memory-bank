@@ -17,7 +17,7 @@ Memory Bank is a semantic memory management system for Claude Code using hexagon
 - **Language**: Go 1.21+
 - **Database**: SQLite with automatic table initialization
 - **Embeddings**: Ollama (nomic-embed-text model) with Mock fallback
-- **Vector Store**: ChromaDB with Mock fallback
+- **Vector Store**: ChromaDB (v2 API) with Mock fallback
 - **MCP**: github.com/mark3labs/mcp-go v0.32.0
 - **CLI**: Direct MCP server implementation
 - **Logging**: Logrus with structured JSON logging
@@ -168,6 +168,8 @@ go build ./cmd/memory-bank
 ```
 
 ### Production Setup (with Ollama + ChromaDB)
+
+#### Option 1: Native Setup (without Docker)
 ```bash
 # Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
@@ -175,8 +177,18 @@ curl -fsSL https://ollama.com/install.sh | sh
 # Pull embedding model
 ollama pull nomic-embed-text
 
-# Start ChromaDB (optional - will fallback to mock if unavailable)
-docker run -p 8000:8000 chromadb/chroma
+# Start ChromaDB server in background (using uvx - no installation needed)
+uvx --from "chromadb[server]" chroma run --host localhost --port 8000 --path ./chromadb_data &
+```
+
+#### Option 2: Docker Setup
+```bash
+# Install Ollama (native)
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull nomic-embed-text
+
+# Start ChromaDB (Docker)
+docker run -p 8000:8000 -v ./chromadb_data:/chroma/chroma chromadb/chroma
 ```
 
 ## MCP Client Configuration
@@ -806,6 +818,15 @@ Returns comprehensive system prompt with:
 - **✅ Advanced Search Features**: Faceted search, enhanced relevance scoring, and intelligent suggestions
 - **✅ MCP System Prompt Resource**: Dynamic, context-aware system prompts for optimal MCP client integration
 - **✅ Fully Functional MCP Server**: Complete MCP protocol implementation with 16 working tools
+
+### ✅ ChromaDB v2 API Migration (v1.9)
+- **✅ API Endpoint Updates**: Successfully migrated all ChromaDB integrations from deprecated v1 API to v2 API
+  - **Collection Operations**: Updated /api/v1/collections → /api/v2/collections for create, list, delete operations
+  - **Vector Operations**: Updated all vector CRUD operations (add, delete, update, query) to use v2 endpoints
+  - **Health Check Enhancement**: Replaced ListCollections() fallback with dedicated /api/v2/heartbeat endpoint
+  - **Test Migration**: Updated all unit tests to expect v2 API endpoints and verify correct behavior
+  - **Backward Compatibility**: Migration maintains full API compatibility with existing memory-bank functionality
+- **✅ Validation**: All tests pass and project builds successfully after v2 migration
 
 ### 📋 Completed Features (All Next Steps)
 1. ✅ **Database Migrations**: Schema versioning system with migration scripts

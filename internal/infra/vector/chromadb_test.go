@@ -49,7 +49,7 @@ func TestChromaDBVectorStore_Store(t *testing.T) {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
 		
-		expectedPath := "/api/v1/collections/test_collection/add"
+		expectedPath := "/api/v2/collections/test_collection/add"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -121,7 +121,7 @@ func TestChromaDBVectorStore_Delete(t *testing.T) {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
 		
-		expectedPath := "/api/v1/collections/test_collection/delete"
+		expectedPath := "/api/v2/collections/test_collection/delete"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -160,7 +160,7 @@ func TestChromaDBVectorStore_Search(t *testing.T) {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
 		
-		expectedPath := "/api/v1/collections/test_collection/query"
+		expectedPath := "/api/v2/collections/test_collection/query"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -255,7 +255,7 @@ func TestChromaDBVectorStore_CreateCollection(t *testing.T) {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
 		
-		expectedPath := "/api/v1/collections"
+		expectedPath := "/api/v2/collections"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -284,7 +284,7 @@ func TestChromaDBVectorStore_ListCollections(t *testing.T) {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
 		
-		expectedPath := "/api/v1/collections"
+		expectedPath := "/api/v2/collections"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
