@@ -28,13 +28,17 @@ All commands support these global flags:
 memory-bank [command] [subcommand] [flags]
 
 Available Commands:
-  init        Initialize a new project
-  memory      Memory management operations
-  search      Global search across all memories
-  session     Development session management
-  server      Start MCP server mode
+  completion  Generate the autocompletion script for the specified shell
   config      Configuration management
-  migrate     Database migration utilities
+  help        Help about any command
+  init        Initialize a new project for memory management
+  memory      Manage memory entries
+  migrate     Database migration management
+  project     Manage projects
+  search      Search across all memory entries
+  server      Start the MCP server
+  session     Manage development sessions
+  version     Print the version number of memory-bank
 ```
 
 ## Project Management
@@ -72,6 +76,86 @@ memory-bank init . --name "New Project" --force
   Name: My API Project
   Path: /current/directory
   Database: ./memory_bank.db
+```
+
+### `project list` - List Projects
+
+List all initialized projects.
+
+**Usage:**
+```bash
+memory-bank project list [flags]
+```
+
+**Flags:**
+- `--limit`: Number of results (default: 20)
+- `--offset`: Pagination offset
+
+**Examples:**
+```bash
+# List all projects
+memory-bank project list
+
+# Paginated listing
+memory-bank project list --limit 5 --offset 10
+```
+
+**Output:**
+```
+ID          Name              Path                    Created           Memories
+proj_abc123 My API Project    /current/directory     2024-01-15 10:30  15
+proj_def456 Frontend App      /path/to/frontend      2024-01-14 14:20  8
+proj_ghi789 Data Pipeline     /path/to/pipeline      2024-01-13 09:15  22
+
+Total: 3 projects
+```
+
+### `project get` - Get Project Details
+
+Retrieve detailed information about a specific project.
+
+**Usage:**
+```bash
+memory-bank project get [project-id-or-name]
+```
+
+**Examples:**
+```bash
+# Get by project ID
+memory-bank project get proj_abc123
+
+# Get by project name
+memory-bank project get "My API Project"
+```
+
+**Output:**
+```
+Project: proj_abc123
+Name: My API Project
+Description: RESTful API with authentication
+Path: /current/directory
+Created: 2024-01-15 10:30:00
+Updated: 2024-01-15 15:45:00
+
+Statistics:
+├─ Total Memories: 15
+├─ Decisions: 5
+├─ Patterns: 6
+├─ Error Solutions: 2
+├─ Code Snippets: 1
+└─ Documentation: 1
+
+Recent Activity:
+├─ Last Memory: 2024-01-15 15:45 (JWT Authentication Pattern)
+├─ Active Sessions: 1
+└─ Completed Sessions: 3
+
+Tags (Top 5):
+├─ auth (8)
+├─ api (6)
+├─ security (5)
+├─ middleware (4)
+└─ database (3)
 ```
 
 ## Memory Management
@@ -324,6 +408,28 @@ Global search results for "error handling patterns":
    Created: 2024-01-13 11:15
 ```
 
+### Advanced Search Features (Future Enhancement)
+
+Memory Bank's search command provides semantic search with various filters. Advanced search features like faceted search, enhanced relevance scoring, and search suggestions are planned for future releases.
+
+**Current Search Capabilities:**
+The basic `search` command provides powerful semantic search across all memories with the following features:
+
+- **Semantic Search**: Vector-based similarity matching
+- **Project Filtering**: Scope search to specific projects  
+- **Type Filtering**: Filter by memory type (decision, pattern, etc.)
+- **Similarity Thresholds**: Control result precision
+- **Result Limiting**: Pagination and result count control
+
+**Planned Advanced Features:**
+- **Faceted Search**: Multi-dimensional filtering with real-time statistics
+- **Enhanced Relevance Scoring**: Detailed match explanations and scoring breakdown
+- **Search Suggestions**: AI-powered query suggestions based on content patterns
+- **Content Highlighting**: Automatic highlighting of matched terms
+- **Search Analytics**: Track search patterns and popular queries
+
+*Note: The above advanced search features are documented for future implementation. Current users should use the basic `search` command with available flags.*
+
 ## Session Management
 
 ### `session start` - Start Development Session
@@ -521,6 +627,164 @@ memory-bank session abort [flags]
 memory-bank session abort --project "my-project"
 ```
 
+**Output:**
+```
+✓ Aborted 1 active session(s) for project "my-project"
+  Session: sess_def456 - "Add rate limiting"
+```
+
+## Additional Commands
+
+### `completion` - Shell Autocompletion
+
+Generate autocompletion scripts for various shells.
+
+**Usage:**
+```bash
+memory-bank completion [shell]
+```
+
+**Supported Shells:**
+- `bash`: Bash shell completion
+- `zsh`: Zsh shell completion  
+- `fish`: Fish shell completion
+- `powershell`: PowerShell completion
+
+**Examples:**
+```bash
+# Generate bash completion
+memory-bank completion bash > /etc/bash_completion.d/memory-bank
+
+# Generate zsh completion
+memory-bank completion zsh > "${fpath[1]}/_memory-bank"
+
+# Install completion for current shell
+source <(memory-bank completion bash)
+
+# Fish shell completion
+memory-bank completion fish > ~/.config/fish/completions/memory-bank.fish
+```
+
+### `help` - Command Help
+
+Get help information for any command.
+
+**Usage:**
+```bash
+memory-bank help [command]
+```
+
+**Examples:**
+```bash
+# General help
+memory-bank help
+
+# Command-specific help
+memory-bank help memory
+memory-bank help search
+memory-bank help session
+
+# Subcommand help
+memory-bank help memory create
+memory-bank help session start
+```
+
+### `version` - Version Information
+
+Display version information and build details.
+
+**Usage:**
+```bash
+memory-bank version [flags]
+```
+
+**Flags:**
+- `--verbose`: Show detailed build information
+
+**Examples:**
+```bash
+# Basic version
+memory-bank version
+
+# Detailed version info
+memory-bank version --verbose
+```
+
+**Output:**
+```
+Memory Bank v1.10.0
+
+# With --verbose:
+Memory Bank v1.10.0
+  Build Date: 2024-01-15T10:30:00Z
+  Git Commit: 29acdd6a
+  Go Version: go1.21.5
+  OS/Arch: darwin/amd64
+  Compiler: gc
+```
+
+## Project Management
+
+### `project` - Project Operations
+
+Manage projects and project-specific operations.
+
+**Usage:**
+```bash
+memory-bank project [subcommand]
+```
+
+**Subcommands:**
+- `list`: List all projects
+- `get`: Get project details
+- `delete`: Delete a project (with confirmation)
+- `stats`: Show project statistics
+
+**Examples:**
+```bash
+# Project statistics
+memory-bank project stats proj_abc123
+memory-bank project stats "My API Project"
+
+# Delete project (requires confirmation)
+memory-bank project delete proj_abc123
+```
+
+**Project Stats Output:**
+```
+Project Statistics: My API Project
+
+Memory Distribution:
+┌────────────────┬───────┬──────────┐
+│ Type           │ Count │ Avg Size │
+├────────────────┼───────┼──────────┤
+│ decision       │ 5     │ 245 chars│
+│ pattern        │ 6     │ 412 chars│
+│ error_solution │ 2     │ 189 chars│
+│ code           │ 1     │ 567 chars│
+│ documentation  │ 1     │ 234 chars│
+└────────────────┴───────┴──────────┘
+
+Activity Timeline:
+├─ First Memory: 2024-01-10 (Database Choice Decision)
+├─ Most Active Day: 2024-01-15 (6 memories created)
+├─ Recent Activity: 2024-01-15 15:45
+└─ Growth Rate: 2.3 memories/day (last 7 days)
+
+Session Summary:
+├─ Total Sessions: 4
+├─ Completed: 3 (avg duration: 2h 15m)
+├─ Active: 1
+└─ Success Rate: 75%
+
+Top Tags:
+├─ auth (8) ████████████████
+├─ api (6) ████████████
+├─ security (5) ██████████
+├─ middleware (4) ████████
+└─ database (3) ██████
+```
+
 ## Configuration Management
 
 ### `config` - Manage Configuration
@@ -553,6 +817,58 @@ memory-bank config set database.path ./custom_memory.db
 
 # Validate configuration
 memory-bank config validate
+
+# Get specific configuration value
+memory-bank config get embedding.provider
+memory-bank config get vector.chromadb.base_url
+
+# Reset configuration to defaults
+memory-bank config reset
+
+# Export configuration (sanitized for sharing)
+memory-bank config export --sanitized
+```
+
+**Additional Config Subcommands:**
+```bash
+# Show configuration locations checked
+memory-bank config locations
+
+# Show configuration with sources (env, file, default)
+memory-bank config show --sources
+
+# Set environment-specific configuration
+memory-bank config set --env production database.path /var/lib/memory-bank/prod.db
+
+# Validate external service connections
+memory-bank config test-connections
+```
+
+**Configuration Export Output:**
+```
+# Memory Bank Configuration Export
+# Generated: 2024-01-15 16:30:00
+# Version: 1.10.0
+
+database:
+  path: "[REDACTED]"
+  max_connections: 25
+
+embedding:
+  provider: "ollama"
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "nomic-embed-text"
+
+vector:
+  provider: "chromadb"
+  chromadb:
+    base_url: "http://localhost:8000"
+    collection: "memory_bank"
+
+logging:
+  level: "info"
+  format: "json"
 ```
 
 ## Database Management
@@ -586,6 +902,29 @@ memory-bank migrate down
 # Reset database (WARNING: destroys all data)
 memory-bank migrate reset
 ```
+
+## Future Enhancements
+
+Memory Bank's CLI is designed for extensibility. Future versions may include additional utility commands for enhanced functionality:
+
+### Planned Utility Commands
+
+**Health and Diagnostics:**
+- `health`: System health checks and diagnostics
+- `benchmark`: Performance benchmarking tools
+- `debug`: Debug utilities and troubleshooting tools
+
+**Data Management:**
+- `backup/restore`: Backup and restore functionality
+- `export/import`: Data export/import in various formats
+- `stats`: Usage statistics and analytics
+
+**Advanced Features:**
+- `watch`: Real-time monitoring of memory bank changes
+- `sync`: Synchronization with remote memory banks
+- `analyze`: Content analysis and insights
+
+*Note: These features are planned for future releases. Current functionality is provided through the core commands: init, memory, search, session, config, migrate, project, server, completion, help, and version.*
 
 ## Server Mode
 
@@ -682,3 +1021,177 @@ memory-bank config set vector.provider chromadb
 # 3. Start capturing knowledge
 memory-bank memory create --type decision --title "Initial architecture" ...
 ```
+
+## Advanced CLI Usage
+
+### Shell Integration
+
+Memory Bank CLI integrates well with shell workflows:
+
+```bash
+# Use with shell pipes and filters
+memory-bank memory list | grep "authentication"
+memory-bank search "database" | head -5
+
+# Combine with other CLI tools
+memory-bank memory list --project "my-api" | wc -l  # Count memories
+memory-bank project list | grep -E "(api|service)"  # Filter projects
+
+# Shell aliases for common operations
+alias mb='memory-bank'
+alias mb-search='memory-bank search'
+alias mb-create='memory-bank memory create'
+```
+
+### Configuration Best Practices
+
+Optimize your Memory Bank configuration for daily use:
+
+```bash
+# Create project-specific configurations
+cd /path/to/project
+memory-bank init . --name "Project Name"
+
+# Use environment variables for common settings
+export MEMORY_BANK_LOG_LEVEL=info
+export MEMORY_BANK_DB_PATH="./project_memory.db"
+
+# Set up shell completion
+memory-bank completion bash > ~/.memory-bank-completion
+echo "source ~/.memory-bank-completion" >> ~/.bashrc
+```
+
+### Scripting Integration
+
+Memory Bank is designed for integration with scripts and automation:
+
+```bash
+#!/bin/bash
+# Example: Daily knowledge capture script
+
+PROJECT="my-current-project"
+DATE=$(date +%Y-%m-%d)
+
+# Start a daily session
+memory-bank session start "Daily work - $DATE" --project "$PROJECT"
+
+# Your development work happens here...
+
+# End session with summary
+memory-bank session complete "Completed daily development tasks"
+
+# Quick health check
+memory-bank config validate
+```
+
+### Common Integration Patterns
+
+#### Git Hooks Integration
+
+Automatically capture significant commits as memories:
+
+```bash
+#!/bin/sh
+# .git/hooks/post-commit
+# Auto-capture significant commits as memories
+
+COMMIT_MSG=$(git log -1 --pretty=%B)
+PROJECT=$(basename $(git rev-parse --show-toplevel))
+
+# Only capture commits with specific prefixes
+if echo "$COMMIT_MSG" | grep -E "^(feat|fix|docs):" > /dev/null; then
+  TYPE=$(echo "$COMMIT_MSG" | cut -d: -f1)
+  
+  case $TYPE in
+    feat) MEMORY_TYPE="pattern" ;;
+    fix) MEMORY_TYPE="error_solution" ;;
+    docs) MEMORY_TYPE="documentation" ;;
+  esac
+  
+  memory-bank memory create \
+    --type "$MEMORY_TYPE" \
+    --title "Git: $COMMIT_MSG" \
+    --content "Auto-captured from commit" \
+    --tags "git,auto-capture,$TYPE" \
+    --project "$PROJECT"
+fi
+```
+
+#### Development Workflow Integration
+
+Example daily development workflow:
+
+```bash
+#!/bin/bash
+# daily-workflow.sh
+
+PROJECT="my-current-project"
+
+# Start daily session
+memory-bank session start "Daily development $(date +%Y-%m-%d)" --project "$PROJECT"
+
+# Your development work happens here...
+echo "Development session started. Work on your project..."
+
+# At the end of the day, complete the session
+echo "Ready to complete session? Press enter..."
+read
+memory-bank session complete "Completed daily development tasks" --project "$PROJECT"
+```
+
+## Troubleshooting CLI Issues
+
+### Common CLI Problems
+
+```bash
+# Command not found
+export PATH=$PATH:/usr/local/bin
+which memory-bank
+
+# Permission denied
+chmod +x /usr/local/bin/memory-bank
+
+# Configuration not loading
+memory-bank config show
+memory-bank config locations
+
+# Database locked
+ps aux | grep memory-bank
+memory-bank health database
+```
+
+### Debug Mode
+
+Enable debug output for troubleshooting:
+
+```bash
+# Enable debug logging
+export MEMORY_BANK_LOG_LEVEL=debug
+memory-bank --verbose memory create --type test --title "Debug test"
+
+# Trace command execution
+memory-bank --trace search "test query"
+
+# Dry run mode (preview actions)
+memory-bank memory delete mem_123 --dry-run
+```
+
+### Getting Help
+
+```bash
+# Command-specific help
+memory-bank memory --help
+memory-bank search enhanced --help
+
+# Show available subcommands
+memory-bank memory
+memory-bank session
+
+# Show version and build info
+memory-bank version --verbose
+
+# Check system compatibility
+memory-bank health check --system
+```
+
+This comprehensive CLI reference covers all available commands, advanced features, and integration patterns for Memory Bank's command-line interface.
