@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/joern1811/memory-bank/internal/app"
 	"github.com/joern1811/memory-bank/internal/infra/config"
@@ -95,6 +96,9 @@ func NewServiceContainerWithConfig(configPath string) (*ServiceContainer, error)
 	chromaConfig := vector.ChromaDBConfig{
 		BaseURL:    cfg.ChromaDB.BaseURL,
 		Collection: cfg.ChromaDB.Collection,
+		Tenant:     cfg.ChromaDB.Tenant,
+		Database:   cfg.ChromaDB.Database,
+		Timeout:    time.Duration(cfg.ChromaDB.Timeout) * time.Second,
 	}
 	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, logger)
 

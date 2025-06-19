@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/joern1811/memory-bank/internal/domain"
@@ -16,16 +17,21 @@ import (
 
 // ChromaDBVectorStore implements the VectorStore interface using ChromaDB
 type ChromaDBVectorStore struct {
-	baseURL    string
-	collection string
-	client     *http.Client
-	logger     *logrus.Logger
+	baseURL      string
+	collection   string
+	collectionID string
+	tenant       string
+	database     string
+	client       *http.Client
+	logger       *logrus.Logger
 }
 
 // ChromaDBConfig holds configuration for ChromaDB provider
 type ChromaDBConfig struct {
 	BaseURL    string        `json:"base_url"`
 	Collection string        `json:"collection"`
+	Tenant     string        `json:"tenant"`
+	Database   string        `json:"database"`
 	Timeout    time.Duration `json:"timeout"`
 }
 
@@ -34,6 +40,8 @@ func DefaultChromeDBConfig() ChromaDBConfig {
 	return ChromaDBConfig{
 		BaseURL:    "http://localhost:8000",
 		Collection: "memory_bank",
+		Tenant:     "default_tenant",
+		Database:   "default_database",
 		Timeout:    30 * time.Second,
 	}
 }
@@ -54,12 +62,101 @@ func NewChromaDBVectorStore(config ChromaDBConfig, logger *logrus.Logger) *Chrom
 	return &ChromaDBVectorStore{
 		baseURL:    config.BaseURL,
 		collection: config.Collection,
+		tenant:     config.Tenant,
+		database:   config.Database,
 		client: &http.Client{
 			Timeout:   config.Timeout,
 			Transport: transport,
 		},
 		logger: logger,
 	}
+}
+
+// getCollectionID retrieves the UUID for a collection by name
+func (c *ChromaDBVectorStore) getCollectionID(ctx context.Context, name string) (string, error) {
+	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections", 
+		c.baseURL, c.tenant, c.database)
+	
+	c.logger.WithFields(logrus.Fields{
+		"url":  url,
+		"name": name,
+	}).Info("Fetching collection ID")
+	
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to list collections: %w", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		c.logger.WithFields(logrus.Fields{
+			"status": resp.StatusCode,
+			"body":   string(body),
+		}).Error("ChromaDB collections API failed")
+		return "", fmt.Errorf("ChromaDB API error (status %d): %s", resp.StatusCode, string(body))
+	}
+	
+	var collections []chromaDBCollection
+	if err := json.NewDecoder(resp.Body).Decode(&collections); err != nil {
+		return "", fmt.Errorf("failed to decode collections response: %w", err)
+	}
+	
+	c.logger.WithField("collections_count", len(collections)).Debug("Retrieved collections")
+	
+	for _, col := range collections {
+		c.logger.WithFields(logrus.Fields{
+			"collection_name": col.Name,
+			"collection_id":   col.ID,
+		}).Debug("Checking collection")
+		
+		if col.Name == name {
+			c.logger.WithField("found_id", col.ID).Debug("Found collection ID")
+			return col.ID, nil
+		}
+	}
+	
+	return "", fmt.Errorf("collection %s not found", name)
+}
+
+// ensureCollectionID ensures the collection ID is loaded
+func (c *ChromaDBVectorStore) ensureCollectionID(ctx context.Context) error {
+	c.logger.WithFields(logrus.Fields{
+		"current_collection_id": c.collectionID,
+		"collection_name":       c.collection,
+	}).Debug("Ensuring collection ID is loaded")
+	
+	if c.collectionID != "" {
+		c.logger.Debug("Collection ID already loaded")
+		return nil
+	}
+	
+	c.logger.Debug("Loading collection ID")
+	id, err := c.getCollectionID(ctx, c.collection)
+	if err != nil {
+		c.logger.WithError(err).Error("Failed to get collection ID")
+		return err
+	}
+	
+	c.collectionID = id
+	c.logger.WithField("loaded_id", id).Debug("Collection ID loaded successfully")
+	return nil
+}
+
+// buildCollectionOperationURL builds the full URL for collection operations using collection ID
+func (c *ChromaDBVectorStore) buildCollectionOperationURL(ctx context.Context, operation string) (string, error) {
+	// Ensure collection ID is loaded
+	if err := c.ensureCollectionID(ctx); err != nil {
+		return "", err
+	}
+	
+	return fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections/%s/%s", 
+		c.baseURL, c.tenant, c.database, c.collectionID, operation), nil
 }
 
 // chromaDBDocument represents a document in ChromaDB
@@ -93,6 +190,47 @@ type chromaDBCollection struct {
 	Metadata map[string]interface{} `json:"metadata"`
 }
 
+// normalizeMetadata converts metadata to ChromaDB-compatible format
+func (c *ChromaDBVectorStore) normalizeMetadata(metadata map[string]interface{}) map[string]interface{} {
+	normalized := make(map[string]interface{})
+	
+	for key, value := range metadata {
+		c.logger.WithFields(logrus.Fields{
+			"key":   key,
+			"value": value,
+			"type":  fmt.Sprintf("%T", value),
+		}).Debug("Processing metadata field")
+		
+		switch v := value.(type) {
+		case []string:
+			// Convert string slices to comma-separated strings
+			normalized[key] = strings.Join(v, ",")
+		case []interface{}:
+			// Convert interface slices to comma-separated strings
+			var strSlice []string
+			for _, item := range v {
+				strSlice = append(strSlice, fmt.Sprintf("%v", item))
+			}
+			normalized[key] = strings.Join(strSlice, ",")
+		case time.Time:
+			// Convert time to string
+			normalized[key] = v.Format(time.RFC3339)
+		default:
+			// Try to detect if it's a slice that wasn't caught above
+			valueStr := fmt.Sprintf("%v", value)
+			if strings.HasPrefix(valueStr, "[") && strings.HasSuffix(valueStr, "]") {
+				// Likely a slice, convert to string representation
+				normalized[key] = strings.Trim(valueStr, "[]")
+			} else {
+				// Keep other types as-is (string, int, float, bool)
+				normalized[key] = value
+			}
+		}
+	}
+	
+	return normalized
+}
+
 // Store stores a vector with metadata in ChromaDB
 func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domain.EmbeddingVector, metadata map[string]interface{}) error {
 	c.logger.WithFields(logrus.Fields{
@@ -102,11 +240,14 @@ func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domai
 		"metadata_keys":   len(metadata),
 	}).Debug("Storing vector in ChromaDB")
 
+	// Normalize metadata for ChromaDB compatibility
+	normalizedMetadata := c.normalizeMetadata(metadata)
+	
 	// Prepare document
 	doc := chromaDBDocument{
 		IDs:        []string{id},
 		Embeddings: [][]float32{vector},
-		Metadatas:  []map[string]interface{}{metadata},
+		Metadatas:  []map[string]interface{}{normalizedMetadata},
 	}
 
 	// Convert to JSON
@@ -116,7 +257,10 @@ func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domai
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections/%s/add", c.baseURL, c.collection)
+	url, err := c.buildCollectionOperationURL(ctx, "add")
+	if err != nil {
+		return fmt.Errorf("failed to build collection URL: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -134,6 +278,21 @@ func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domai
 	// Check response status
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
+		
+		// If collection doesn't exist (404), try to create it and retry
+		if resp.StatusCode == http.StatusNotFound {
+			c.logger.WithField("collection", c.collection).Info("Collection not found, creating it")
+			if err := c.CreateCollection(ctx, c.collection); err != nil {
+				return fmt.Errorf("failed to create collection: %w", err)
+			}
+			
+			// Reset collection ID so it gets loaded again with the new collection
+			c.collectionID = ""
+			
+			// Retry the store operation
+			return c.Store(ctx, id, vector, metadata)
+		}
+		
 		return fmt.Errorf("chromadb API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -162,7 +321,7 @@ func (c *ChromaDBVectorStore) BatchStore(ctx context.Context, items []ports.Batc
 	for i, item := range items {
 		doc.IDs[i] = item.ID
 		doc.Embeddings[i] = item.Vector
-		doc.Metadatas[i] = item.Metadata
+		doc.Metadatas[i] = c.normalizeMetadata(item.Metadata)
 	}
 
 	// Convert to JSON
@@ -172,7 +331,10 @@ func (c *ChromaDBVectorStore) BatchStore(ctx context.Context, items []ports.Batc
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections/%s/add", c.baseURL, c.collection)
+	url, err := c.buildCollectionOperationURL(ctx, "add")
+	if err != nil {
+		return fmt.Errorf("failed to build collection URL: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -219,7 +381,10 @@ func (c *ChromaDBVectorStore) BatchDelete(ctx context.Context, ids []string) err
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections/%s/delete", c.baseURL, c.collection)
+	url, err := c.buildCollectionOperationURL(ctx, "delete")
+	if err != nil {
+		return fmt.Errorf("failed to build collection URL: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -262,7 +427,10 @@ func (c *ChromaDBVectorStore) Delete(ctx context.Context, id string) error {
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections/%s/delete", c.baseURL, c.collection)
+	url, err := c.buildCollectionOperationURL(ctx, "delete")
+	if err != nil {
+		return fmt.Errorf("failed to build collection URL: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -309,7 +477,10 @@ func (c *ChromaDBVectorStore) Update(ctx context.Context, id string, vector doma
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections/%s/update", c.baseURL, c.collection)
+	url, err := c.buildCollectionOperationURL(ctx, "update")
+	if err != nil {
+		return fmt.Errorf("failed to build collection URL: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -356,7 +527,10 @@ func (c *ChromaDBVectorStore) Search(ctx context.Context, vector domain.Embeddin
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections/%s/query", c.baseURL, c.collection)
+	url, err := c.buildCollectionOperationURL(ctx, "query")
+	if err != nil {
+		return nil, fmt.Errorf("failed to build collection URL: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -426,11 +600,12 @@ func (c *ChromaDBVectorStore) SearchByText(ctx context.Context, text string, lim
 func (c *ChromaDBVectorStore) CreateCollection(ctx context.Context, name string) error {
 	c.logger.WithField("collection", name).Debug("Creating collection in ChromaDB")
 
-	// Prepare collection request
+	// Prepare collection request with cosine distance metric
 	collectionReq := map[string]interface{}{
 		"name": name,
 		"metadata": map[string]interface{}{
 			"description": "Memory Bank collection",
+			"hnsw:space": "cosine",  // Use cosine distance metric
 		},
 	}
 
@@ -440,7 +615,8 @@ func (c *ChromaDBVectorStore) CreateCollection(ctx context.Context, name string)
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections", c.baseURL)
+	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections", 
+		c.baseURL, c.tenant, c.database)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -470,7 +646,7 @@ func (c *ChromaDBVectorStore) DeleteCollection(ctx context.Context, name string)
 	c.logger.WithField("collection", name).Debug("Deleting collection from ChromaDB")
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections/%s", c.baseURL, name)
+	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections/%s", c.baseURL, c.tenant, c.database, name)
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -498,7 +674,8 @@ func (c *ChromaDBVectorStore) ListCollections(ctx context.Context) ([]string, er
 	c.logger.Debug("Listing collections from ChromaDB")
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/collections", c.baseURL)
+	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections", 
+		c.baseURL, c.tenant, c.database)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

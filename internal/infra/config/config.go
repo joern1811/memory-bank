@@ -33,6 +33,8 @@ type Ollama struct {
 type ChromaDB struct {
 	BaseURL    string `mapstructure:"base_url" yaml:"base_url" json:"base_url"`
 	Collection string `mapstructure:"collection" yaml:"collection" json:"collection"`
+	Tenant     string `mapstructure:"tenant" yaml:"tenant" json:"tenant"`
+	Database   string `mapstructure:"database" yaml:"database" json:"database"`
 	Timeout    int    `mapstructure:"timeout" yaml:"timeout" json:"timeout"` // seconds
 }
 
@@ -51,6 +53,8 @@ func LoadConfig(configPath string) (*Config, error) {
 	viper.SetDefault("ollama.timeout", 30)
 	viper.SetDefault("chromadb.base_url", "http://localhost:8000")
 	viper.SetDefault("chromadb.collection", "memory_bank")
+	viper.SetDefault("chromadb.tenant", "default_tenant")
+	viper.SetDefault("chromadb.database", "default_database")
 	viper.SetDefault("chromadb.timeout", 30)
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("logging.format", "json")

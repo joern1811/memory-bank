@@ -108,6 +108,7 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 	if collection := os.Getenv("CHROMADB_COLLECTION"); collection != "" {
 		vectorConfig.Collection = collection
 	}
+	// Note: DefaultChromeDBConfig() already includes Tenant and Database defaults
 	
 	var vectorStore ports.VectorStore
 	chromaDBStore := vector.NewChromaDBVectorStore(vectorConfig, logger)
