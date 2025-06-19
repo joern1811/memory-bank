@@ -169,6 +169,24 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithString("id", mcp.Description("Session ID"), mcp.Required()),
 	), s.handleGetSessionTool)
 	
+	mcpServer.AddTool(mcp.NewTool("session_list",
+		mcp.WithDescription("List sessions with optional filters"),
+		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
+		mcp.WithString("status", mcp.Description("Session status to filter by")),
+		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
+	), s.handleListSessionsTool)
+	
+	mcpServer.AddTool(mcp.NewTool("session_abort",
+		mcp.WithDescription("Abort active sessions"),
+		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
+		mcp.WithString("session_id", mcp.Description("Specific session ID to abort")),
+	), s.handleAbortSessionTool)
+	
+	// Version tool
+	mcpServer.AddTool(mcp.NewTool("version",
+		mcp.WithDescription("Get Memory Bank version information"),
+	), s.handleVersionTool)
+	
 	s.logger.Info("MCP tools and resources registered successfully")
 }
 
@@ -751,24 +769,270 @@ func (s *MemoryBankServer) handleListProjects(ctx context.Context, params json.R
 // StartSessionRequest, LogSessionRequest, CompleteSessionRequest, etc.
 // For brevity, I'm including placeholders here
 
+// Session-related request/response structures
+type StartSessionRequest struct {
+	Title       string  `json:"title"`
+	ProjectID   string  `json:"project_id"`
+	Description *string `json:"description,omitempty"`
+}
+
+type StartSessionResponse struct {
+	ID          string    `json:"id"`
+	ProjectID   string    `json:"project_id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 func (s *MemoryBankServer) handleStartSession(ctx context.Context, params json.RawMessage) (interface{}, error) {
-	s.logger.Debug("Handling session/start request - not implemented yet")
-	return nil, fmt.Errorf("session/start not implemented yet")
+	s.logger.Debug("Handling session/start request")
+
+	var req StartSessionRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.Title == "" {
+		return nil, fmt.Errorf("title is required")
+	}
+	if req.ProjectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+
+	// Build service request
+	description := req.Title
+	if req.Description != nil {
+		description = *req.Description
+	}
+
+	serviceReq := ports.StartSessionRequest{
+		ProjectID:       domain.ProjectID(req.ProjectID),
+		TaskDescription: description,
+	}
+
+	// Start session
+	session, err := s.sessionService.StartSession(ctx, serviceReq)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to start session")
+		return nil, fmt.Errorf("failed to start session: %w", err)
+	}
+
+	response := StartSessionResponse{
+		ID:          string(session.ID),
+		ProjectID:   string(session.ProjectID),
+		Title:       req.Title,
+		Description: description,
+		Status:      string(session.Status),
+		CreatedAt:   session.StartTime,
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"session_id": session.ID,
+		"project_id": session.ProjectID,
+	}).Info("Session started successfully")
+
+	return response, nil
+}
+
+type LogSessionRequest struct {
+	Message    string  `json:"message"`
+	ProjectID  *string `json:"project_id,omitempty"`
+	SessionID  *string `json:"session_id,omitempty"`
+}
+
+type LogSessionResponse struct {
+	Success   bool   `json:"success"`
+	SessionID string `json:"session_id"`
 }
 
 func (s *MemoryBankServer) handleLogSession(ctx context.Context, params json.RawMessage) (interface{}, error) {
-	s.logger.Debug("Handling session/log request - not implemented yet")
-	return nil, fmt.Errorf("session/log not implemented yet")
+	s.logger.Debug("Handling session/log request")
+
+	var req LogSessionRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.Message == "" {
+		return nil, fmt.Errorf("message is required")
+	}
+
+	// Determine session ID
+	var sessionID domain.SessionID
+	if req.SessionID != nil {
+		sessionID = domain.SessionID(*req.SessionID)
+	} else if req.ProjectID != nil {
+		// Find active session for project
+		projectID := domain.ProjectID(*req.ProjectID)
+		activeSession, err := s.sessionService.GetActiveSession(ctx, projectID)
+		if err != nil {
+			return nil, fmt.Errorf("no active session found for project: %w", err)
+		}
+		sessionID = activeSession.ID
+	} else {
+		return nil, fmt.Errorf("either session_id or project_id is required")
+	}
+
+	// Log progress
+	if err := s.sessionService.LogProgress(ctx, sessionID, req.Message); err != nil {
+		s.logger.WithError(err).Error("Failed to log session progress")
+		return nil, fmt.Errorf("failed to log session progress: %w", err)
+	}
+
+	response := LogSessionResponse{
+		Success:   true,
+		SessionID: string(sessionID),
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"session_id": sessionID,
+		"message":    req.Message,
+	}).Info("Session progress logged")
+
+	return response, nil
+}
+
+type CompleteSessionRequest struct {
+	Outcome   string  `json:"outcome"`
+	ProjectID *string `json:"project_id,omitempty"`
+	SessionID *string `json:"session_id,omitempty"`
+}
+
+type CompleteSessionResponse struct {
+	Success   bool      `json:"success"`
+	SessionID string    `json:"session_id"`
+	Duration  string    `json:"duration"`
+	EndedAt   time.Time `json:"ended_at"`
 }
 
 func (s *MemoryBankServer) handleCompleteSession(ctx context.Context, params json.RawMessage) (interface{}, error) {
-	s.logger.Debug("Handling session/complete request - not implemented yet")
-	return nil, fmt.Errorf("session/complete not implemented yet")
+	s.logger.Debug("Handling session/complete request")
+
+	var req CompleteSessionRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.Outcome == "" {
+		return nil, fmt.Errorf("outcome is required")
+	}
+
+	// Determine session ID
+	var sessionID domain.SessionID
+	if req.SessionID != nil {
+		sessionID = domain.SessionID(*req.SessionID)
+	} else if req.ProjectID != nil {
+		// Find active session for project
+		projectID := domain.ProjectID(*req.ProjectID)
+		activeSession, err := s.sessionService.GetActiveSession(ctx, projectID)
+		if err != nil {
+			return nil, fmt.Errorf("no active session found for project: %w", err)
+		}
+		sessionID = activeSession.ID
+	} else {
+		return nil, fmt.Errorf("either session_id or project_id is required")
+	}
+
+	// Complete session
+	if err := s.sessionService.CompleteSession(ctx, sessionID, req.Outcome); err != nil {
+		s.logger.WithError(err).Error("Failed to complete session")
+		return nil, fmt.Errorf("failed to complete session: %w", err)
+	}
+
+	// Get updated session for response
+	session, err := s.sessionService.GetSession(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve updated session: %w", err)
+	}
+
+	var duration string
+	if session.EndTime != nil {
+		duration = session.Duration().String()
+	}
+
+	response := CompleteSessionResponse{
+		Success:   true,
+		SessionID: string(sessionID),
+		Duration:  duration,
+		EndedAt:   *session.EndTime,
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"session_id": sessionID,
+		"outcome":    req.Outcome,
+		"duration":   duration,
+	}).Info("Session completed successfully")
+
+	return response, nil
+}
+
+type GetSessionRequest struct {
+	ID string `json:"id"`
+}
+
+type GetSessionResponse struct {
+	ID          string                   `json:"id"`
+	ProjectID   string                   `json:"project_id"`
+	Title       string                   `json:"title"`
+	Description string                   `json:"description"`
+	Status      string                   `json:"status"`
+	Progress    []map[string]interface{} `json:"progress"`
+	CreatedAt   time.Time                `json:"created_at"`
+	UpdatedAt   time.Time                `json:"updated_at"`
+	EndedAt     *time.Time               `json:"ended_at,omitempty"`
+	Duration    *string                  `json:"duration,omitempty"`
 }
 
 func (s *MemoryBankServer) handleGetSession(ctx context.Context, params json.RawMessage) (interface{}, error) {
-	s.logger.Debug("Handling session/get request - not implemented yet")
-	return nil, fmt.Errorf("session/get not implemented yet")
+	s.logger.Debug("Handling session/get request")
+
+	var req GetSessionRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.ID == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+
+	sessionID := domain.SessionID(req.ID)
+	session, err := s.sessionService.GetSession(ctx, sessionID)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to get session")
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	response := GetSessionResponse{
+		ID:          string(session.ID),
+		ProjectID:   string(session.ProjectID),
+		Title:       session.TaskDescription,
+		Description: session.Summary,
+		Status:      string(session.Status),
+		Progress:    make([]map[string]interface{}, len(session.Progress)),
+		CreatedAt:   session.StartTime,
+		UpdatedAt:   session.StartTime, // Using StartTime as fallback
+	}
+
+	// Convert progress entries
+	for i, entry := range session.Progress {
+		response.Progress[i] = map[string]interface{}{
+			"timestamp": entry.Timestamp,
+			"type":      entry.Type,
+			"content":   entry.Message,
+		}
+	}
+
+	// Add optional fields
+	if session.EndTime != nil {
+		response.EndedAt = session.EndTime
+		duration := session.Duration().String()
+		response.Duration = &duration
+	}
+
+	s.logger.WithField("session_id", sessionID).Info("Session retrieved successfully")
+
+	return response, nil
 }
 
 // Advanced Search Features
@@ -1513,4 +1777,211 @@ func (s *MemoryBankServer) handleCompleteSessionTool(ctx context.Context, reques
 
 func (s *MemoryBankServer) handleGetSessionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return s.wrapHandler(ctx, request, s.handleGetSession)
+}
+
+// ListSessionsRequest represents a request to list sessions
+type ListSessionsRequest struct {
+	ProjectID *string `json:"project_id,omitempty"`
+	Status    *string `json:"status,omitempty"`
+	Limit     *int    `json:"limit,omitempty"`
+}
+
+// ListSessionsResponse represents the response from listing sessions
+type ListSessionsResponse struct {
+	Sessions []GetSessionResponse `json:"sessions"`
+	Total    int                  `json:"total"`
+}
+
+func (s *MemoryBankServer) handleListSessions(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling session/list request")
+
+	var req ListSessionsRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	// Set default limit
+	limit := 20
+	if req.Limit != nil {
+		limit = *req.Limit
+	}
+
+	// Build filters
+	filters := ports.SessionFilters{
+		Limit: limit,
+	}
+
+	if req.ProjectID != nil {
+		projectID := domain.ProjectID(*req.ProjectID)
+		filters.ProjectID = &projectID
+	}
+
+	if req.Status != nil {
+		status := domain.SessionStatus(*req.Status)
+		filters.Status = &status
+	}
+
+	// List sessions
+	sessions, err := s.sessionService.ListSessions(ctx, filters)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to list sessions")
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
+	}
+
+	// Convert to response format
+	sessionResponses := make([]GetSessionResponse, len(sessions))
+	for i, session := range sessions {
+		sessionResponse := GetSessionResponse{
+			ID:          string(session.ID),
+			ProjectID:   string(session.ProjectID),
+			Title:       session.TaskDescription,
+			Description: session.Summary,
+			Status:      string(session.Status),
+			Progress:    make([]map[string]interface{}, len(session.Progress)),
+			CreatedAt:   session.StartTime,
+			UpdatedAt:   session.StartTime,
+		}
+
+		// Convert progress entries
+		for j, entry := range session.Progress {
+			sessionResponse.Progress[j] = map[string]interface{}{
+				"timestamp": entry.Timestamp,
+				"type":      entry.Type,
+				"content":   entry.Message,
+			}
+		}
+
+		// Add optional fields
+		if session.EndTime != nil {
+			sessionResponse.EndedAt = session.EndTime
+			duration := session.Duration().String()
+			sessionResponse.Duration = &duration
+		}
+
+		sessionResponses[i] = sessionResponse
+	}
+
+	response := ListSessionsResponse{
+		Sessions: sessionResponses,
+		Total:    len(sessionResponses),
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"count":      len(sessions),
+		"project_id": req.ProjectID,
+		"status":     req.Status,
+	}).Info("Sessions listed successfully")
+
+	return response, nil
+}
+
+func (s *MemoryBankServer) handleListSessionsTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleListSessions)
+}
+
+// AbortSessionRequest represents a request to abort sessions
+type AbortSessionRequest struct {
+	ProjectID string  `json:"project_id"`
+	SessionID *string `json:"session_id,omitempty"`
+}
+
+// AbortSessionResponse represents the response from aborting sessions
+type AbortSessionResponse struct {
+	Success     bool     `json:"success"`
+	AbortedIDs  []string `json:"aborted_session_ids"`
+	Message     string   `json:"message"`
+}
+
+func (s *MemoryBankServer) handleAbortSession(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling session/abort request")
+
+	var req AbortSessionRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if req.ProjectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+
+	projectID := domain.ProjectID(req.ProjectID)
+	var abortedIDs []string
+
+	if req.SessionID != nil {
+		// Abort specific session
+		sessionID := domain.SessionID(*req.SessionID)
+		err := s.sessionService.AbortSession(ctx, sessionID)
+		if err != nil {
+			s.logger.WithError(err).Error("Failed to abort session")
+			return nil, fmt.Errorf("failed to abort session: %w", err)
+		}
+		abortedIDs = []string{string(sessionID)}
+	} else {
+		// Abort all active sessions for project
+		abortedSessionIDs, err := s.sessionService.AbortActiveSessionsForProject(ctx, projectID)
+		if err != nil {
+			s.logger.WithError(err).Error("Failed to abort active sessions")
+			return nil, fmt.Errorf("failed to abort active sessions: %w", err)
+		}
+		
+		for _, id := range abortedSessionIDs {
+			abortedIDs = append(abortedIDs, string(id))
+		}
+	}
+
+	var message string
+	if len(abortedIDs) == 0 {
+		message = "No active sessions found to abort"
+	} else if len(abortedIDs) == 1 {
+		message = fmt.Sprintf("Successfully aborted 1 session")
+	} else {
+		message = fmt.Sprintf("Successfully aborted %d sessions", len(abortedIDs))
+	}
+
+	response := AbortSessionResponse{
+		Success:    true,
+		AbortedIDs: abortedIDs,
+		Message:    message,
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"project_id":     req.ProjectID,
+		"session_id":     req.SessionID,
+		"aborted_count":  len(abortedIDs),
+	}).Info("Session abort completed")
+
+	return response, nil
+}
+
+func (s *MemoryBankServer) handleAbortSessionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleAbortSession)
+}
+
+// VersionResponse represents the version information
+type VersionResponse struct {
+	Version     string `json:"version"`
+	BuildTime   string `json:"build_time"`
+	GoVersion   string `json:"go_version"`
+	GitCommit   string `json:"git_commit"`
+	Application string `json:"application"`
+}
+
+func (s *MemoryBankServer) handleVersion(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling version request")
+
+	// Get version information (these would typically be set at build time)
+	response := VersionResponse{
+		Version:     "1.0.0", // This would be injected at build time
+		BuildTime:   "dev",   // This would be injected at build time  
+		GoVersion:   "go1.21+",
+		GitCommit:   "dev",   // This would be injected at build time
+		Application: "Memory Bank MCP Server",
+	}
+
+	s.logger.Info("Version information retrieved")
+	return response, nil
+}
+
+func (s *MemoryBankServer) handleVersionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleVersion)
 }

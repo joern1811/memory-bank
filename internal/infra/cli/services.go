@@ -13,6 +13,7 @@ import (
 	"github.com/joern1811/memory-bank/internal/infra/vector"
 	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 // ServiceContainer holds all application services
@@ -29,8 +30,18 @@ func NewServiceContainer() (*ServiceContainer, error) {
 	return NewServiceContainerWithConfig("")
 }
 
+// NewServiceContainerQuiet creates a new service container with quiet logging
+func NewServiceContainerQuiet() (*ServiceContainer, error) {
+	return NewServiceContainerWithOptions("", true)
+}
+
 // NewServiceContainerWithConfig creates a service container with specified config file
 func NewServiceContainerWithConfig(configPath string) (*ServiceContainer, error) {
+	return NewServiceContainerWithOptions(configPath, false)
+}
+
+// NewServiceContainerWithOptions creates a service container with specified config file and logging options
+func NewServiceContainerWithOptions(configPath string, quiet bool) (*ServiceContainer, error) {
 	// Load configuration
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
@@ -45,25 +56,35 @@ func NewServiceContainerWithConfig(configPath string) (*ServiceContainer, error)
 	// Initialize logger with config
 	logger := logrus.New()
 	
-	// Set log format
-	if cfg.Logging.Format == "text" {
-		logger.SetFormatter(&logrus.TextFormatter{})
+	// Set log format - always use text for CLI, JSON only for server mode
+	if quiet {
+		// For CLI commands, be completely quiet unless verbose mode
+		logger.SetLevel(logrus.FatalLevel) // Only show fatal errors
+		logger.SetFormatter(&logrus.TextFormatter{
+			DisableTimestamp: true,
+			DisableColors:    false,
+		})
 	} else {
-		logger.SetFormatter(&logrus.JSONFormatter{})
-	}
-	
-	// Set log level
-	switch strings.ToLower(cfg.Logging.Level) {
-	case "debug":
-		logger.SetLevel(logrus.DebugLevel)
-	case "info":
-		logger.SetLevel(logrus.InfoLevel)
-	case "warn":
-		logger.SetLevel(logrus.WarnLevel)
-	case "error":
-		logger.SetLevel(logrus.ErrorLevel)
-	default:
-		logger.SetLevel(logrus.InfoLevel)
+		// Normal logging configuration
+		if cfg.Logging.Format == "text" {
+			logger.SetFormatter(&logrus.TextFormatter{})
+		} else {
+			logger.SetFormatter(&logrus.JSONFormatter{})
+		}
+		
+		// Set log level
+		switch strings.ToLower(cfg.Logging.Level) {
+		case "debug":
+			logger.SetLevel(logrus.DebugLevel)
+		case "info":
+			logger.SetLevel(logrus.InfoLevel)
+		case "warn":
+			logger.SetLevel(logrus.WarnLevel)
+		case "error":
+			logger.SetLevel(logrus.ErrorLevel)
+		default:
+			logger.SetLevel(logrus.InfoLevel)
+		}
 	}
 
 	// Initialize database using config
@@ -135,5 +156,18 @@ func GetServices() (*ServiceContainer, error) {
 		}
 	}
 	return services, nil
+}
+
+// GetServicesForCLI returns a service container appropriate for CLI usage
+// It checks the verbose flag and configures logging accordingly
+func GetServicesForCLI(cmd *cobra.Command) (*ServiceContainer, error) {
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	configPath, _ := cmd.Flags().GetString("config")
+	
+	if verbose {
+		return NewServiceContainerWithOptions(configPath, false)
+	} else {
+		return NewServiceContainerWithOptions(configPath, true)
+	}
 }
 

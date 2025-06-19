@@ -23,7 +23,7 @@ This is a convenience command that searches all projects and memory types.`,
 		showContent, _ := cmd.Flags().GetBool("content")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -97,7 +97,7 @@ Supports filtering by types, tags, sessions, content length, and more.`,
 		hasContent, _ := cmd.Flags().GetBool("has-content")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -227,7 +227,7 @@ Provides detailed insights into why each result was matched.`,
 		tagsFlag, _ := cmd.Flags().GetStringSlice("tags")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -316,7 +316,7 @@ Suggestions are generated from titles, tags, and frequently used terms.`,
 		limit, _ := cmd.Flags().GetInt("limit")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}

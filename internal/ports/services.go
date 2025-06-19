@@ -50,7 +50,8 @@ type SessionService interface {
 	LogProgress(ctx context.Context, sessionID domain.SessionID, entry string) error
 	CompleteSession(ctx context.Context, sessionID domain.SessionID, outcome string) error
 	AbortSession(ctx context.Context, sessionID domain.SessionID) error
-	ListSessions(ctx context.Context, projectID domain.ProjectID) ([]*domain.Session, error)
+	ListSessions(ctx context.Context, filters SessionFilters) ([]*domain.Session, error)
+	AbortActiveSessionsForProject(ctx context.Context, projectID domain.ProjectID) ([]domain.SessionID, error)
 }
 
 // Requests and Responses
@@ -116,6 +117,13 @@ type InitializeProjectRequest struct {
 type StartSessionRequest struct {
 	ProjectID       domain.ProjectID `json:"project_id"`
 	TaskDescription string           `json:"task_description"`
+}
+
+// SessionFilters represents filters for listing sessions
+type SessionFilters struct {
+	ProjectID *domain.ProjectID     `json:"project_id,omitempty"`
+	Status    *domain.SessionStatus `json:"status,omitempty"`
+	Limit     int                   `json:"limit"`
 }
 
 // MemorySearchResult represents a memory with similarity score

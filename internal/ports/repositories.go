@@ -55,6 +55,7 @@ type SessionRepository interface {
 	
 	// Query operations
 	ListByProject(ctx context.Context, projectID domain.ProjectID) ([]*domain.Session, error)
+	ListWithFilters(ctx context.Context, filters SessionFilters) ([]*domain.Session, error)
 	GetActiveSession(ctx context.Context, projectID domain.ProjectID) (*domain.Session, error)
 }
 

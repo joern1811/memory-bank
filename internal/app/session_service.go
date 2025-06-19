@@ -177,7 +177,43 @@ func (s *SessionService) Update(ctx context.Context, session *domain.Session) er
 	return s.sessionRepo.Update(ctx, session)
 }
 
-// ListSessions lists all sessions for a project
-func (s *SessionService) ListSessions(ctx context.Context, projectID domain.ProjectID) ([]*domain.Session, error) {
-	return s.sessionRepo.ListByProject(ctx, projectID)
+// ListSessions lists sessions with filters
+func (s *SessionService) ListSessions(ctx context.Context, filters ports.SessionFilters) ([]*domain.Session, error) {
+	return s.sessionRepo.ListWithFilters(ctx, filters)
+}
+
+// AbortActiveSessionsForProject aborts all active sessions for a project
+func (s *SessionService) AbortActiveSessionsForProject(ctx context.Context, projectID domain.ProjectID) ([]domain.SessionID, error) {
+	s.logger.WithField("project_id", projectID).Info("Aborting all active sessions for project")
+
+	// Get all active sessions for the project
+	filters := ports.SessionFilters{
+		ProjectID: &projectID,
+		Status:    &[]domain.SessionStatus{domain.SessionStatusActive}[0],
+		Limit:     100, // Reasonable limit for batch abort
+	}
+
+	sessions, err := s.sessionRepo.ListWithFilters(ctx, filters)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list active sessions: %w", err)
+	}
+
+	var abortedIDs []domain.SessionID
+	for _, session := range sessions {
+		if session.IsActive() {
+			session.Abort("Project-wide session abort")
+			if err := s.sessionRepo.Update(ctx, session); err != nil {
+				s.logger.WithError(err).WithField("session_id", session.ID).Warn("Failed to abort session")
+				continue
+			}
+			abortedIDs = append(abortedIDs, session.ID)
+		}
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"project_id":     projectID,
+		"aborted_count":  len(abortedIDs),
+	}).Info("Completed aborting active sessions")
+
+	return abortedIDs, nil
 }

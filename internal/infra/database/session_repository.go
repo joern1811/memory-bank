@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/joern1811/memory-bank/internal/domain"
+	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/sirupsen/logrus"
 )
 
@@ -332,4 +333,85 @@ func (r *SQLiteSessionRepository) GetActiveSession(ctx context.Context, projectI
 	}).Debug("Active session retrieved successfully")
 
 	return session, nil
+}
+
+// ListWithFilters retrieves sessions based on provided filters
+func (r *SQLiteSessionRepository) ListWithFilters(ctx context.Context, filters ports.SessionFilters) ([]*domain.Session, error) {
+	query := `
+		SELECT id, project_id, name, description, status, started_at, completed_at
+		FROM sessions
+		WHERE 1=1
+	`
+	var args []interface{}
+
+	// Add WHERE conditions based on filters
+	if filters.ProjectID != nil {
+		query += " AND project_id = ?"
+		args = append(args, *filters.ProjectID)
+	}
+
+	if filters.Status != nil {
+		query += " AND status = ?"
+		args = append(args, *filters.Status)
+	}
+
+	// Add ordering and limit
+	query += " ORDER BY started_at DESC"
+	
+	if filters.Limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, filters.Limit)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		r.logger.WithError(err).WithField("filters", filters).Error("Failed to list sessions with filters")
+		return nil, fmt.Errorf("failed to list sessions with filters: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []*domain.Session
+
+	for rows.Next() {
+		session := &domain.Session{}
+		var description sql.NullString
+		var completedAt sql.NullTime
+
+		err := rows.Scan(
+			&session.ID,
+			&session.ProjectID,
+			&session.TaskDescription,
+			&description,
+			&session.Status,
+			&session.StartTime,
+			&completedAt,
+		)
+
+		if err != nil {
+			r.logger.WithError(err).Error("Failed to scan session row")
+			continue
+		}
+
+		// Handle completed_at
+		if completedAt.Valid {
+			session.EndTime = &completedAt.Time
+		}
+
+		// Parse description
+		r.parseDescription(description.String, session)
+
+		sessions = append(sessions, session)
+	}
+
+	if err := rows.Err(); err != nil {
+		r.logger.WithError(err).Error("Error iterating over session rows")
+		return nil, fmt.Errorf("error iterating over session rows: %w", err)
+	}
+
+	r.logger.WithFields(logrus.Fields{
+		"filters":        filters,
+		"sessions_count": len(sessions),
+	}).Debug("Sessions listed with filters successfully")
+
+	return sessions, nil
 }

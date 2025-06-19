@@ -33,7 +33,7 @@ The session will be created and set as active for the project.`,
 		}
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -151,7 +151,7 @@ The session will be marked as completed and no longer active.`,
 		sessionID, _ := cmd.Flags().GetString("session")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -205,7 +205,7 @@ var sessionListCmd = &cobra.Command{
 		limit, _ := cmd.Flags().GetInt("limit")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -229,26 +229,21 @@ var sessionListCmd = &cobra.Command{
 			pid = domain.ProjectID("default")
 		}
 
-		// List sessions
-		sessions, err := services.SessionService.ListSessions(ctx, pid)
-		if err != nil {
-			return fmt.Errorf("failed to list sessions: %w", err)
-		}
-		
-		// Filter by status if provided
-		if status != "" {
-			filtered := make([]*domain.Session, 0)
-			for _, session := range sessions {
-				if strings.EqualFold(string(session.Status), status) {
-					filtered = append(filtered, session)
-				}
-			}
-			sessions = filtered
+		// Build filters
+		filters := ports.SessionFilters{
+			ProjectID: &pid,
+			Limit:     limit,
 		}
 
-		// Apply limit
-		if limit > 0 && len(sessions) > limit {
-			sessions = sessions[:limit]
+		if status != "" {
+			sessionStatus := domain.SessionStatus(status)
+			filters.Status = &sessionStatus
+		}
+
+		// List sessions
+		sessions, err := services.SessionService.ListSessions(ctx, filters)
+		if err != nil {
+			return fmt.Errorf("failed to list sessions: %w", err)
 		}
 
 		fmt.Printf("\nSessions (%d found):\n", len(sessions))
@@ -302,7 +297,7 @@ var sessionGetCmd = &cobra.Command{
 		}
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -380,7 +375,7 @@ If no session ID is provided, the active session for the project will be aborted
 		projectID, _ := cmd.Flags().GetString("project")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}

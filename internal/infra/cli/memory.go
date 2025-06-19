@@ -49,7 +49,7 @@ Supported types: decision, pattern, error-solution, code, documentation`,
 		}
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -107,7 +107,7 @@ var memorySearchCmd = &cobra.Command{
 		threshold, _ := cmd.Flags().GetFloat32("threshold")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
@@ -167,7 +167,7 @@ var memoryListCmd = &cobra.Command{
 		limit, _ := cmd.Flags().GetInt("limit")
 
 		// Get services
-		services, err := GetServices()
+		services, err := GetServicesForCLI(cmd)
 		if err != nil {
 			return fmt.Errorf("failed to initialize services: %w", err)
 		}
