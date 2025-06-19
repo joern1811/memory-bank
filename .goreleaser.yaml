@@ -1,0 +1,113 @@
+version: 2
+
+project_name: memory-bank
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: memory-bank
+    main: ./cmd/memory-bank
+    binary: memory-bank
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/joern1811/memory-bank/internal/infra/cli.version={{.Version}}
+      - -X github.com/joern1811/memory-bank/internal/infra/cli.commit={{.Commit}}
+      - -X github.com/joern1811/memory-bank/internal/infra/cli.date={{.Date}}
+
+archives:
+  - id: memory-bank
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^build:"
+      - "^ci:"
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  footer: |
+    ## Installation
+    
+    ### Homebrew (macOS/Linux)
+    ```bash
+    brew install joern1811/tap/memory-bank
+    ```
+    
+    ### Manual Installation
+    Download the appropriate binary for your platform from the assets above.
+    
+    ## Usage
+    
+    ### MCP Server Mode (for Claude Code)
+    ```bash
+    ./memory-bank
+    ```
+    
+    ### CLI Mode
+    ```bash
+    ./memory-bank --help
+    ```
+
+brews:
+  - name: memory-bank
+    repository:
+      owner: joern1811
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/joern1811/memory-bank"
+    description: "Semantic memory management system for Claude Code using hexagonal architecture"
+    license: "MIT"
+    commit_author:
+      name: "Jörn Dombrowski"
+      email: "joern.dombrowski@gmail.com"
+    skip_upload: auto
+    install: |
+      bin.install "memory-bank"
+    test: |
+      system "#{bin}/memory-bank", "--help"
+    dependencies:
+      - name: ollama
+        type: optional
+      - name: chromadb
+        type: optional

@@ -30,4 +30,15 @@ func init() {
 	// Global flags can be added here
 	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.memory-bank.yaml)")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
+	
+	// Add version flag to root command
+	rootCmd.Flags().BoolP("version", "V", false, "show version")
+	rootCmd.Run = func(cmd *cobra.Command, args []string) {
+		if versionFlag, _ := cmd.Flags().GetBool("version"); versionFlag {
+			versionCmd.Run(cmd, args)
+			return
+		}
+		// If no subcommand is provided, show help
+		cmd.Help()
+	}
 }
