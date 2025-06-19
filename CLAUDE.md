@@ -828,6 +828,16 @@ Returns comprehensive system prompt with:
   - **Backward Compatibility**: Migration maintains full API compatibility with existing memory-bank functionality
 - **✅ Validation**: All tests pass and project builds successfully after v2 migration
 
+### ✅ ChromaDB Distance Metric Fix (v1.10)
+- **✅ Critical Search Bug Fix**: Resolved semantic search returning 0 results despite valid embeddings
+  - **Root Cause**: ChromaDB defaulted to Squared Euclidean Distance, but Memory Bank assumed Cosine Distance
+  - **Issue**: Similarity calculation `1.0 - distance` produced negative values for Euclidean distance
+  - **Solution**: Configure collections with `"hnsw:space": "cosine"` for proper cosine distance metric
+  - **Tenant/Database Support**: Added full v2 API tenant/database parameter support throughout codebase
+  - **Metadata Normalization**: Enhanced metadata handling for ChromaDB compatibility (arrays, timestamps)
+  - **Debug Testing**: Added comprehensive regression test (`memory_search_debug_test.go`) for end-to-end validation
+- **✅ Results**: Semantic search now returns realistic similarity scores (0.8+ for relevant content vs. previous negative values)
+
 ### 📋 Completed Features (All Next Steps)
 1. ✅ **Database Migrations**: Schema versioning system with migration scripts
 2. ✅ **Configuration Management**: YAML/JSON config files support
