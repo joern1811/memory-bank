@@ -43,7 +43,8 @@ func NewSQLiteDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
 }
 
 // initializeTables creates the necessary database tables
-func initializeTables(db *sql.DB) error {
+// Deprecated: Use migrations instead
+func initializeTables(db *sql.DB) error { //nolint:unused
 	createMemoriesTable := `
 	CREATE TABLE IF NOT EXISTS memories (
 		id TEXT PRIMARY KEY,
