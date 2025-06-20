@@ -243,7 +243,11 @@ func (r *SQLiteSessionRepository) ListByProject(ctx context.Context, projectID d
 		r.logger.WithError(err).WithField("project_id", projectID).Error("Failed to list sessions")
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	var sessions []*domain.Session
 
@@ -386,7 +390,11 @@ func (r *SQLiteSessionRepository) ListWithFilters(ctx context.Context, filters p
 		r.logger.WithError(err).WithField("filters", filters).Error("Failed to list sessions with filters")
 		return nil, fmt.Errorf("failed to list sessions with filters: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	var sessions []*domain.Session
 

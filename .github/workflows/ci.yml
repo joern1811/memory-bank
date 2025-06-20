@@ -78,7 +78,7 @@ jobs:
         ports:
           - 8000:8000
         options: >-
-          --health-cmd "curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
+          --health-cmd "curl -f http://localhost:8000/api/v2/heartbeat || exit 1"
           --health-interval 30s
           --health-timeout 10s
           --health-retries 5
@@ -112,7 +112,7 @@ jobs:
     - name: Wait for services
       run: |
         # Wait for ChromaDB
-        timeout 60s bash -c 'until curl -f http://localhost:8000/api/v1/heartbeat; do sleep 2; done'
+        timeout 60s bash -c 'until curl -f http://localhost:8000/api/v2/heartbeat; do sleep 2; done'
         
         # Wait for Ollama
         timeout 60s bash -c 'until curl -f http://localhost:11434/api/version; do sleep 2; done'
@@ -189,9 +189,14 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
 
     - name: Run Gosec Security Scanner
-      uses: securecodewarrior/github-action-gosec@master
+      uses: securecodewarrior/github-action-add-sarif@v1
       with:
-        args: '-fmt sarif -out gosec.sarif ./...'
+        sarif-file: gosec.sarif
+        
+    - name: Generate gosec SARIF report
+      run: |
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        gosec -fmt sarif -out gosec.sarif ./...
 
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@v2

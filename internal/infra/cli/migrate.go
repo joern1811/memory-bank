@@ -38,7 +38,11 @@ var migrateUpCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %w", err)
 		}
-		defer db.Close()
+		defer func() {
+			if err := db.Close(); err != nil {
+				logger.WithError(err).Error("Failed to close database")
+			}
+		}()
 
 		// Create migrator and run migrations
 		migrator := database.NewMigrator(db, logger)
@@ -71,7 +75,11 @@ var migrateDownCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %w", err)
 		}
-		defer db.Close()
+		defer func() {
+			if err := db.Close(); err != nil {
+				logger.WithError(err).Error("Failed to close database")
+			}
+		}()
 
 		// Create migrator and rollback
 		migrator := database.NewMigrator(db, logger)
@@ -104,7 +112,11 @@ var migrateStatusCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %w", err)
 		}
-		defer db.Close()
+		defer func() {
+			if err := db.Close(); err != nil {
+				logger.WithError(err).Error("Failed to close database")
+			}
+		}()
 
 		// Create migrator and get current version
 		migrator := database.NewMigrator(db, logger)
@@ -130,7 +142,9 @@ func connectToDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
 
 	// Test connection
 	if err := db.Ping(); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			logger.WithError(closeErr).Error("Failed to close database after ping failure")
+		}
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

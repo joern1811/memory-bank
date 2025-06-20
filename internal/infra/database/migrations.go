@@ -152,7 +152,11 @@ func (m *Migrator) runMigration(migration Migration) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			m.logger.WithError(err).Warn("Failed to rollback transaction")
+		}
+	}()
 
 	// Execute migration SQL
 	if _, err := tx.Exec(migration.Up); err != nil {
@@ -190,7 +194,11 @@ func (m *Migrator) rollbackMigration(migration Migration) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			m.logger.WithError(err).Warn("Failed to rollback transaction")
+		}
+	}()
 
 	// Execute rollback SQL
 	if _, err := tx.Exec(migration.Down); err != nil {

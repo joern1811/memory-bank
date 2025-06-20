@@ -111,7 +111,11 @@ func (p *OllamaProvider) GenerateEmbedding(ctx context.Context, text string) (do
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			p.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Read response
 	body, err := io.ReadAll(resp.Body)

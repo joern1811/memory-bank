@@ -46,8 +46,12 @@ var projectListCmd = &cobra.Command{
 
 		// Create table writer
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintf(w, "ID\tName\tPath\tCreated\tDescription\n")
-		fmt.Fprintf(w, "--\t----\t----\t-------\t-----------\n")
+		if _, err := fmt.Fprintf(w, "ID\tName\tPath\tCreated\tDescription\n"); err != nil {
+			return fmt.Errorf("failed to write table header: %w", err)
+		}
+		if _, err := fmt.Fprintf(w, "--\t----\t----\t-------\t-----------\n"); err != nil {
+			return fmt.Errorf("failed to write table separator: %w", err)
+		}
 
 		for _, project := range projects {
 			// Format creation time
@@ -59,16 +63,20 @@ var projectListCmd = &cobra.Command{
 				description = description[:47] + "..."
 			}
 
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 				project.ID,
 				project.Name,
 				project.Path,
 				createdAt,
 				description,
-			)
+			); err != nil {
+				return fmt.Errorf("failed to write project row: %w", err)
+			}
 		}
 
-		w.Flush()
+		if err := w.Flush(); err != nil {
+			return fmt.Errorf("failed to flush table output: %w", err)
+		}
 		return nil
 	},
 }

@@ -23,14 +23,18 @@ func NewSQLiteDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
 
 	// Test connection
 	if err := db.Ping(); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			logger.WithError(closeErr).Error("Failed to close database after ping failure")
+		}
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	// Run database migrations
 	migrator := NewMigrator(db, logger)
 	if err := migrator.Run(); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			logger.WithError(closeErr).Error("Failed to close database after migration failure")
+		}
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
@@ -251,7 +255,11 @@ func (r *SQLiteMemoryRepository) ListByProject(ctx context.Context, projectID do
 	if err != nil {
 		return nil, fmt.Errorf("failed to query memories: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	return r.scanMemories(rows)
 }
@@ -275,7 +283,11 @@ func (r *SQLiteMemoryRepository) ListByType(ctx context.Context, projectID domai
 	if err != nil {
 		return nil, fmt.Errorf("failed to query memories: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	return r.scanMemories(rows)
 }
@@ -301,7 +313,11 @@ func (r *SQLiteMemoryRepository) ListByTags(ctx context.Context, projectID domai
 	if err != nil {
 		return nil, fmt.Errorf("failed to query memories: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	memories, err := r.scanMemories(rows)
 	if err != nil {
@@ -342,7 +358,11 @@ func (r *SQLiteMemoryRepository) ListBySession(ctx context.Context, sessionID do
 	if err != nil {
 		return nil, fmt.Errorf("failed to query memories: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	return r.scanMemories(rows)
 }
@@ -465,7 +485,11 @@ func (r *SQLiteMemoryRepository) GetByIDs(ctx context.Context, ids []domain.Memo
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch query memories: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	return r.scanMemories(rows)
 }
@@ -496,7 +520,11 @@ func (r *SQLiteMemoryRepository) GetMetadataByIDs(ctx context.Context, ids []dom
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch query memory metadata: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	var metadata []*ports.MemoryMetadata
 	for rows.Next() {

@@ -209,7 +209,11 @@ func (r *SQLiteProjectRepository) List(ctx context.Context) ([]*domain.Project, 
 		r.logger.WithError(err).Error("Failed to list projects")
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			r.logger.WithError(err).Warn("Failed to close rows")
+		}
+	}()
 
 	var projects []*domain.Project
 

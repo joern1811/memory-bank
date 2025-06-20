@@ -73,7 +73,11 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.WithError(err).Error("Failed to close database")
+		}
+	}()
 
 	// Initialize repositories
 	memoryRepo := database.NewSQLiteMemoryRepository(db, logger)

@@ -28,13 +28,17 @@ func setupTestDB(t *testing.T) (*sql.DB, func()) {
 	// Run migrations
 	migrator := NewMigrator(db, logger)
 	if err := migrator.Run(); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			logger.WithError(closeErr).Error("Failed to close database after migration failure")
+		}
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	// Return cleanup function
 	cleanup := func() {
-		db.Close()
+		if err := db.Close(); err != nil {
+			logger.WithError(err).Error("Failed to close test database")
+		}
 	}
 
 	return db, cleanup

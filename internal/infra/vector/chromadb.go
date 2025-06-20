@@ -91,7 +91,11 @@ func (c *ChromaDBVectorStore) getCollectionID(ctx context.Context, name string) 
 	if err != nil {
 		return "", fmt.Errorf("failed to list collections: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 	
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -273,7 +277,11 @@ func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domai
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
@@ -347,7 +355,11 @@ func (c *ChromaDBVectorStore) BatchStore(ctx context.Context, items []ports.Batc
 	if err != nil {
 		return fmt.Errorf("failed to execute batch request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
@@ -397,7 +409,11 @@ func (c *ChromaDBVectorStore) BatchDelete(ctx context.Context, ids []string) err
 	if err != nil {
 		return fmt.Errorf("failed to execute batch delete request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
@@ -443,7 +459,11 @@ func (c *ChromaDBVectorStore) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
@@ -493,7 +513,11 @@ func (c *ChromaDBVectorStore) Update(ctx context.Context, id string, vector doma
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
@@ -543,7 +567,11 @@ func (c *ChromaDBVectorStore) Search(ctx context.Context, vector domain.Embeddin
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Read response
 	body, err := io.ReadAll(resp.Body)
@@ -629,7 +657,11 @@ func (c *ChromaDBVectorStore) CreateCollection(ctx context.Context, name string)
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
@@ -657,7 +689,11 @@ func (c *ChromaDBVectorStore) DeleteCollection(ctx context.Context, name string)
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
@@ -686,7 +722,11 @@ func (c *ChromaDBVectorStore) ListCollections(ctx context.Context) ([]string, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Read response
 	body, err := io.ReadAll(resp.Body)
@@ -730,7 +770,11 @@ func (c *ChromaDBVectorStore) HealthCheck(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("chromadb health check failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.WithError(err).Warn("Failed to close response body")
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {

@@ -15,7 +15,9 @@ It provides intelligent storage and retrieval of development knowledge including
 error solutions, and session context.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// If no subcommand is provided, show help
-		cmd.Help()
+		if err := cmd.Help(); err != nil {
+			fmt.Printf("Error displaying help: %v\n", err)
+		}
 	},
 }
 
@@ -39,6 +41,8 @@ func init() {
 			return
 		}
 		// If no subcommand is provided, show help
-		cmd.Help()
+		if err := cmd.Help(); err != nil {
+			fmt.Printf("Error displaying help: %v\n", err)
+		}
 	}
 }
