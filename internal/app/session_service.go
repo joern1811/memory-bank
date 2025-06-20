@@ -211,8 +211,8 @@ func (s *SessionService) AbortActiveSessionsForProject(ctx context.Context, proj
 	}
 
 	s.logger.WithFields(logrus.Fields{
-		"project_id":     projectID,
-		"aborted_count":  len(abortedIDs),
+		"project_id":    projectID,
+		"aborted_count": len(abortedIDs),
 	}).Info("Completed aborting active sessions")
 
 	return abortedIDs, nil

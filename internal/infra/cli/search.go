@@ -29,10 +29,10 @@ This is a convenience command that searches all projects and memory types.`,
 		}
 
 		ctx := context.Background()
-		
+
 		// Quick health check for external services
 		QuickHealthCheck(ctx, services)
-		
+
 		fmt.Printf("Global search for: %s\n", query)
 		fmt.Printf("Limit: %d, Threshold: %.2f\n", limit, threshold)
 		if showContent {
@@ -51,7 +51,7 @@ This is a convenience command that searches all projects and memory types.`,
 		if err != nil {
 			return fmt.Errorf("failed to search memories: %w", err)
 		}
-		
+
 		fmt.Printf("\nGlobal Search Results (%d found):\n", len(results))
 		if len(results) == 0 {
 			fmt.Println("No memories found matching your query.")
@@ -59,20 +59,20 @@ This is a convenience command that searches all projects and memory types.`,
 			for i, result := range results {
 				fmt.Printf("\n%d. %s (Score: %.3f)\n", i+1, result.Memory.Title, result.Similarity)
 				fmt.Printf("   Type: %s, Project: %s\n", result.Memory.Type, result.Memory.ProjectID)
-				
+
 				if showContent {
 					fmt.Printf("   Content: %s\n", result.Memory.Content)
 				} else {
 					fmt.Printf("   Content: %s\n", truncateString(result.Memory.Content, 100))
 				}
-				
+
 				if len(result.Memory.Tags) > 0 {
 					fmt.Printf("   Tags: %s\n", strings.Join(result.Memory.Tags, ", "))
 				}
 				fmt.Printf("   Created: %s\n", result.Memory.CreatedAt.Format("2006-01-02 15:04:05"))
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -106,9 +106,9 @@ Supports filtering by types, tags, sessions, content length, and more.`,
 		}
 
 		ctx := context.Background()
-		
+
 		fmt.Printf("Faceted search for: %s\n", query)
-		
+
 		// Build search request
 		searchReq := ports.FacetedSearchRequest{
 			Query:         query,
@@ -126,19 +126,19 @@ Supports filtering by types, tags, sessions, content length, and more.`,
 		// Build filters
 		if len(typesFlag) > 0 || len(tagsFlag) > 0 || minLength > 0 || maxLength > 0 || hasContent {
 			filters := &ports.SearchFilters{}
-			
+
 			// Convert types
 			if len(typesFlag) > 0 {
 				for _, t := range typesFlag {
 					filters.Types = append(filters.Types, domain.MemoryType(t))
 				}
 			}
-			
+
 			// Set tags
 			if len(tagsFlag) > 0 {
 				filters.Tags = domain.Tags(tagsFlag)
 			}
-			
+
 			// Set content filters
 			if minLength > 0 {
 				filters.MinLength = &minLength
@@ -149,7 +149,7 @@ Supports filtering by types, tags, sessions, content length, and more.`,
 			if hasContent {
 				filters.HasContent = hasContent
 			}
-			
+
 			searchReq.Filters = filters
 		}
 
@@ -177,7 +177,7 @@ Supports filtering by types, tags, sessions, content length, and more.`,
 				fmt.Printf("\n%d. %s (Score: %.3f)\n", i+1, result.Memory.Title, result.Similarity)
 				fmt.Printf("   Type: %s, Project: %s\n", result.Memory.Type, result.Memory.ProjectID)
 				fmt.Printf("   Content: %s\n", truncateString(result.Memory.Content, 100))
-				
+
 				if len(result.Memory.Tags) > 0 {
 					fmt.Printf("   Tags: %s\n", strings.Join(result.Memory.Tags, ", "))
 				}
@@ -188,21 +188,21 @@ Supports filtering by types, tags, sessions, content length, and more.`,
 		// Display facets if requested
 		if includeFacets && response.Facets != nil {
 			fmt.Printf("\nFacets:\n")
-			
+
 			if len(response.Facets.Types) > 0 {
 				fmt.Printf("\nTypes:\n")
 				for _, facet := range response.Facets.Types {
 					fmt.Printf("  %s (%d)\n", facet.Type, facet.Count)
 				}
 			}
-			
+
 			if len(response.Facets.Tags) > 0 {
 				fmt.Printf("\nTags:\n")
 				for _, facet := range response.Facets.Tags {
 					fmt.Printf("  %s (%d)\n", facet.Tag, facet.Count)
 				}
 			}
-			
+
 			if len(response.Facets.TimePeriods) > 0 {
 				fmt.Printf("\nTime Periods:\n")
 				for _, facet := range response.Facets.TimePeriods {
@@ -210,7 +210,7 @@ Supports filtering by types, tags, sessions, content length, and more.`,
 				}
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -236,9 +236,9 @@ Provides detailed insights into why each result was matched.`,
 		}
 
 		ctx := context.Background()
-		
+
 		fmt.Printf("Enhanced search for: %s\n", query)
-		
+
 		// Build search request
 		searchReq := ports.SemanticSearchRequest{
 			Query:     query,
@@ -278,11 +278,11 @@ Provides detailed insights into why each result was matched.`,
 				fmt.Printf("\n%d. %s\n", i+1, result.Memory.Title)
 				fmt.Printf("   Similarity: %.3f | Relevance: %.3f\n", result.Similarity, result.RelevanceScore)
 				fmt.Printf("   Type: %s | Project: %s\n", result.Memory.Type, result.Memory.ProjectID)
-				
+
 				if len(result.Memory.Tags) > 0 {
 					fmt.Printf("   Tags: %s\n", strings.Join(result.Memory.Tags, ", "))
 				}
-				
+
 				// Show match reasons
 				if len(result.MatchReasons) > 0 {
 					fmt.Printf("   Match Reasons:\n")
@@ -290,7 +290,7 @@ Provides detailed insights into why each result was matched.`,
 						fmt.Printf("     • %s\n", reason)
 					}
 				}
-				
+
 				// Show highlights
 				if len(result.Highlights) > 0 {
 					fmt.Printf("   Highlights:\n")
@@ -298,11 +298,11 @@ Provides detailed insights into why each result was matched.`,
 						fmt.Printf("     %s\n", highlight)
 					}
 				}
-				
+
 				fmt.Printf("   Created: %s\n", result.Memory.CreatedAt.Format("2006-01-02 15:04:05"))
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -325,7 +325,7 @@ Suggestions are generated from titles, tags, and frequently used terms.`,
 		}
 
 		ctx := context.Background()
-		
+
 		// Set project filter
 		var projectID *domain.ProjectID
 		if projectFlag != "" {
@@ -353,14 +353,14 @@ Suggestions are generated from titles, tags, and frequently used terms.`,
 				fmt.Printf("%d. %s\n", i+1, suggestion)
 			}
 		}
-		
+
 		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(searchCmd)
-	
+
 	// Basic search flags
 	searchCmd.Flags().IntP("limit", "l", 10, "maximum number of results")
 	searchCmd.Flags().Float32P("threshold", "", 0.5, "similarity threshold")

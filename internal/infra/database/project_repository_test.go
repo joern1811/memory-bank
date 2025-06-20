@@ -255,4 +255,3 @@ func TestSQLiteProjectRepository_List(t *testing.T) {
 		t.Errorf("Expected 3 projects, got %d", len(allProjects))
 	}
 }
-

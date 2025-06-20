@@ -6,23 +6,23 @@ import (
 
 func TestTags_Contains(t *testing.T) {
 	tags := Tags{"tag1", "tag2", "tag3"}
-	
+
 	// Test existing tag
 	if !tags.Contains("tag2") {
 		t.Error("Expected Contains to return true for existing tag")
 	}
-	
+
 	// Test non-existing tag
 	if tags.Contains("tag4") {
 		t.Error("Expected Contains to return false for non-existing tag")
 	}
-	
+
 	// Test empty tags
 	emptyTags := Tags{}
 	if emptyTags.Contains("any") {
 		t.Error("Expected Contains to return false for empty tags")
 	}
-	
+
 	// Test case sensitivity
 	if tags.Contains("TAG1") {
 		t.Error("Expected Contains to be case sensitive")
@@ -31,7 +31,7 @@ func TestTags_Contains(t *testing.T) {
 
 func TestTags_Add(t *testing.T) {
 	tags := Tags{}
-	
+
 	// Test adding first tag
 	tags.Add("first")
 	if len(tags) != 1 {
@@ -40,13 +40,13 @@ func TestTags_Add(t *testing.T) {
 	if tags[0] != "first" {
 		t.Errorf("Expected first tag to be 'first', got '%s'", tags[0])
 	}
-	
+
 	// Test adding duplicate tag
 	tags.Add("first")
 	if len(tags) != 1 {
 		t.Errorf("Expected length to remain 1 after adding duplicate, got %d", len(tags))
 	}
-	
+
 	// Test adding different tag
 	tags.Add("second")
 	if len(tags) != 2 {
@@ -55,7 +55,7 @@ func TestTags_Add(t *testing.T) {
 	if !tags.Contains("second") {
 		t.Error("Expected tags to contain 'second'")
 	}
-	
+
 	// Test adding empty string
 	initialLen := len(tags)
 	tags.Add("")
@@ -81,7 +81,7 @@ func TestSimilarity_IsRelevant(t *testing.T) {
 		{Similarity(0.0), 0.1, false, "no similarity"},
 		{Similarity(0.75), 1.0, false, "high similarity but higher threshold"},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := tc.similarity.IsRelevant(tc.threshold)
@@ -103,7 +103,7 @@ func TestMemoryType_Constants(t *testing.T) {
 		MemoryTypeDocumentation: "documentation",
 		MemoryTypeSession:       "session",
 	}
-	
+
 	for memoryType, expectedValue := range expectedTypes {
 		if string(memoryType) != expectedValue {
 			t.Errorf("Expected MemoryType %s to have value '%s', got '%s'",
@@ -120,7 +120,7 @@ func TestSessionStatus_Constants(t *testing.T) {
 		SessionStatusAborted:   "aborted",
 		SessionStatusPaused:    "paused",
 	}
-	
+
 	for status, expectedValue := range expectedStatuses {
 		if string(status) != expectedValue {
 			t.Errorf("Expected SessionStatus %s to have value '%s', got '%s'",
@@ -132,16 +132,16 @@ func TestSessionStatus_Constants(t *testing.T) {
 func TestEmbeddingVector(t *testing.T) {
 	// Test creating embedding vector
 	vector := EmbeddingVector{0.1, 0.2, 0.3, 0.4}
-	
+
 	if len(vector) != 4 {
 		t.Errorf("Expected vector length 4, got %d", len(vector))
 	}
-	
+
 	// Test accessing values
 	if vector[0] != 0.1 {
 		t.Errorf("Expected vector[0] to be 0.1, got %f", vector[0])
 	}
-	
+
 	// Test empty vector
 	emptyVector := EmbeddingVector{}
 	if len(emptyVector) != 0 {
@@ -155,7 +155,7 @@ func TestProgressEntry(t *testing.T) {
 		Message:   "Test message",
 		Type:      "info",
 	}
-	
+
 	if entry.Timestamp != "2023-01-01T12:00:00Z" {
 		t.Errorf("Expected timestamp '2023-01-01T12:00:00Z', got '%s'", entry.Timestamp)
 	}
@@ -172,7 +172,7 @@ func TestIDTypes(t *testing.T) {
 	memoryID := MemoryID("mem_123")
 	projectID := ProjectID("proj_456")
 	sessionID := SessionID("sess_789")
-	
+
 	if string(memoryID) != "mem_123" {
 		t.Errorf("Expected MemoryID 'mem_123', got '%s'", string(memoryID))
 	}
@@ -182,7 +182,7 @@ func TestIDTypes(t *testing.T) {
 	if string(sessionID) != "sess_789" {
 		t.Errorf("Expected SessionID 'sess_789', got '%s'", string(sessionID))
 	}
-	
+
 	// Test that different ID types are different types
 	// This is more of a compile-time check, but we can verify they're not equal
 	if memoryID == MemoryID(projectID) {

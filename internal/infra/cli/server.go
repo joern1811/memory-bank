@@ -92,7 +92,7 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 	if model := os.Getenv("OLLAMA_MODEL"); model != "" {
 		embeddingConfig.Model = model
 	}
-	
+
 	var embeddingProvider ports.EmbeddingProvider
 	ollamaProvider := embedding.NewOllamaProvider(embeddingConfig, logger)
 
@@ -113,7 +113,7 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 		vectorConfig.Collection = collection
 	}
 	// Note: DefaultChromeDBConfig() already includes Tenant and Database defaults
-	
+
 	var vectorStore ports.VectorStore
 	chromaDBStore := vector.NewChromaDBVectorStore(vectorConfig, logger)
 

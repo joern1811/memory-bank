@@ -33,12 +33,12 @@ type EmbeddingVector []float32
 type MemoryType string
 
 const (
-	MemoryTypeDecision     MemoryType = "decision"
-	MemoryTypePattern      MemoryType = "pattern"
+	MemoryTypeDecision      MemoryType = "decision"
+	MemoryTypePattern       MemoryType = "pattern"
 	MemoryTypeErrorSolution MemoryType = "error_solution"
-	MemoryTypeCode         MemoryType = "code"
+	MemoryTypeCode          MemoryType = "code"
 	MemoryTypeDocumentation MemoryType = "documentation"
-	MemoryTypeSession      MemoryType = "session"
+	MemoryTypeSession       MemoryType = "session"
 )
 
 // Tags represents a collection of tags for categorization

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
-	_ "modernc.org/sqlite"
 	"github.com/sirupsen/logrus"
+	_ "modernc.org/sqlite"
 	"strings"
 )
 

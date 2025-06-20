@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Enhanced Integration Tests
@@ -36,7 +37,7 @@ var testMemoryCounter int64
 func createTestMemoryWithUniqueTitle(ctx context.Context, service *app.MemoryService, projectID domain.ProjectID, memoryType domain.MemoryType, baseTitle, content string, tags []string) (*domain.Memory, error) {
 	counter := atomic.AddInt64(&testMemoryCounter, 1)
 	uniqueTitle := fmt.Sprintf("%s_%d_%d", baseTitle, counter, time.Now().UnixNano())
-	
+
 	req := ports.CreateMemoryRequest{
 		ProjectID: projectID,
 		Type:      memoryType,
@@ -44,7 +45,7 @@ func createTestMemoryWithUniqueTitle(ctx context.Context, service *app.MemorySer
 		Content:   content,
 		Tags:      domain.Tags(tags),
 	}
-	
+
 	return service.CreateMemory(ctx, req)
 }
 
@@ -70,7 +71,7 @@ func TestEndToEndMemoryOperations(t *testing.T) {
 	db, err := database.NewSQLiteDatabase(dbPath, logger)
 	require.NoError(t, err)
 	defer db.Close()
-	
+
 	memoryRepo := database.NewSQLiteMemoryRepository(db, logger)
 
 	// Create embedding provider (with fallback to mock)
@@ -87,11 +88,11 @@ func TestEndToEndMemoryOperations(t *testing.T) {
 
 	t.Run("CreateMemoriesWithDifferentTypes", func(t *testing.T) {
 		testCases := []struct {
-			name        string
-			memoryType  domain.MemoryType
-			title       string
-			content     string
-			tags        []string
+			name       string
+			memoryType domain.MemoryType
+			title      string
+			content    string
+			tags       []string
 		}{
 			{
 				name:       "Decision Memory",
@@ -103,7 +104,7 @@ func TestEndToEndMemoryOperations(t *testing.T) {
 			{
 				name:       "Pattern Memory",
 				memoryType: domain.MemoryTypePattern,
-				title:      "Repository Pattern Implementation", 
+				title:      "Repository Pattern Implementation",
 				content:    "Implement repository pattern for data access abstraction with interface segregation.",
 				tags:       []string{"pattern", "repository", "design"},
 			},
@@ -252,19 +253,19 @@ func TestPerformanceCharacteristics(t *testing.T) {
 		for _, text := range testTexts {
 			t.Run(fmt.Sprintf("TextLength_%d", len(text)), func(t *testing.T) {
 				start := time.Now()
-				
+
 				embedding, err := embeddingProvider.GenerateEmbedding(ctx, text)
-				
+
 				duration := time.Since(start)
-				
+
 				if err != nil {
 					t.Logf("Embedding generation failed (may be expected with mock provider): %v", err)
 				} else {
 					assert.NotNil(t, embedding)
 					assert.Greater(t, len(embedding), 0)
-					
+
 					t.Logf("Generated embedding for text length %d in %v", len(text), duration)
-					
+
 					// Performance expectations (adjust based on your requirements)
 					if duration > 30*time.Second {
 						t.Logf("Warning: Embedding generation took longer than expected: %v", duration)
@@ -286,16 +287,16 @@ func TestPerformanceCharacteristics(t *testing.T) {
 				}
 
 				start := time.Now()
-				
+
 				embeddings, err := embeddingProvider.GenerateBatchEmbeddings(ctx, texts)
-				
+
 				duration := time.Since(start)
 
 				if err != nil {
 					t.Logf("Batch embedding generation failed (may be expected with mock provider): %v", err)
 				} else {
 					assert.Len(t, embeddings, batchSize)
-					
+
 					avgTime := duration / time.Duration(batchSize)
 					t.Logf("Generated %d embeddings in %v (avg: %v per embedding)", batchSize, duration, avgTime)
 				}
@@ -311,7 +312,7 @@ func TestPerformanceCharacteristics(t *testing.T) {
 
 		// Create test collection
 		testCollection := fmt.Sprintf("perf_test_%d", time.Now().Unix())
-		
+
 		chromaStore, ok := vectorStore.(*vector.ChromaDBVectorStore)
 		if !ok {
 			t.Skip("Vector search performance test requires ChromaDB")

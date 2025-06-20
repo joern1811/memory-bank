@@ -266,7 +266,7 @@ func TestOllamaProvider_GenerateBatchEmbeddings_Success(t *testing.T) {
 	requestCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
-		
+
 		var req ollamaEmbeddingRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("Failed to decode request: %v", err)
@@ -399,7 +399,7 @@ func TestOllamaProvider_GetDimensions(t *testing.T) {
 	logger := setupTestLogger()
 
 	tests := []struct {
-		model      string
+		model       string
 		expectedDim int
 	}{
 		{"nomic-embed-text", 768},
@@ -519,7 +519,7 @@ func TestOllamaProvider_ConcurrencyControl(t *testing.T) {
 	ctx := context.Background()
 	// Send 4 requests - should be processed in 2 batches
 	texts := []string{"text 1", "text 2", "text 3", "text 4"}
-	
+
 	start := time.Now()
 	_, err := provider.GenerateBatchEmbeddings(ctx, texts)
 	duration := time.Since(start)
@@ -538,7 +538,7 @@ func TestOllamaProvider_ConcurrencyControl(t *testing.T) {
 	// Verify that no more than 2 requests started at the same time
 	requestMutex.Lock()
 	defer requestMutex.Unlock()
-	
+
 	if len(requestTimes) != 4 {
 		t.Errorf("Expected 4 requests, got %d", len(requestTimes))
 	}

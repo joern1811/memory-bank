@@ -48,7 +48,7 @@ func (m *Migrator) Run() error {
 
 	// Get all migrations
 	migrations := m.getAllMigrations()
-	
+
 	// Sort migrations by version
 	sort.Slice(migrations, func(i, j int) bool {
 		return migrations[i].Version < migrations[j].Version
@@ -130,13 +130,13 @@ func (m *Migrator) createMigrationsTable() error {
 // getCurrentVersion gets the current schema version from the database
 func (m *Migrator) getCurrentVersion() (int, error) {
 	query := "SELECT COALESCE(MAX(version), 0) FROM schema_migrations"
-	
+
 	var version int
 	err := m.db.QueryRow(query).Scan(&version)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return version, nil
 }
 

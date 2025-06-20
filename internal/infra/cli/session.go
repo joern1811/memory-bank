@@ -39,7 +39,7 @@ The session will be created and set as active for the project.`,
 		}
 
 		ctx := context.Background()
-		
+
 		fmt.Printf("Starting new development session:\n")
 		fmt.Printf("  Task: %s\n", taskDescription)
 		if projectID != "" {
@@ -65,7 +65,7 @@ The session will be created and set as active for the project.`,
 		if err != nil {
 			return fmt.Errorf("failed to start session: %w", err)
 		}
-		
+
 		fmt.Printf("✓ Development session started successfully (ID: %s)\n", session.ID)
 		fmt.Printf("  Status: %s\n", session.Status)
 		fmt.Printf("  Started: %s\n", session.StartTime.Format("2006-01-02 15:04:05"))
@@ -146,7 +146,7 @@ The session will be marked as completed and no longer active.`,
 		if len(args) > 0 {
 			outcome = args[0]
 		}
-		
+
 		projectID, _ := cmd.Flags().GetString("project")
 		sessionID, _ := cmd.Flags().GetString("session")
 
@@ -157,7 +157,7 @@ The session will be marked as completed and no longer active.`,
 		}
 
 		ctx := context.Background()
-		
+
 		var targetSessionID domain.SessionID
 
 		// If session ID provided, use it directly
@@ -189,7 +189,7 @@ The session will be marked as completed and no longer active.`,
 		if err != nil {
 			return fmt.Errorf("failed to complete session: %w", err)
 		}
-		
+
 		fmt.Printf("✓ Session completed successfully\n")
 		return nil
 	},
@@ -211,7 +211,7 @@ var sessionListCmd = &cobra.Command{
 		}
 
 		ctx := context.Background()
-		
+
 		fmt.Printf("Listing sessions")
 		if projectID != "" {
 			fmt.Printf(" for project: %s", projectID)
@@ -259,18 +259,18 @@ var sessionListCmd = &cobra.Command{
 				fmt.Printf("   ID: %s\n", session.ID)
 				fmt.Printf("   Project: %s, Status: %s\n", session.ProjectID, session.Status)
 				fmt.Printf("   Started: %s\n", session.StartTime.Format("2006-01-02 15:04:05"))
-				
+
 				if session.EndTime != nil {
 					fmt.Printf("   Ended: %s\n", session.EndTime.Format("2006-01-02 15:04:05"))
 					fmt.Printf("   Duration: %s\n", session.Duration().String())
 				} else if session.IsActive() {
 					fmt.Printf("   Duration: %s (ongoing)\n", time.Since(session.StartTime).Truncate(time.Second).String())
 				}
-				
+
 				if session.Outcome != "" {
 					fmt.Printf("   Outcome: %s\n", truncateString(session.Outcome, 100))
 				}
-				
+
 				if len(session.Progress) > 0 {
 					fmt.Printf("   Progress entries: %d\n", len(session.Progress))
 					// Show last progress entry
@@ -279,7 +279,7 @@ var sessionListCmd = &cobra.Command{
 				}
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -303,7 +303,7 @@ var sessionGetCmd = &cobra.Command{
 		}
 
 		ctx := context.Background()
-		
+
 		fmt.Printf("Retrieving session: %s\n", sessionID)
 
 		// Get session
@@ -311,36 +311,36 @@ var sessionGetCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to get session: %w", err)
 		}
-		
+
 		fmt.Printf("\nSession Details:\n")
 		fmt.Printf("  ID: %s\n", session.ID)
 		fmt.Printf("  Project: %s\n", session.ProjectID)
 		fmt.Printf("  Task: %s\n", session.TaskDescription)
 		fmt.Printf("  Status: %s\n", session.Status)
 		fmt.Printf("  Started: %s\n", session.StartTime.Format("2006-01-02 15:04:05"))
-		
+
 		if session.EndTime != nil {
 			fmt.Printf("  Ended: %s\n", session.EndTime.Format("2006-01-02 15:04:05"))
 			fmt.Printf("  Duration: %s\n", session.Duration().String())
 		} else if session.IsActive() {
 			fmt.Printf("  Duration: %s (ongoing)\n", time.Since(session.StartTime).Truncate(time.Second).String())
 		}
-		
+
 		if session.Outcome != "" {
 			fmt.Printf("  Outcome: %s\n", session.Outcome)
 		}
-		
+
 		if len(session.Progress) > 0 {
 			fmt.Printf("\nProgress Log (%d entries):\n", len(session.Progress))
 			for i, entry := range session.Progress {
 				fmt.Printf("  %d. [%s] %s - %s\n", i+1, entry.Type, entry.Timestamp, entry.Message)
 			}
-			
+
 			// Show progress breakdown
 			milestones := session.GetMilestones()
 			issues := session.GetIssues()
 			solutions := session.GetSolutions()
-			
+
 			fmt.Printf("\nProgress Summary:\n")
 			fmt.Printf("  Milestones: %d\n", len(milestones))
 			fmt.Printf("  Issues: %d\n", len(issues))
@@ -348,15 +348,15 @@ var sessionGetCmd = &cobra.Command{
 		} else {
 			fmt.Printf("\nProgress Log: No entries yet\n")
 		}
-		
+
 		if len(session.Tags) > 0 {
 			fmt.Printf("\nTags: %s\n", strings.Join(session.Tags, ", "))
 		}
-		
+
 		if session.Summary != "" {
 			fmt.Printf("\nSummary: %s\n", session.Summary)
 		}
-		
+
 		return nil
 	},
 }
@@ -371,7 +371,7 @@ If no session ID is provided, the active session for the project will be aborted
 		if len(args) > 0 {
 			sessionID = args[0]
 		}
-		
+
 		projectID, _ := cmd.Flags().GetString("project")
 
 		// Get services
@@ -381,7 +381,7 @@ If no session ID is provided, the active session for the project will be aborted
 		}
 
 		ctx := context.Background()
-		
+
 		var targetSessionID domain.SessionID
 
 		// If session ID provided, use it directly
@@ -410,7 +410,7 @@ If no session ID is provided, the active session for the project will be aborted
 		if err != nil {
 			return fmt.Errorf("failed to abort session: %w", err)
 		}
-		
+
 		fmt.Printf("✓ Session aborted successfully\n")
 		return nil
 	},
@@ -418,7 +418,7 @@ If no session ID is provided, the active session for the project will be aborted
 
 func init() {
 	rootCmd.AddCommand(sessionCmd)
-	
+
 	// Add subcommands
 	sessionCmd.AddCommand(sessionStartCmd)
 	sessionCmd.AddCommand(sessionLogCmd)
@@ -426,24 +426,24 @@ func init() {
 	sessionCmd.AddCommand(sessionListCmd)
 	sessionCmd.AddCommand(sessionGetCmd)
 	sessionCmd.AddCommand(sessionAbortCmd)
-	
+
 	// Flags for start command
 	sessionStartCmd.Flags().StringP("project", "p", "", "project ID")
-	
+
 	// Flags for log command
 	sessionLogCmd.Flags().StringP("project", "p", "", "project ID (if no session ID provided)")
 	sessionLogCmd.Flags().StringP("session", "s", "", "specific session ID")
 	sessionLogCmd.Flags().StringP("type", "t", "info", "entry type (info, milestone, issue, solution)")
-	
+
 	// Flags for complete command
 	sessionCompleteCmd.Flags().StringP("project", "p", "", "project ID (if no session ID provided)")
 	sessionCompleteCmd.Flags().StringP("session", "s", "", "specific session ID")
-	
+
 	// Flags for list command
 	sessionListCmd.Flags().StringP("project", "p", "", "filter by project ID")
 	sessionListCmd.Flags().StringP("status", "", "", "filter by status (active, completed, aborted)")
 	sessionListCmd.Flags().IntP("limit", "l", 20, "maximum number of results")
-	
+
 	// Flags for abort command
 	sessionAbortCmd.Flags().StringP("project", "p", "", "project ID (if no session ID provided)")
 }

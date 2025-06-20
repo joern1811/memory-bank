@@ -97,9 +97,9 @@ func LoadConfig(configPath string) (*Config, error) {
 func findAndLoadConfig() error {
 	// Search paths in order of preference
 	searchPaths := []string{
-		".",                                   // Current directory
-		"$HOME/.config/memory-bank",          // User config directory
-		"/etc/memory-bank",                   // System config directory
+		".",                         // Current directory
+		"$HOME/.config/memory-bank", // User config directory
+		"/etc/memory-bank",          // System config directory
 	}
 
 	// Config file names to search for
@@ -128,11 +128,11 @@ func findAndLoadConfig() error {
 func overrideWithLegacyEnvVars() {
 	// Legacy environment variables mapping
 	legacyMappings := map[string]string{
-		"MEMORY_BANK_DB_PATH":        "database.path",
-		"OLLAMA_BASE_URL":           "ollama.base_url",
-		"OLLAMA_MODEL":              "ollama.model",
-		"CHROMADB_BASE_URL":         "chromadb.base_url",
-		"CHROMADB_COLLECTION":       "chromadb.collection",
+		"MEMORY_BANK_DB_PATH": "database.path",
+		"OLLAMA_BASE_URL":     "ollama.base_url",
+		"OLLAMA_MODEL":        "ollama.model",
+		"CHROMADB_BASE_URL":   "chromadb.base_url",
+		"CHROMADB_COLLECTION": "chromadb.collection",
 	}
 
 	for envVar, configKey := range legacyMappings {

@@ -24,7 +24,7 @@ var projectListCmd = &cobra.Command{
 	Long:  "List all projects in the memory bank system.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		
+
 		// Initialize services
 		services, err := GetServicesForCLI(cmd)
 		if err != nil {
@@ -56,7 +56,7 @@ var projectListCmd = &cobra.Command{
 		for _, project := range projects {
 			// Format creation time
 			createdAt := project.CreatedAt.Format("2006-01-02 15:04")
-			
+
 			// Truncate description if too long
 			description := project.Description
 			if len(description) > 50 {
@@ -88,7 +88,7 @@ var projectGetCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		
+
 		// Initialize services
 		services, err := GetServicesForCLI(cmd)
 		if err != nil {
@@ -114,7 +114,7 @@ var projectGetCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("failed to get current directory: %w", err)
 			}
-			
+
 			project, err = services.ProjectService.GetProjectByPath(ctx, currentDir)
 			if err != nil {
 				return fmt.Errorf("no project found in current directory: %s", currentDir)

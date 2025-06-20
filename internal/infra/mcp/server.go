@@ -51,7 +51,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	)
 
 	mcpServer.AddResource(systemPromptResource, s.handleSystemPromptResource)
-	
+
 	// Register Memory operations as tools
 	mcpServer.AddTool(mcp.NewTool("memory_create",
 		mcp.WithDescription("Create a new memory entry"),
@@ -62,7 +62,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithArray("tags", mcp.Description("Memory tags")),
 		mcp.WithString("session_id", mcp.Description("Session ID")),
 	), s.handleCreateMemoryTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("memory_search",
 		mcp.WithDescription("Search memories semantically"),
 		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
@@ -72,12 +72,12 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
 		mcp.WithNumber("threshold", mcp.Description("Similarity threshold")),
 	), s.handleSearchMemoriesTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("memory_get",
 		mcp.WithDescription("Get a specific memory by ID"),
 		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
 	), s.handleGetMemoryTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("memory_update",
 		mcp.WithDescription("Update an existing memory"),
 		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
@@ -85,19 +85,19 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithString("content", mcp.Description("New content")),
 		mcp.WithArray("tags", mcp.Description("New tags")),
 	), s.handleUpdateMemoryTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("memory_delete",
 		mcp.WithDescription("Delete a memory"),
 		mcp.WithString("id", mcp.Description("Memory ID"), mcp.Required()),
 	), s.handleDeleteMemoryTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("memory_list",
 		mcp.WithDescription("List memories with optional filters"),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
 		mcp.WithString("type", mcp.Description("Memory type to filter by")),
 		mcp.WithArray("tags", mcp.Description("Tags to filter by")),
 	), s.handleListMemoriesTool)
-	
+
 	// Register advanced search operations
 	mcpServer.AddTool(mcp.NewTool("memory_faceted-search",
 		mcp.WithDescription("Advanced search with facets and filters"),
@@ -109,7 +109,7 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithBoolean("include_facets", mcp.Description("Include facets in response")),
 		mcp.WithObject("sort_by", mcp.Description("Sort options")),
 	), s.handleFacetedSearchTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("memory_enhanced-search",
 		mcp.WithDescription("Enhanced search with relevance scoring and highlights"),
 		mcp.WithString("query", mcp.Description("Search query"), mcp.Required()),
@@ -119,14 +119,14 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
 		mcp.WithNumber("threshold", mcp.Description("Similarity threshold")),
 	), s.handleEnhancedSearchTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("memory_search-suggestions",
 		mcp.WithDescription("Get intelligent search suggestions"),
 		mcp.WithString("partial_query", mcp.Description("Partial query for suggestions"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
 		mcp.WithNumber("limit", mcp.Description("Maximum number of suggestions")),
 	), s.handleSearchSuggestionsTool)
-	
+
 	// Register Project operations
 	mcpServer.AddTool(mcp.NewTool("project_init",
 		mcp.WithDescription("Initialize a new project"),
@@ -134,17 +134,17 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithString("path", mcp.Description("Project path"), mcp.Required()),
 		mcp.WithString("description", mcp.Description("Project description")),
 	), s.handleInitProjectTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("project_get",
 		mcp.WithDescription("Get project information"),
 		mcp.WithString("id", mcp.Description("Project ID")),
 		mcp.WithString("path", mcp.Description("Project path")),
 	), s.handleGetProjectTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("project_list",
 		mcp.WithDescription("List all projects"),
 	), s.handleListProjectsTool)
-	
+
 	// Register Session operations
 	mcpServer.AddTool(mcp.NewTool("session_start",
 		mcp.WithDescription("Start a new development session"),
@@ -152,62 +152,62 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
 		mcp.WithString("description", mcp.Description("Session description")),
 	), s.handleStartSessionTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("session_log",
 		mcp.WithDescription("Log progress to the active session"),
 		mcp.WithString("message", mcp.Description("Progress message"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID")),
 		mcp.WithString("session_id", mcp.Description("Session ID")),
 	), s.handleLogSessionTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("session_complete",
 		mcp.WithDescription("Complete a development session"),
 		mcp.WithString("outcome", mcp.Description("Session outcome"), mcp.Required()),
 		mcp.WithString("project_id", mcp.Description("Project ID")),
 		mcp.WithString("session_id", mcp.Description("Session ID")),
 	), s.handleCompleteSessionTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("session_get",
 		mcp.WithDescription("Get session details"),
 		mcp.WithString("id", mcp.Description("Session ID"), mcp.Required()),
 	), s.handleGetSessionTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("session_list",
 		mcp.WithDescription("List sessions with optional filters"),
 		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
 		mcp.WithString("status", mcp.Description("Session status to filter by")),
 		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
 	), s.handleListSessionsTool)
-	
+
 	mcpServer.AddTool(mcp.NewTool("session_abort",
 		mcp.WithDescription("Abort active sessions"),
 		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
 		mcp.WithString("session_id", mcp.Description("Specific session ID to abort")),
 	), s.handleAbortSessionTool)
-	
+
 	// Version tool
 	mcpServer.AddTool(mcp.NewTool("version",
 		mcp.WithDescription("Get Memory Bank version information"),
 	), s.handleVersionTool)
-	
+
 	// System health tool
 	mcpServer.AddTool(mcp.NewTool("system_health",
 		mcp.WithDescription("Check system health and service connectivity"),
 		mcp.WithBoolean("verbose", mcp.Description("Include detailed service information")),
 	), s.handleSystemHealthTool)
-	
+
 	s.logger.Info("MCP tools and resources registered successfully")
 }
 
 // CreateMemoryRequest represents a request to create a new memory
 type CreateMemoryRequest struct {
-	ProjectID   string                 `json:"project_id"`
-	Type        string                 `json:"type"`
-	Title       string                 `json:"title"`
-	Content     string                 `json:"content"`
-	Tags        []string               `json:"tags,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	SessionID   *string                `json:"session_id,omitempty"`
+	ProjectID string                 `json:"project_id"`
+	Type      string                 `json:"type"`
+	Title     string                 `json:"title"`
+	Content   string                 `json:"content"`
+	Tags      []string               `json:"tags,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	SessionID *string                `json:"session_id,omitempty"`
 }
 
 // CreateMemoryResponse represents the response from creating a memory
@@ -219,7 +219,7 @@ type CreateMemoryResponse struct {
 // Tool handlers that wrap the existing handlers to match MCP tool interface
 func (s *MemoryBankServer) handleCreateMemoryTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	s.logger.Debug("Handling memory/create tool request")
-	
+
 	// Convert tool arguments to JSON for reuse with existing handler
 	params, err := json.Marshal(request.Params.Arguments)
 	if err != nil {
@@ -232,7 +232,7 @@ func (s *MemoryBankServer) handleCreateMemoryTool(ctx context.Context, request m
 			},
 		}, nil
 	}
-	
+
 	result, err := s.handleCreateMemory(ctx, params)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -244,7 +244,7 @@ func (s *MemoryBankServer) handleCreateMemoryTool(ctx context.Context, request m
 			},
 		}, nil
 	}
-	
+
 	// Convert result to JSON string for MCP response
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
@@ -257,7 +257,7 @@ func (s *MemoryBankServer) handleCreateMemoryTool(ctx context.Context, request m
 			},
 		}, nil
 	}
-	
+
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
@@ -311,7 +311,7 @@ func (s *MemoryBankServer) handleCreateMemory(ctx context.Context, params json.R
 		Context:   "", // Could be extracted from metadata
 		Tags:      tags,
 	}
-	
+
 	memory, err := s.memoryService.CreateMemory(ctx, createReq)
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to create memory")
@@ -334,12 +334,12 @@ func (s *MemoryBankServer) handleCreateMemory(ctx context.Context, params json.R
 
 // SearchMemoriesRequest represents a request to search memories
 type SearchMemoriesRequest struct {
-	Query       string   `json:"query"`
-	ProjectID   *string  `json:"project_id,omitempty"`
-	Type        *string  `json:"type,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	Limit       *int     `json:"limit,omitempty"`
-	Threshold   *float32 `json:"threshold,omitempty"`
+	Query     string   `json:"query"`
+	ProjectID *string  `json:"project_id,omitempty"`
+	Type      *string  `json:"type,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	Limit     *int     `json:"limit,omitempty"`
+	Threshold *float32 `json:"threshold,omitempty"`
 }
 
 // SearchMemoriesResponse represents the response from searching memories
@@ -408,7 +408,7 @@ func (s *MemoryBankServer) handleSearchMemories(ctx context.Context, params json
 		Limit:     limit,
 		Threshold: threshold,
 	}
-	
+
 	searchResults, err := s.memoryService.SearchMemories(ctx, searchQuery)
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to search memories")
@@ -619,7 +619,7 @@ func (s *MemoryBankServer) handleListMemories(ctx context.Context, params json.R
 		Limit:     1000, // Large limit to get all results
 		Threshold: 0.0,  // No threshold filtering
 	}
-	
+
 	searchResults, err := s.memoryService.SearchMemories(ctx, searchQuery)
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to list memories")
@@ -686,7 +686,7 @@ func (s *MemoryBankServer) handleInitProject(ctx context.Context, params json.Ra
 		Path:        req.Path,
 		Description: req.Description,
 	}
-	
+
 	project, err := s.projectService.CreateProject(ctx, createProjectReq)
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to initialize project")
@@ -845,9 +845,9 @@ func (s *MemoryBankServer) handleStartSession(ctx context.Context, params json.R
 }
 
 type LogSessionRequest struct {
-	Message    string  `json:"message"`
-	ProjectID  *string `json:"project_id,omitempty"`
-	SessionID  *string `json:"session_id,omitempty"`
+	Message   string  `json:"message"`
+	ProjectID *string `json:"project_id,omitempty"`
+	SessionID *string `json:"session_id,omitempty"`
 }
 
 type LogSessionResponse struct {
@@ -1048,24 +1048,24 @@ func (s *MemoryBankServer) handleGetSession(ctx context.Context, params json.Raw
 
 // FacetedSearchRequest represents a request for faceted search
 type FacetedSearchRequest struct {
-	Query         string                 `json:"query"`
-	ProjectID     *string                `json:"project_id,omitempty"`
-	Filters       *SearchFilters         `json:"filters,omitempty"`
-	Limit         *int                   `json:"limit,omitempty"`
-	Threshold     *float32               `json:"threshold,omitempty"`
-	IncludeFacets *bool                  `json:"include_facets,omitempty"`
-	SortBy        *SortOption            `json:"sort_by,omitempty"`
+	Query         string         `json:"query"`
+	ProjectID     *string        `json:"project_id,omitempty"`
+	Filters       *SearchFilters `json:"filters,omitempty"`
+	Limit         *int           `json:"limit,omitempty"`
+	Threshold     *float32       `json:"threshold,omitempty"`
+	IncludeFacets *bool          `json:"include_facets,omitempty"`
+	SortBy        *SortOption    `json:"sort_by,omitempty"`
 }
 
 // SearchFilters represents comprehensive search filters
 type SearchFilters struct {
-	Types      []string     `json:"types,omitempty"`
-	Tags       []string     `json:"tags,omitempty"`
-	SessionIDs []string     `json:"session_ids,omitempty"`
-	TimeFilter *TimeFilter  `json:"time_filter,omitempty"`
-	HasContent *bool        `json:"has_content,omitempty"`
-	MinLength  *int         `json:"min_length,omitempty"`
-	MaxLength  *int         `json:"max_length,omitempty"`
+	Types      []string    `json:"types,omitempty"`
+	Tags       []string    `json:"tags,omitempty"`
+	SessionIDs []string    `json:"session_ids,omitempty"`
+	TimeFilter *TimeFilter `json:"time_filter,omitempty"`
+	HasContent *bool       `json:"has_content,omitempty"`
+	MinLength  *int        `json:"min_length,omitempty"`
+	MaxLength  *int        `json:"max_length,omitempty"`
 }
 
 // TimeFilter represents time-based filtering options
@@ -1102,7 +1102,7 @@ type TypeFacet struct {
 	Count int    `json:"count"`
 }
 
-// TagFacet represents a tag facet  
+// TagFacet represents a tag facet
 type TagFacet struct {
 	Tag   string `json:"tag"`
 	Count int    `json:"count"`
@@ -1528,13 +1528,13 @@ func (s *MemoryBankServer) generateSystemPrompt(ctx context.Context) (string, er
 	// Build contextual information
 	var contextInfo strings.Builder
 	contextInfo.WriteString("# Memory Bank Integration Context\n\n")
-	
+
 	if len(projects) > 0 {
 		contextInfo.WriteString("## Current Projects\n")
 		for _, project := range projects {
-			contextInfo.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", 
-				project.Name, 
-				string(project.ID), 
+			contextInfo.WriteString(fmt.Sprintf("- **%s** (%s): %s\n",
+				project.Name,
+				string(project.ID),
 				project.Description))
 		}
 		contextInfo.WriteString("\n")
@@ -1624,7 +1624,7 @@ Remember: The more you use Memory Bank consistently, the more valuable it become
 // buildMemoryContext analyzes existing memories to provide context about available content
 func (s *MemoryBankServer) buildMemoryContext(ctx context.Context, projects []*domain.Project) string {
 	var context strings.Builder
-	
+
 	// Get sample of memories from each project to understand what's available
 	for _, project := range projects {
 		// Search for recent memories in this project
@@ -1634,29 +1634,29 @@ func (s *MemoryBankServer) buildMemoryContext(ctx context.Context, projects []*d
 			Limit:     10,
 			Threshold: 0.0,
 		}
-		
+
 		memories, err := s.memoryService.SearchMemories(ctx, searchReq)
 		if err != nil {
 			s.logger.WithError(err).Debug("Failed to load memories for context")
 			continue
 		}
-		
+
 		if len(memories) > 0 {
 			context.WriteString(fmt.Sprintf("### %s Project Memories (%d total)\n", project.Name, len(memories)))
-			
+
 			// Group by type to show what kinds of memories exist
 			typeCount := make(map[domain.MemoryType]int)
 			for _, memory := range memories {
 				typeCount[memory.Memory.Type]++
 			}
-			
+
 			for memType, count := range typeCount {
 				context.WriteString(fmt.Sprintf("- %s: %d entries\n", string(memType), count))
 			}
 			context.WriteString("\n")
 		}
 	}
-	
+
 	return context.String()
 }
 
@@ -1670,7 +1670,7 @@ func (s *MemoryBankServer) handleSearchMemoriesTool(ctx context.Context, request
 			},
 		}, nil
 	}
-	
+
 	result, err := s.handleSearchMemories(ctx, params)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -1679,7 +1679,7 @@ func (s *MemoryBankServer) handleSearchMemoriesTool(ctx context.Context, request
 			},
 		}, nil
 	}
-	
+
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -1688,7 +1688,7 @@ func (s *MemoryBankServer) handleSearchMemoriesTool(ctx context.Context, request
 			},
 		}, nil
 	}
-	
+
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{Type: "text", Text: string(resultJSON)},
@@ -1706,7 +1706,7 @@ func (s *MemoryBankServer) wrapHandler(ctx context.Context, request mcp.CallTool
 			},
 		}, nil
 	}
-	
+
 	result, err := handler(ctx, params)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -1715,7 +1715,7 @@ func (s *MemoryBankServer) wrapHandler(ctx context.Context, request mcp.CallTool
 			},
 		}, nil
 	}
-	
+
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -1724,7 +1724,7 @@ func (s *MemoryBankServer) wrapHandler(ctx context.Context, request mcp.CallTool
 			},
 		}, nil
 	}
-	
+
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{Type: "text", Text: string(resultJSON)},
@@ -1896,9 +1896,9 @@ type AbortSessionRequest struct {
 
 // AbortSessionResponse represents the response from aborting sessions
 type AbortSessionResponse struct {
-	Success     bool     `json:"success"`
-	AbortedIDs  []string `json:"aborted_session_ids"`
-	Message     string   `json:"message"`
+	Success    bool     `json:"success"`
+	AbortedIDs []string `json:"aborted_session_ids"`
+	Message    string   `json:"message"`
 }
 
 func (s *MemoryBankServer) handleAbortSession(ctx context.Context, params json.RawMessage) (interface{}, error) {
@@ -1932,7 +1932,7 @@ func (s *MemoryBankServer) handleAbortSession(ctx context.Context, params json.R
 			s.logger.WithError(err).Error("Failed to abort active sessions")
 			return nil, fmt.Errorf("failed to abort active sessions: %w", err)
 		}
-		
+
 		for _, id := range abortedSessionIDs {
 			abortedIDs = append(abortedIDs, string(id))
 		}
@@ -1954,9 +1954,9 @@ func (s *MemoryBankServer) handleAbortSession(ctx context.Context, params json.R
 	}
 
 	s.logger.WithFields(logrus.Fields{
-		"project_id":     req.ProjectID,
-		"session_id":     req.SessionID,
-		"aborted_count":  len(abortedIDs),
+		"project_id":    req.ProjectID,
+		"session_id":    req.SessionID,
+		"aborted_count": len(abortedIDs),
 	}).Info("Session abort completed")
 
 	return response, nil
@@ -1992,10 +1992,10 @@ type SystemHealthRequest struct {
 
 // SystemHealthResponse represents the overall system health
 type SystemHealthResponse struct {
-	Overall       string                         `json:"overall"`
-	Timestamp     string                         `json:"timestamp"`
-	Services      []HealthServiceStatus          `json:"services"`
-	Configuration map[string]interface{}         `json:"configuration,omitempty"`
+	Overall       string                 `json:"overall"`
+	Timestamp     string                 `json:"timestamp"`
+	Services      []HealthServiceStatus  `json:"services"`
+	Configuration map[string]interface{} `json:"configuration,omitempty"`
 }
 
 func (s *MemoryBankServer) handleVersion(ctx context.Context, params json.RawMessage) (interface{}, error) {
@@ -2004,9 +2004,9 @@ func (s *MemoryBankServer) handleVersion(ctx context.Context, params json.RawMes
 	// Get version information (these would typically be set at build time)
 	response := VersionResponse{
 		Version:     "1.0.0", // This would be injected at build time
-		BuildTime:   "dev",   // This would be injected at build time  
+		BuildTime:   "dev",   // This would be injected at build time
 		GoVersion:   "go1.21+",
-		GitCommit:   "dev",   // This would be injected at build time
+		GitCommit:   "dev", // This would be injected at build time
 		Application: "Memory Bank MCP Server",
 	}
 
@@ -2020,17 +2020,17 @@ func (s *MemoryBankServer) handleVersionTool(ctx context.Context, request mcp.Ca
 
 func (s *MemoryBankServer) handleSystemHealth(ctx context.Context, params json.RawMessage) (interface{}, error) {
 	s.logger.Debug("Handling system health check request")
-	
+
 	var req SystemHealthRequest
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &req); err != nil {
 			return nil, fmt.Errorf("invalid request parameters: %w", err)
 		}
 	}
-	
+
 	// Perform health checks
 	health := s.checkSystemHealth(ctx, req.Verbose)
-	
+
 	s.logger.WithField("overall_status", health.Overall).Info("System health check completed")
 	return health, nil
 }
@@ -2044,30 +2044,30 @@ func (s *MemoryBankServer) checkSystemHealth(ctx context.Context, verbose bool) 
 		Timestamp: time.Now().Format(time.RFC3339),
 		Services:  make([]HealthServiceStatus, 0),
 	}
-	
+
 	// Add configuration if verbose
 	if verbose {
 		health.Configuration = map[string]interface{}{
-			"ollama_base_url":    getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
-			"ollama_model":       getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
-			"chromadb_base_url":  getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
+			"ollama_base_url":     getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
+			"ollama_model":        getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
+			"chromadb_base_url":   getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
 			"chromadb_collection": getEnvOrDefault("CHROMADB_COLLECTION", "memory_bank"),
-			"database_path":      getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
+			"database_path":       getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
 		}
 	}
-	
+
 	// Check Ollama health
 	ollamaStatus := s.checkOllamaHealth(ctx, verbose)
 	health.Services = append(health.Services, ollamaStatus)
-	
+
 	// Check ChromaDB health
 	chromaStatus := s.checkChromaDBHealth(ctx, verbose)
 	health.Services = append(health.Services, chromaStatus)
-	
+
 	// Check database health (simplified check)
 	dbStatus := s.checkDatabaseHealth(ctx, verbose)
 	health.Services = append(health.Services, dbStatus)
-	
+
 	// Determine overall status
 	allHealthy := true
 	for _, service := range health.Services {
@@ -2076,13 +2076,13 @@ func (s *MemoryBankServer) checkSystemHealth(ctx context.Context, verbose bool) 
 			break
 		}
 	}
-	
+
 	if allHealthy {
 		health.Overall = "healthy"
 	} else {
 		health.Overall = "degraded"
 	}
-	
+
 	return health
 }
 
@@ -2091,7 +2091,7 @@ func (s *MemoryBankServer) checkOllamaHealth(ctx context.Context, verbose bool) 
 		Service: "ollama",
 		Status:  "unknown",
 	}
-	
+
 	// Create Ollama provider for health checking
 	ollamaConfig := embedding.DefaultOllamaConfig()
 	if baseURL := os.Getenv("OLLAMA_BASE_URL"); baseURL != "" {
@@ -2100,16 +2100,16 @@ func (s *MemoryBankServer) checkOllamaHealth(ctx context.Context, verbose bool) 
 	if model := os.Getenv("OLLAMA_MODEL"); model != "" {
 		ollamaConfig.Model = model
 	}
-	
+
 	ollamaProvider := embedding.NewOllamaProvider(ollamaConfig, s.logger)
-	
+
 	// Measure response time
 	start := time.Now()
 	err := ollamaProvider.HealthCheck(ctx)
 	responseTime := time.Since(start)
-	
+
 	status.ResponseTime = responseTime.String()
-	
+
 	if err != nil {
 		status.Status = "unhealthy"
 		status.Available = false
@@ -2132,7 +2132,7 @@ func (s *MemoryBankServer) checkOllamaHealth(ctx context.Context, verbose bool) 
 			}
 		}
 	}
-	
+
 	return status
 }
 
@@ -2141,7 +2141,7 @@ func (s *MemoryBankServer) checkChromaDBHealth(ctx context.Context, verbose bool
 		Service: "chromadb",
 		Status:  "unknown",
 	}
-	
+
 	// Create ChromaDB store for health checking
 	chromaConfig := vector.DefaultChromeDBConfig()
 	if baseURL := os.Getenv("CHROMADB_BASE_URL"); baseURL != "" {
@@ -2150,16 +2150,16 @@ func (s *MemoryBankServer) checkChromaDBHealth(ctx context.Context, verbose bool
 	if collection := os.Getenv("CHROMADB_COLLECTION"); collection != "" {
 		chromaConfig.Collection = collection
 	}
-	
+
 	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, s.logger)
-	
+
 	// Measure response time
 	start := time.Now()
 	err := chromaStore.HealthCheck(ctx)
 	responseTime := time.Since(start)
-	
+
 	status.ResponseTime = responseTime.String()
-	
+
 	if err != nil {
 		status.Status = "unhealthy"
 		status.Available = false
@@ -2183,17 +2183,17 @@ func (s *MemoryBankServer) checkChromaDBHealth(ctx context.Context, verbose bool
 				"tenant":     chromaConfig.Tenant,
 				"database":   chromaConfig.Database,
 			}
-			
+
 			// Try to get additional details
 			if collections, err := chromaStore.ListCollections(ctx); err == nil {
 				details["available_collections"] = collections
 				details["collections_count"] = len(collections)
 			}
-			
+
 			status.Details = details
 		}
 	}
-	
+
 	return status
 }
 
@@ -2202,14 +2202,14 @@ func (s *MemoryBankServer) checkDatabaseHealth(ctx context.Context, verbose bool
 		Service: "database",
 		Status:  "unknown",
 	}
-	
+
 	// Simple database health check by trying to list projects
 	start := time.Now()
 	_, err := s.projectService.ListProjects(ctx)
 	responseTime := time.Since(start)
-	
+
 	status.ResponseTime = responseTime.String()
-	
+
 	if err != nil {
 		status.Status = "unhealthy"
 		status.Available = false
@@ -2230,7 +2230,7 @@ func (s *MemoryBankServer) checkDatabaseHealth(ctx context.Context, verbose bool
 			}
 		}
 	}
-	
+
 	return status
 }
 

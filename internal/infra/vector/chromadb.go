@@ -74,19 +74,19 @@ func NewChromaDBVectorStore(config ChromaDBConfig, logger *logrus.Logger) *Chrom
 
 // getCollectionID retrieves the UUID for a collection by name
 func (c *ChromaDBVectorStore) getCollectionID(ctx context.Context, name string) (string, error) {
-	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections", 
+	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections",
 		c.baseURL, c.tenant, c.database)
-	
+
 	c.logger.WithFields(logrus.Fields{
 		"url":  url,
 		"name": name,
 	}).Info("Fetching collection ID")
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to list collections: %w", err)
@@ -96,7 +96,7 @@ func (c *ChromaDBVectorStore) getCollectionID(ctx context.Context, name string) 
 			c.logger.WithError(err).Warn("Failed to close response body")
 		}
 	}()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		c.logger.WithFields(logrus.Fields{
@@ -105,26 +105,26 @@ func (c *ChromaDBVectorStore) getCollectionID(ctx context.Context, name string) 
 		}).Error("ChromaDB collections API failed")
 		return "", fmt.Errorf("ChromaDB API error (status %d): %s", resp.StatusCode, string(body))
 	}
-	
+
 	var collections []chromaDBCollection
 	if err := json.NewDecoder(resp.Body).Decode(&collections); err != nil {
 		return "", fmt.Errorf("failed to decode collections response: %w", err)
 	}
-	
+
 	c.logger.WithField("collections_count", len(collections)).Debug("Retrieved collections")
-	
+
 	for _, col := range collections {
 		c.logger.WithFields(logrus.Fields{
 			"collection_name": col.Name,
 			"collection_id":   col.ID,
 		}).Debug("Checking collection")
-		
+
 		if col.Name == name {
 			c.logger.WithField("found_id", col.ID).Debug("Found collection ID")
 			return col.ID, nil
 		}
 	}
-	
+
 	return "", fmt.Errorf("collection %s not found", name)
 }
 
@@ -134,19 +134,19 @@ func (c *ChromaDBVectorStore) ensureCollectionID(ctx context.Context) error {
 		"current_collection_id": c.collectionID,
 		"collection_name":       c.collection,
 	}).Debug("Ensuring collection ID is loaded")
-	
+
 	if c.collectionID != "" {
 		c.logger.Debug("Collection ID already loaded")
 		return nil
 	}
-	
+
 	c.logger.Debug("Loading collection ID")
 	id, err := c.getCollectionID(ctx, c.collection)
 	if err != nil {
 		c.logger.WithError(err).Error("Failed to get collection ID")
 		return err
 	}
-	
+
 	c.collectionID = id
 	c.logger.WithField("loaded_id", id).Debug("Collection ID loaded successfully")
 	return nil
@@ -158,24 +158,24 @@ func (c *ChromaDBVectorStore) buildCollectionOperationURL(ctx context.Context, o
 	if err := c.ensureCollectionID(ctx); err != nil {
 		return "", err
 	}
-	
-	return fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections/%s/%s", 
+
+	return fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections/%s/%s",
 		c.baseURL, c.tenant, c.database, c.collectionID, operation), nil
 }
 
 // chromaDBDocument represents a document in ChromaDB
 type chromaDBDocument struct {
-	IDs       []string                 `json:"ids"`
-	Documents []string                 `json:"documents,omitempty"`
-	Metadatas []map[string]interface{} `json:"metadatas,omitempty"`
-	Embeddings [][]float32             `json:"embeddings,omitempty"`
+	IDs        []string                 `json:"ids"`
+	Documents  []string                 `json:"documents,omitempty"`
+	Metadatas  []map[string]interface{} `json:"metadatas,omitempty"`
+	Embeddings [][]float32              `json:"embeddings,omitempty"`
 }
 
 // chromaDBQueryRequest represents a query request to ChromaDB
 type chromaDBQueryRequest struct {
-	QueryEmbeddings [][]float32 `json:"query_embeddings"`
-	NResults        int         `json:"n_results"`
-	Include         []string    `json:"include,omitempty"`
+	QueryEmbeddings [][]float32            `json:"query_embeddings"`
+	NResults        int                    `json:"n_results"`
+	Include         []string               `json:"include,omitempty"`
 	Where           map[string]interface{} `json:"where,omitempty"`
 }
 
@@ -197,14 +197,14 @@ type chromaDBCollection struct {
 // normalizeMetadata converts metadata to ChromaDB-compatible format
 func (c *ChromaDBVectorStore) normalizeMetadata(metadata map[string]interface{}) map[string]interface{} {
 	normalized := make(map[string]interface{})
-	
+
 	for key, value := range metadata {
 		c.logger.WithFields(logrus.Fields{
 			"key":   key,
 			"value": value,
 			"type":  fmt.Sprintf("%T", value),
 		}).Debug("Processing metadata field")
-		
+
 		switch v := value.(type) {
 		case []string:
 			// Convert string slices to comma-separated strings
@@ -231,22 +231,22 @@ func (c *ChromaDBVectorStore) normalizeMetadata(metadata map[string]interface{})
 			}
 		}
 	}
-	
+
 	return normalized
 }
 
 // Store stores a vector with metadata in ChromaDB
 func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domain.EmbeddingVector, metadata map[string]interface{}) error {
 	c.logger.WithFields(logrus.Fields{
-		"collection":      c.collection,
-		"id":              id,
-		"vector_length":   len(vector),
-		"metadata_keys":   len(metadata),
+		"collection":    c.collection,
+		"id":            id,
+		"vector_length": len(vector),
+		"metadata_keys": len(metadata),
 	}).Debug("Storing vector in ChromaDB")
 
 	// Normalize metadata for ChromaDB compatibility
 	normalizedMetadata := c.normalizeMetadata(metadata)
-	
+
 	// Prepare document
 	doc := chromaDBDocument{
 		IDs:        []string{id},
@@ -286,21 +286,21 @@ func (c *ChromaDBVectorStore) Store(ctx context.Context, id string, vector domai
 	// Check response status
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		
+
 		// If collection doesn't exist (404), try to create it and retry
 		if resp.StatusCode == http.StatusNotFound {
 			c.logger.WithField("collection", c.collection).Info("Collection not found, creating it")
 			if err := c.CreateCollection(ctx, c.collection); err != nil {
 				return fmt.Errorf("failed to create collection: %w", err)
 			}
-			
+
 			// Reset collection ID so it gets loaded again with the new collection
 			c.collectionID = ""
-			
+
 			// Retry the store operation
 			return c.Store(ctx, id, vector, metadata)
 		}
-		
+
 		return fmt.Errorf("chromadb API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -478,10 +478,10 @@ func (c *ChromaDBVectorStore) Delete(ctx context.Context, id string) error {
 // Update updates a vector and its metadata in ChromaDB
 func (c *ChromaDBVectorStore) Update(ctx context.Context, id string, vector domain.EmbeddingVector, metadata map[string]interface{}) error {
 	c.logger.WithFields(logrus.Fields{
-		"collection":      c.collection,
-		"id":              id,
-		"vector_length":   len(vector),
-		"metadata_keys":   len(metadata),
+		"collection":    c.collection,
+		"id":            id,
+		"vector_length": len(vector),
+		"metadata_keys": len(metadata),
 	}).Debug("Updating vector in ChromaDB")
 
 	// Prepare update document
@@ -532,10 +532,10 @@ func (c *ChromaDBVectorStore) Update(ctx context.Context, id string, vector doma
 // Search performs vector similarity search
 func (c *ChromaDBVectorStore) Search(ctx context.Context, vector domain.EmbeddingVector, limit int, threshold float32) ([]ports.SearchResult, error) {
 	c.logger.WithFields(logrus.Fields{
-		"collection":     c.collection,
-		"vector_length":  len(vector),
-		"limit":          limit,
-		"threshold":      threshold,
+		"collection":    c.collection,
+		"vector_length": len(vector),
+		"limit":         limit,
+		"threshold":     threshold,
 	}).Debug("Searching vectors in ChromaDB")
 
 	// Prepare query request
@@ -599,7 +599,7 @@ func (c *ChromaDBVectorStore) Search(ctx context.Context, vector domain.Embeddin
 		for i, id := range ids {
 			// Convert distance to similarity (ChromaDB uses cosine distance)
 			similarity := domain.Similarity(1.0 - distances[i])
-			
+
 			// Apply threshold filter
 			if similarity.IsRelevant(threshold) {
 				results = append(results, ports.SearchResult{
@@ -633,7 +633,7 @@ func (c *ChromaDBVectorStore) CreateCollection(ctx context.Context, name string)
 		"name": name,
 		"metadata": map[string]interface{}{
 			"description": "Memory Bank collection",
-			"hnsw:space": "cosine",  // Use cosine distance metric
+			"hnsw:space":  "cosine", // Use cosine distance metric
 		},
 	}
 
@@ -643,7 +643,7 @@ func (c *ChromaDBVectorStore) CreateCollection(ctx context.Context, name string)
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections", 
+	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections",
 		c.baseURL, c.tenant, c.database)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -710,7 +710,7 @@ func (c *ChromaDBVectorStore) ListCollections(ctx context.Context) ([]string, er
 	c.logger.Debug("Listing collections from ChromaDB")
 
 	// Create HTTP request
-	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections", 
+	url := fmt.Sprintf("%s/api/v2/tenants/%s/databases/%s/collections",
 		c.baseURL, c.tenant, c.database)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -810,9 +810,9 @@ func NewMockVectorStore(logger *logrus.Logger) *MockVectorStore {
 // Store stores a vector with metadata in the mock store
 func (m *MockVectorStore) Store(ctx context.Context, id string, vector domain.EmbeddingVector, metadata map[string]interface{}) error {
 	m.logger.WithFields(logrus.Fields{
-		"id":             id,
-		"vector_length":  len(vector),
-		"metadata_keys":  len(metadata),
+		"id":            id,
+		"vector_length": len(vector),
+		"metadata_keys": len(metadata),
 	}).Debug("Storing vector in mock store")
 
 	m.vectors[id] = mockVectorEntry{
@@ -859,9 +859,9 @@ func (m *MockVectorStore) Delete(ctx context.Context, id string) error {
 // Update updates a vector and its metadata in the mock store
 func (m *MockVectorStore) Update(ctx context.Context, id string, vector domain.EmbeddingVector, metadata map[string]interface{}) error {
 	m.logger.WithFields(logrus.Fields{
-		"id":             id,
-		"vector_length":  len(vector),
-		"metadata_keys":  len(metadata),
+		"id":            id,
+		"vector_length": len(vector),
+		"metadata_keys": len(metadata),
 	}).Debug("Updating vector in mock store")
 
 	m.vectors[id] = mockVectorEntry{
@@ -885,7 +885,7 @@ func (m *MockVectorStore) Search(ctx context.Context, vector domain.EmbeddingVec
 	// Calculate similarity with all stored vectors using dot product
 	for id, entry := range m.vectors {
 		similarity := calculateDotProduct(vector, entry.Vector)
-		
+
 		if similarity.IsRelevant(threshold) {
 			results = append(results, ports.SearchResult{
 				ID:         id,

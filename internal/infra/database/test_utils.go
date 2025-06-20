@@ -175,3 +175,4 @@ func assertSessionEqual(t *testing.T, expected, actual *domain.Session) {
 	// Note: Outcome, Summary, Tags, and Progress are stored in encoded format in description field
 	// and reconstructed differently, so we don't assert exact equality here
 }
+

@@ -49,13 +49,13 @@ func createMemoryWithUniqueID(service *MemoryService, ctx context.Context, req p
 	// Override with a truly unique ID
 	uniqueID := generateUniqueTestID("mem")
 	overrideMemoryID(memory, uniqueID)
-	
+
 	// Update in repository
 	err = service.memoryRepo.Update(ctx, memory)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return memory, nil
 }
 
@@ -399,7 +399,7 @@ func TestMemoryService_DeleteMemory(t *testing.T) {
 	// Since we can't easily generate the exact vector without the service's embedding provider,
 	// we'll just verify that searching for the memory's embedding text returns no results
 	embeddingText := memory.GetEmbeddingText()
-	
+
 	// Create a new embedding provider for verification
 	testEmbeddingProvider := NewMockEmbeddingProvider()
 	expectedVector, _ := testEmbeddingProvider.GenerateEmbedding(ctx, embeddingText)
@@ -467,7 +467,7 @@ func TestMemoryService_ListMemories(t *testing.T) {
 				for _, tag := range req.Tags {
 					memory.AddTag(tag)
 				}
-				
+
 				// Store directly in repository
 				err = memoryRepo.Store(ctx, memory)
 				if err != nil {
@@ -496,7 +496,7 @@ func TestMemoryService_ListMemories(t *testing.T) {
 	if len(listedMemories) < 2 {
 		t.Errorf("Expected at least 2 memories for project 1, got %d", len(listedMemories))
 	}
-	
+
 	// Count memories by project to verify correct filtering
 	project1Count := 0
 	for _, memory := range listedMemories {
@@ -556,7 +556,7 @@ func TestMemoryService_ListMemoriesByType(t *testing.T) {
 				for _, tag := range req.Tags {
 					memory.AddTag(tag)
 				}
-				
+
 				// Store directly in repository
 				err = memoryRepo.Store(ctx, memory)
 				if err != nil {
@@ -651,7 +651,7 @@ func TestMemoryService_SearchMemories(t *testing.T) {
 				for _, tag := range req.Tags {
 					memory.AddTag(tag)
 				}
-				
+
 				// Store directly in repository
 				err = memoryRepo.Store(ctx, memory)
 				if err != nil {
@@ -681,7 +681,7 @@ func TestMemoryService_SearchMemories(t *testing.T) {
 	// Note: Due to ID collision fallback, some memories might not have embeddings,
 	// so we check if we got any results rather than expecting specific count
 	t.Logf("Search returned %d results", len(results))
-	
+
 	// At least verify that we can perform search without error
 	// The actual results depend on whether embeddings were successfully stored
 	if len(results) > 0 {
@@ -739,7 +739,7 @@ func TestMemoryService_SearchMemories_WithTypeFilter(t *testing.T) {
 				for _, tag := range req.Tags {
 					memory.AddTag(tag)
 				}
-				
+
 				// Store directly in repository
 				err = memoryRepo.Store(ctx, memory)
 				if err != nil {

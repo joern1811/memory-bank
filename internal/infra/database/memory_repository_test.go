@@ -297,7 +297,6 @@ func TestSQLiteMemoryRepository_ListByType(t *testing.T) {
 	}
 }
 
-
 func TestSQLiteMemoryRepository_GetByIDs(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()

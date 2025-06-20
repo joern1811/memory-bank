@@ -1,6 +1,7 @@
+//go:build integration
 // +build integration
 
-// External Service Integration Tests  
+// External Service Integration Tests
 // These tests verify integration with real external services (Ollama, ChromaDB).
 // They require the actual services to be running and accessible.
 //
@@ -65,12 +66,12 @@ func TestOllamaIntegration(t *testing.T) {
 		text := "This is a test document for embedding generation"
 		embedding, err := provider.GenerateEmbedding(ctx, text)
 		require.NoError(t, err)
-		
+
 		// Verify embedding properties
 		assert.NotNil(t, embedding)
 		assert.Greater(t, len(embedding), 0)
 		assert.LessOrEqual(t, len(embedding), 2048) // Reasonable upper bound
-		
+
 		// Verify embedding values are not all zeros
 		hasNonZero := false
 		for _, val := range embedding {
@@ -89,7 +90,7 @@ func TestOllamaIntegration(t *testing.T) {
 
 		// Skip batch embedding test due to known Ollama concurrency issues
 		t.Skip("Skipping batch embedding test - Ollama batch operations can hang in concurrent scenarios")
-		
+
 		// TODO: Re-enable when Ollama batch embedding stability is improved
 		// or implement a more robust timeout/cancellation mechanism
 	})
@@ -327,7 +328,7 @@ func TestFullIntegration(t *testing.T) {
 		// The query should match "Deep Learning" and "ML Algorithms" documents
 		foundDeepLearning := false
 		foundMLAlgorithms := false
-		
+
 		for _, result := range results {
 			if result.ID == "doc2" { // Deep Learning
 				foundDeepLearning = true
@@ -335,17 +336,17 @@ func TestFullIntegration(t *testing.T) {
 			if result.ID == "doc1" { // ML Algorithms
 				foundMLAlgorithms = true
 			}
-			
+
 			// All results should have reasonable similarity scores
 			assert.Greater(t, float32(result.Similarity), float32(0.3))
-			
+
 			// Metadata should be preserved
 			assert.Contains(t, result.Metadata, "title")
 			assert.Contains(t, result.Metadata, "content")
 		}
 
 		// At least one of the semantically similar documents should be found
-		assert.True(t, foundDeepLearning || foundMLAlgorithms, 
+		assert.True(t, foundDeepLearning || foundMLAlgorithms,
 			"Should find semantically similar documents")
 	})
 }

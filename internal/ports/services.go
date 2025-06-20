@@ -12,17 +12,17 @@ type MemoryService interface {
 	GetMemory(ctx context.Context, id domain.MemoryID) (*domain.Memory, error)
 	UpdateMemory(ctx context.Context, memory *domain.Memory) error
 	DeleteMemory(ctx context.Context, id domain.MemoryID) error
-	
+
 	// Search operations
 	SearchMemories(ctx context.Context, query SemanticSearchRequest) ([]MemorySearchResult, error)
 	FacetedSearch(ctx context.Context, req FacetedSearchRequest) (*FacetedSearchResponse, error)
 	FindSimilarMemories(ctx context.Context, memoryID domain.MemoryID, limit int) ([]MemorySearchResult, error)
 	ListMemories(ctx context.Context, req ListMemoriesRequest) ([]*domain.Memory, error)
-	
+
 	// Advanced search operations
 	SearchWithRelevanceScoring(ctx context.Context, query SemanticSearchRequest) ([]EnhancedMemorySearchResult, error)
 	GetSearchSuggestions(ctx context.Context, partialQuery string, projectID *domain.ProjectID) ([]string, error)
-	
+
 	// Specialized operations
 	CreateDecision(ctx context.Context, req CreateDecisionRequest) (*domain.Decision, error)
 	CreatePattern(ctx context.Context, req CreatePatternRequest) (*domain.Pattern, error)
@@ -37,7 +37,7 @@ type ProjectService interface {
 	UpdateProject(ctx context.Context, project *domain.Project) error
 	DeleteProject(ctx context.Context, id domain.ProjectID) error
 	ListProjects(ctx context.Context) ([]*domain.Project, error)
-	
+
 	// Project initialization
 	InitializeProject(ctx context.Context, path string, req InitializeProjectRequest) (*domain.Project, error)
 }
@@ -104,13 +104,13 @@ type CreateProjectRequest struct {
 
 // InitializeProjectRequest represents a request to initialize a project
 type InitializeProjectRequest struct {
-	Name                string            `json:"name"`
-	Description         string            `json:"description"`
-	Language            string            `json:"language,omitempty"`
-	Framework           string            `json:"framework,omitempty"`
-	EmbeddingProvider   string            `json:"embedding_provider,omitempty"`
-	VectorStore         string            `json:"vector_store,omitempty"`
-	Config              map[string]string `json:"config,omitempty"`
+	Name              string            `json:"name"`
+	Description       string            `json:"description"`
+	Language          string            `json:"language,omitempty"`
+	Framework         string            `json:"framework,omitempty"`
+	EmbeddingProvider string            `json:"embedding_provider,omitempty"`
+	VectorStore       string            `json:"vector_store,omitempty"`
+	Config            map[string]string `json:"config,omitempty"`
 }
 
 // StartSessionRequest represents a request to start a session
@@ -153,13 +153,13 @@ type ListMemoriesRequest struct {
 
 // FacetedSearchRequest represents an advanced search with faceting
 type FacetedSearchRequest struct {
-	Query      string             `json:"query"`
-	ProjectID  *domain.ProjectID  `json:"project_id,omitempty"`
-	Filters    *SearchFilters     `json:"filters,omitempty"`
-	Limit      int                `json:"limit"`
-	Threshold  float32            `json:"threshold"`
-	IncludeFacets bool             `json:"include_facets"`
-	SortBy     *SortOption        `json:"sort_by,omitempty"`
+	Query         string            `json:"query"`
+	ProjectID     *domain.ProjectID `json:"project_id,omitempty"`
+	Filters       *SearchFilters    `json:"filters,omitempty"`
+	Limit         int               `json:"limit"`
+	Threshold     float32           `json:"threshold"`
+	IncludeFacets bool              `json:"include_facets"`
+	SortBy        *SortOption       `json:"sort_by,omitempty"`
 }
 
 // SearchFilters represents comprehensive search filters
@@ -180,15 +180,17 @@ type SortOption struct {
 }
 
 type SortField string
+
 const (
-	SortByRelevance  SortField = "relevance"
-	SortByCreatedAt  SortField = "created_at"
-	SortByUpdatedAt  SortField = "updated_at"
-	SortByTitle      SortField = "title"
-	SortByType       SortField = "type"
+	SortByRelevance SortField = "relevance"
+	SortByCreatedAt SortField = "created_at"
+	SortByUpdatedAt SortField = "updated_at"
+	SortByTitle     SortField = "title"
+	SortByType      SortField = "type"
 )
 
 type SortDirection string
+
 const (
 	SortAsc  SortDirection = "asc"
 	SortDesc SortDirection = "desc"
@@ -203,10 +205,10 @@ type FacetedSearchResponse struct {
 
 // SearchFacets represents faceted search results
 type SearchFacets struct {
-	Types      []TypeFacet      `json:"types,omitempty"`
-	Tags       []TagFacet       `json:"tags,omitempty"`
-	Projects   []ProjectFacet   `json:"projects,omitempty"`
-	Sessions   []SessionFacet   `json:"sessions,omitempty"`
+	Types       []TypeFacet       `json:"types,omitempty"`
+	Tags        []TagFacet        `json:"tags,omitempty"`
+	Projects    []ProjectFacet    `json:"projects,omitempty"`
+	Sessions    []SessionFacet    `json:"sessions,omitempty"`
 	TimePeriods []TimePeriodFacet `json:"time_periods,omitempty"`
 }
 
@@ -216,7 +218,7 @@ type TypeFacet struct {
 	Count int               `json:"count"`
 }
 
-// TagFacet represents a tag facet  
+// TagFacet represents a tag facet
 type TagFacet struct {
 	Tag   string `json:"tag"`
 	Count int    `json:"count"`
@@ -253,8 +255,8 @@ type EnhancedMemorySearchResult struct {
 
 // SearchSuggestion represents a search suggestion
 type SearchSuggestion struct {
-	Query       string  `json:"query"`
-	Frequency   int     `json:"frequency"`
-	Relevance   float64 `json:"relevance"`
-	Type        string  `json:"type"` // "tag", "title", "content", "type"
+	Query     string  `json:"query"`
+	Frequency int     `json:"frequency"`
+	Relevance float64 `json:"relevance"`
+	Type      string  `json:"type"` // "tag", "title", "content", "type"
 }

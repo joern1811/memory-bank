@@ -14,11 +14,11 @@ type Project struct {
 	Framework   string    `json:"framework,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-	
+
 	// Configuration
 	EmbeddingProvider string            `json:"embedding_provider"`
 	VectorStore       string            `json:"vector_store"`
-	Config           map[string]string `json:"config"`
+	Config            map[string]string `json:"config"`
 }
 
 // NewProject creates a new project
@@ -26,14 +26,14 @@ func NewProject(name, path, description string) *Project {
 	now := time.Now()
 	return &Project{
 		ID:                ProjectID(generateID()),
-		Name:             name,
-		Path:             path,
-		Description:      description,
-		CreatedAt:        now,
-		UpdatedAt:        now,
-		EmbeddingProvider: "ollama", // default
+		Name:              name,
+		Path:              path,
+		Description:       description,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+		EmbeddingProvider: "ollama",   // default
 		VectorStore:       "chromadb", // default
-		Config:           make(map[string]string),
+		Config:            make(map[string]string),
 	}
 }
 

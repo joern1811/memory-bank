@@ -20,7 +20,7 @@ type EmbeddingCache struct {
 	ttl        time.Duration
 	underlying ports.EmbeddingProvider
 	logger     *logrus.Logger
-	
+
 	// Stats for monitoring
 	hits   int64
 	misses int64
@@ -84,12 +84,12 @@ func (c *EmbeddingCache) GenerateEmbedding(ctx context.Context, text string) (do
 		c.cache[key] = entry
 		c.hits++
 		c.mutex.RUnlock()
-		
+
 		c.logger.WithFields(logrus.Fields{
 			"cache_key": key[:8] + "...",
 			"text_len":  len(text),
 		}).Debug("Cache hit for embedding")
-		
+
 		return entry.Embedding, nil
 	}
 	c.mutex.RUnlock()
@@ -108,12 +108,12 @@ func (c *EmbeddingCache) GenerateEmbedding(ctx context.Context, text string) (do
 	// Store in cache
 	c.mutex.Lock()
 	c.misses++
-	
+
 	// Check if we need to evict entries
 	if len(c.cache) >= c.maxSize {
 		c.evictOldest()
 	}
-	
+
 	c.cache[key] = CacheEntry{
 		Embedding: embedding,
 		CreatedAt: time.Now(),
@@ -140,7 +140,7 @@ func (c *EmbeddingCache) GenerateBatchEmbeddings(ctx context.Context, texts []st
 	// Check cache for each text
 	for i, text := range texts {
 		key := c.hashText(text)
-		
+
 		c.mutex.RLock()
 		if entry, exists := c.cache[key]; exists && c.isEntryValid(entry) {
 			// Cache hit
@@ -177,18 +177,18 @@ func (c *EmbeddingCache) GenerateBatchEmbeddings(ctx context.Context, texts []st
 			originalIndex := missingIndices[i]
 			text := missingTexts[i]
 			key := c.hashText(text)
-			
+
 			// Check if we need to evict entries
 			if len(c.cache) >= c.maxSize {
 				c.evictOldest()
 			}
-			
+
 			c.cache[key] = CacheEntry{
 				Embedding: embedding,
 				CreatedAt: time.Now(),
 				LastUsed:  time.Now(),
 			}
-			
+
 			embeddings[originalIndex] = embedding
 		}
 		c.mutex.Unlock()
@@ -212,13 +212,13 @@ func (c *EmbeddingCache) GetModelName() string {
 func (c *EmbeddingCache) GetStats() (hits, misses int64, hitRate float64) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	
+
 	total := c.hits + c.misses
 	hitRate = 0
 	if total > 0 {
 		hitRate = float64(c.hits) / float64(total) * 100
 	}
-	
+
 	return c.hits, c.misses, hitRate
 }
 
@@ -226,11 +226,11 @@ func (c *EmbeddingCache) GetStats() (hits, misses int64, hitRate float64) {
 func (c *EmbeddingCache) ClearCache() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	
+
 	c.cache = make(map[string]CacheEntry)
 	c.hits = 0
 	c.misses = 0
-	
+
 	c.logger.Info("Embedding cache cleared")
 }
 
@@ -250,11 +250,11 @@ func (c *EmbeddingCache) evictOldest() {
 	if len(c.cache) == 0 {
 		return
 	}
-	
+
 	var oldestKey string
 	var oldestTime time.Time
 	first := true
-	
+
 	for key, entry := range c.cache {
 		if first || entry.LastUsed.Before(oldestTime) {
 			oldestKey = key
@@ -262,7 +262,7 @@ func (c *EmbeddingCache) evictOldest() {
 			first = false
 		}
 	}
-	
+
 	delete(c.cache, oldestKey)
 	c.logger.WithField("evicted_key", oldestKey[:8]+"...").Debug("Evicted oldest cache entry")
 }
@@ -276,18 +276,18 @@ func (c *EmbeddingCache) cleanup() {
 		c.mutex.Lock()
 		now := time.Now()
 		evicted := 0
-		
+
 		for key, entry := range c.cache {
 			if now.Sub(entry.CreatedAt) > c.ttl {
 				delete(c.cache, key)
 				evicted++
 			}
 		}
-		
+
 		if evicted > 0 {
 			c.logger.WithField("evicted_count", evicted).Debug("Cleaned up expired cache entries")
 		}
-		
+
 		c.mutex.Unlock()
 	}
 }

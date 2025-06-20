@@ -390,7 +390,7 @@ func TestProjectService_ListProjects(t *testing.T) {
 				project := domain.NewProject(req.Name, req.Path, req.Description)
 				project.ID = domain.ProjectID(uniqueID)
 				project.Language = req.Language
-				
+
 				err = projectRepo.Store(ctx, project)
 				if err != nil {
 					t.Fatalf("Failed to store project %d manually: %v", i, err)

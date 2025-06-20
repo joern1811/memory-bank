@@ -97,17 +97,17 @@ var configShowCmd = &cobra.Command{
 		fmt.Println("Current Memory Bank Configuration:")
 		fmt.Printf("\nDatabase:")
 		fmt.Printf("\n  Path: %s", cfg.Database.Path)
-		
+
 		fmt.Printf("\n\nOllama:")
 		fmt.Printf("\n  Base URL: %s", cfg.Ollama.BaseURL)
 		fmt.Printf("\n  Model: %s", cfg.Ollama.Model)
 		fmt.Printf("\n  Timeout: %d seconds", cfg.Ollama.Timeout)
-		
+
 		fmt.Printf("\n\nChromaDB:")
 		fmt.Printf("\n  Base URL: %s", cfg.ChromaDB.BaseURL)
 		fmt.Printf("\n  Collection: %s", cfg.ChromaDB.Collection)
 		fmt.Printf("\n  Timeout: %d seconds", cfg.ChromaDB.Timeout)
-		
+
 		fmt.Printf("\n\nLogging:")
 		fmt.Printf("\n  Level: %s", cfg.Logging.Level)
 		fmt.Printf("\n  Format: %s", cfg.Logging.Format)
@@ -125,14 +125,14 @@ var configPathCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		defaultPath := config.GetDefaultConfigPath()
 		fmt.Printf("Default config path: %s\n", defaultPath)
-		
+
 		// Check if file exists
 		if _, err := os.Stat(defaultPath); err == nil {
 			fmt.Println("Config file exists")
 		} else {
 			fmt.Println("Config file does not exist (run 'memory-bank config init' to create)")
 		}
-		
+
 		return nil
 	},
 }

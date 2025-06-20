@@ -7,17 +7,17 @@ import (
 
 // Memory represents a single memory entry in the system
 type Memory struct {
-	ID          MemoryID      `json:"id"`
-	ProjectID   ProjectID     `json:"project_id"`
-	SessionID   *SessionID    `json:"session_id,omitempty"`
-	Type        MemoryType    `json:"type"`
-	Title       string        `json:"title"`
-	Content     string        `json:"content"`
-	Context     string        `json:"context"`
-	Tags        Tags          `json:"tags"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   time.Time     `json:"updated_at"`
-	
+	ID        MemoryID   `json:"id"`
+	ProjectID ProjectID  `json:"project_id"`
+	SessionID *SessionID `json:"session_id,omitempty"`
+	Type      MemoryType `json:"type"`
+	Title     string     `json:"title"`
+	Content   string     `json:"content"`
+	Context   string     `json:"context"`
+	Tags      Tags       `json:"tags"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+
 	// Embedding is stored separately but linked
 	HasEmbedding bool `json:"has_embedding"`
 }
@@ -26,15 +26,15 @@ type Memory struct {
 func NewMemory(projectID ProjectID, memoryType MemoryType, title, content, context string) *Memory {
 	now := time.Now()
 	return &Memory{
-		ID:          MemoryID(generateID()),
-		ProjectID:   projectID,
-		Type:        memoryType,
-		Title:       title,
-		Content:     content,
-		Context:     context,
-		Tags:        make(Tags, 0),
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:           MemoryID(generateID()),
+		ProjectID:    projectID,
+		Type:         memoryType,
+		Title:        title,
+		Content:      content,
+		Context:      context,
+		Tags:         make(Tags, 0),
+		CreatedAt:    now,
+		UpdatedAt:    now,
 		HasEmbedding: false,
 	}
 }
@@ -64,9 +64,9 @@ func (m *Memory) IsType(memoryType MemoryType) bool {
 // Decision represents an architectural decision
 type Decision struct {
 	*Memory
-	Rationale string `json:"rationale"`
+	Rationale string   `json:"rationale"`
 	Options   []string `json:"options"`
-	Outcome   string `json:"outcome"`
+	Outcome   string   `json:"outcome"`
 }
 
 // NewDecision creates a new decision memory
@@ -126,7 +126,7 @@ func generateID() string {
 func randomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, length)
-	
+
 	// Use crypto/rand for true randomness
 	randBytes := make([]byte, length)
 	if _, err := rand.Read(randBytes); err != nil {
@@ -136,7 +136,7 @@ func randomString(length int) string {
 		}
 		return string(b)
 	}
-	
+
 	for i := range b {
 		b[i] = charset[randBytes[i]%byte(len(charset))]
 	}

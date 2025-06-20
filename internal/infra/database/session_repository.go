@@ -53,11 +53,11 @@ func (r *SQLiteSessionRepository) Store(ctx context.Context, session *domain.Ses
 	_, err := r.db.ExecContext(ctx, query,
 		session.ID,
 		session.ProjectID,
-		session.Name,        // name 
-		description,         // description = task + outcome + progress
+		session.Name, // name
+		description,  // description = task + outcome + progress
 		session.Status,
-		session.StartTime,   // started_at
-		completedAt,         // completed_at
+		session.StartTime, // started_at
+		completedAt,       // completed_at
 	)
 
 	if err != nil {
@@ -86,10 +86,10 @@ func (r *SQLiteSessionRepository) GetByID(ctx context.Context, id domain.Session
 	err := row.Scan(
 		&session.ID,
 		&session.ProjectID,
-		&session.Name,        // name -> Name
+		&session.Name, // name -> Name
 		&description,
 		&session.Status,
-		&session.StartTime,   // started_at -> StartTime
+		&session.StartTime, // started_at -> StartTime
 		&completedAt,
 	)
 
@@ -143,7 +143,7 @@ func (r *SQLiteSessionRepository) parseDescription(description string, session *
 			}
 		}
 	}
-	
+
 	// Ensure Progress is never nil
 	if session.Progress == nil {
 		session.Progress = []domain.ProgressEntry{}
@@ -180,7 +180,7 @@ func (r *SQLiteSessionRepository) Update(ctx context.Context, session *domain.Se
 
 	result, err := r.db.ExecContext(ctx, query,
 		session.ProjectID,
-		session.Name,          // Use Name field for the name column
+		session.Name, // Use Name field for the name column
 		description,
 		session.Status,
 		session.StartTime,
@@ -259,7 +259,7 @@ func (r *SQLiteSessionRepository) ListByProject(ctx context.Context, projectID d
 		err := rows.Scan(
 			&session.ID,
 			&session.ProjectID,
-			&session.Name,              // Scan into Name field, not TaskDescription
+			&session.Name, // Scan into Name field, not TaskDescription
 			&description,
 			&session.Status,
 			&session.StartTime,
@@ -320,7 +320,7 @@ func (r *SQLiteSessionRepository) GetActiveSession(ctx context.Context, projectI
 	err := row.Scan(
 		&session.ID,
 		&session.ProjectID,
-		&session.Name,              // Scan into Name field, not TaskDescription
+		&session.Name, // Scan into Name field, not TaskDescription
 		&description,
 		&session.Status,
 		&session.StartTime,
@@ -379,7 +379,7 @@ func (r *SQLiteSessionRepository) ListWithFilters(ctx context.Context, filters p
 
 	// Add ordering and limit
 	query += " ORDER BY started_at DESC"
-	
+
 	if filters.Limit > 0 {
 		query += " LIMIT ?"
 		args = append(args, filters.Limit)
@@ -406,7 +406,7 @@ func (r *SQLiteSessionRepository) ListWithFilters(ctx context.Context, filters p
 		err := rows.Scan(
 			&session.ID,
 			&session.ProjectID,
-			&session.Name,              // Scan into Name field, not TaskDescription
+			&session.Name, // Scan into Name field, not TaskDescription
 			&description,
 			&session.Status,
 			&session.StartTime,

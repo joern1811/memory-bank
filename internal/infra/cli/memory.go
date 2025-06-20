@@ -55,10 +55,10 @@ Supported types: decision, pattern, error-solution, code, documentation`,
 		}
 
 		ctx := context.Background()
-		
+
 		// Quick health check for external services
 		QuickHealthCheck(ctx, services)
-		
+
 		fmt.Printf("Creating memory entry:\n")
 		fmt.Printf("  Type: %s\n", memoryType)
 		fmt.Printf("  Title: %s\n", title)
@@ -92,7 +92,7 @@ Supported types: decision, pattern, error-solution, code, documentation`,
 		if err != nil {
 			return fmt.Errorf("failed to create memory: %w", err)
 		}
-		
+
 		fmt.Printf("✓ Memory entry created successfully (ID: %s)\n", memory.ID)
 		return nil
 	},
@@ -116,7 +116,7 @@ var memorySearchCmd = &cobra.Command{
 		}
 
 		ctx := context.Background()
-		
+
 		fmt.Printf("Searching for: %s\n", query)
 		if projectID != "" {
 			fmt.Printf("Project filter: %s\n", projectID)
@@ -141,7 +141,7 @@ var memorySearchCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to search memories: %w", err)
 		}
-		
+
 		fmt.Printf("\nSearch Results (%d found):\n", len(results))
 		if len(results) == 0 {
 			fmt.Println("No memories found matching your query.")
@@ -155,7 +155,7 @@ var memorySearchCmd = &cobra.Command{
 				}
 			}
 		}
-		
+
 		return nil
 	},
 }
@@ -176,7 +176,7 @@ var memoryListCmd = &cobra.Command{
 		}
 
 		ctx := context.Background()
-		
+
 		fmt.Printf("Listing memory entries")
 		if projectID != "" {
 			fmt.Printf(" for project: %s", projectID)
@@ -208,7 +208,7 @@ var memoryListCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to list memories: %w", err)
 		}
-		
+
 		fmt.Printf("\nMemory Entries (%d found):\n", len(memories))
 		if len(memories) == 0 {
 			if projectID == "" {
@@ -228,31 +228,31 @@ var memoryListCmd = &cobra.Command{
 				fmt.Printf("   Created: %s\n", memory.CreatedAt.Format("2006-01-02 15:04:05"))
 			}
 		}
-		
+
 		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(memoryCmd)
-	
+
 	// Add subcommands
 	memoryCmd.AddCommand(memoryCreateCmd)
 	memoryCmd.AddCommand(memorySearchCmd)
 	memoryCmd.AddCommand(memoryListCmd)
-	
+
 	// Flags for create command
 	memoryCreateCmd.Flags().StringP("type", "t", "", "memory type (decision, pattern, error-solution, code, documentation)")
 	memoryCreateCmd.Flags().StringP("title", "", "", "memory title")
 	memoryCreateCmd.Flags().StringP("content", "", "", "memory content")
 	memoryCreateCmd.Flags().StringP("tags", "", "", "comma-separated tags")
 	memoryCreateCmd.Flags().StringP("project", "p", "", "project ID")
-	
+
 	// Flags for search command
 	memorySearchCmd.Flags().StringP("project", "p", "", "filter by project ID")
 	memorySearchCmd.Flags().IntP("limit", "l", 10, "maximum number of results")
 	memorySearchCmd.Flags().Float32P("threshold", "", 0.5, "similarity threshold")
-	
+
 	// Flags for list command
 	memoryListCmd.Flags().StringP("project", "p", "", "filter by project ID")
 	memoryListCmd.Flags().StringP("type", "t", "", "filter by memory type")

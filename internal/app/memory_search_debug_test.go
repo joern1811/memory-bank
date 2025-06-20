@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 // Memory Search Debug Integration Test
@@ -114,7 +115,7 @@ func TestMemorySearchDebug(t *testing.T) {
 
 		// Step 1: Create a memory entry
 		t.Log("=== STEP 1: Creating Memory Entry ===")
-		
+
 		createReq := ports.CreateMemoryRequest{
 			ProjectID: project.ID,
 			Type:      domain.MemoryTypeDecision,
@@ -138,7 +139,7 @@ func TestMemorySearchDebug(t *testing.T) {
 
 		// Step 2: Verify embedding was generated and stored in ChromaDB
 		t.Log("=== STEP 2: Verifying ChromaDB Storage ===")
-		
+
 		// Get the exact embedding that was generated
 		embeddingText := createdMemory.Title + " " + createdMemory.Content
 		queryEmbedding, err := embeddingProvider.GenerateEmbedding(ctx, embeddingText)
@@ -149,9 +150,9 @@ func TestMemorySearchDebug(t *testing.T) {
 		chromaResults, err := vectorStore.Search(ctx, queryEmbedding, 5, 0.0)
 		require.NoError(t, err)
 		t.Logf("Direct ChromaDB search returned %d results", len(chromaResults))
-		
+
 		for i, result := range chromaResults {
-			t.Logf("ChromaDB Result %d: ID=%s, Similarity=%.4f, Metadata=%+v", 
+			t.Logf("ChromaDB Result %d: ID=%s, Similarity=%.4f, Metadata=%+v",
 				i+1, result.ID, result.Similarity, result.Metadata)
 		}
 
@@ -168,7 +169,7 @@ func TestMemorySearchDebug(t *testing.T) {
 
 		// Step 3: Test Memory Service Search
 		t.Log("=== STEP 3: Testing Memory Service Search ===")
-		
+
 		searchReq := ports.SemanticSearchRequest{
 			Query:     "authentication jwt tokens",
 			ProjectID: &project.ID,
@@ -182,46 +183,46 @@ func TestMemorySearchDebug(t *testing.T) {
 
 		// Debug: Print all search results
 		for i, result := range searchResults {
-			t.Logf("Memory Service Result %d: ID=%s, Title=%s, Similarity=%.4f", 
+			t.Logf("Memory Service Result %d: ID=%s, Title=%s, Similarity=%.4f",
 				i+1, result.Memory.ID, result.Memory.Title, result.Similarity)
 		}
 
 		// Step 4: Compare results
 		t.Log("=== STEP 4: Analysis ===")
-		
+
 		if len(searchResults) == 0 {
 			t.Log("❌ Memory Service returned no results - this is the bug!")
-			
+
 			// Additional debugging - let's trace the search process
 			t.Log("=== Additional Debugging ===")
-			
+
 			// Test the search query embedding
 			searchEmbedding, err := embeddingProvider.GenerateEmbedding(ctx, searchReq.Query)
 			require.NoError(t, err)
 			t.Logf("Search embedding length: %d", len(searchEmbedding))
-			
+
 			// Test if search embedding finds the stored vector
 			directSearchResults, err := vectorStore.Search(ctx, searchEmbedding, 5, searchReq.Threshold)
 			require.NoError(t, err)
 			t.Logf("Direct search with search embedding returned %d results", len(directSearchResults))
-			
+
 			for i, result := range directSearchResults {
-				t.Logf("Direct Search Result %d: ID=%s, Similarity=%.4f", 
+				t.Logf("Direct Search Result %d: ID=%s, Similarity=%.4f",
 					i+1, result.ID, result.Similarity)
 			}
-			
+
 			// Check if the memory still exists in the database
 			allMemories, err := memoryRepo.ListByProject(ctx, project.ID)
 			require.NoError(t, err)
 			t.Logf("Database contains %d memories for this project", len(allMemories))
-			
+
 			if len(allMemories) > 0 {
 				t.Logf("First memory: ID=%s, HasEmbedding=%t", allMemories[0].ID, allMemories[0].HasEmbedding)
 			}
-			
+
 		} else {
 			t.Log("✓ Memory Service returned results - search is working!")
-			
+
 			// Verify our created memory is in the results
 			foundInResults := false
 			for _, result := range searchResults {

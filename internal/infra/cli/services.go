@@ -55,7 +55,7 @@ func NewServiceContainerWithOptions(configPath string, quiet bool) (*ServiceCont
 
 	// Initialize logger with config
 	logger := logrus.New()
-	
+
 	// Set log format - always use text for CLI, JSON only for server mode
 	if quiet {
 		// For CLI commands, be completely quiet unless verbose mode
@@ -71,7 +71,7 @@ func NewServiceContainerWithOptions(configPath string, quiet bool) (*ServiceCont
 		} else {
 			logger.SetFormatter(&logrus.JSONFormatter{})
 		}
-		
+
 		// Set log level
 		switch strings.ToLower(cfg.Logging.Level) {
 		case "debug":
@@ -163,11 +163,10 @@ func GetServices() (*ServiceContainer, error) {
 func GetServicesForCLI(cmd *cobra.Command) (*ServiceContainer, error) {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	configPath, _ := cmd.Flags().GetString("config")
-	
+
 	if verbose {
 		return NewServiceContainerWithOptions(configPath, false)
 	} else {
 		return NewServiceContainerWithOptions(configPath, true)
 	}
 }
-

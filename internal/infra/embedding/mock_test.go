@@ -203,13 +203,13 @@ func TestMockEmbeddingProvider_GenerateBatchEmbeddings_Empty(t *testing.T) {
 
 func TestMockEmbeddingProvider_GetDimensions(t *testing.T) {
 	logger := setupTestLogger()
-	
+
 	testCases := []int{1, 50, 384, 768, 1536}
-	
+
 	for _, expectedDim := range testCases {
 		provider := NewMockEmbeddingProvider(expectedDim, logger)
 		actualDim := provider.GetDimensions()
-		
+
 		if actualDim != expectedDim {
 			t.Errorf("Expected dimensions %d, got %d", expectedDim, actualDim)
 		}
@@ -222,7 +222,7 @@ func TestMockEmbeddingProvider_GetModelName(t *testing.T) {
 
 	modelName := provider.GetModelName()
 	expectedName := "mock-embedding-model"
-	
+
 	if modelName != expectedName {
 		t.Errorf("Expected model name '%s', got '%s'", expectedName, modelName)
 	}
@@ -230,7 +230,7 @@ func TestMockEmbeddingProvider_GetModelName(t *testing.T) {
 
 func TestSimpleHash_Consistency(t *testing.T) {
 	testCases := []struct {
-		text string
+		text         string
 		expectedHash int
 	}{
 		{"", 0},
@@ -249,10 +249,10 @@ func TestSimpleHash_Consistency(t *testing.T) {
 
 func TestSimpleHash_Deterministic(t *testing.T) {
 	text := "test string for hash consistency"
-	
+
 	hash1 := simpleHash(text)
 	hash2 := simpleHash(text)
-	
+
 	if hash1 != hash2 {
 		t.Errorf("Expected consistent hash for same text, got %d and %d", hash1, hash2)
 	}
@@ -261,17 +261,17 @@ func TestSimpleHash_Deterministic(t *testing.T) {
 func TestSimpleHash_Different(t *testing.T) {
 	texts := []string{
 		"text1",
-		"text2", 
+		"text2",
 		"different text",
 		"yet another text",
 		"completely different content",
 	}
-	
+
 	hashes := make(map[int]string)
-	
+
 	for _, text := range texts {
 		hash := simpleHash(text)
-		
+
 		// Check for collisions (unlikely but possible)
 		if existingText, exists := hashes[hash]; exists {
 			t.Logf("Hash collision detected: '%s' and '%s' both hash to %d", text, existingText, hash)
@@ -279,7 +279,7 @@ func TestSimpleHash_Different(t *testing.T) {
 			hashes[hash] = text
 		}
 	}
-	
+
 	// We should have at least some different hashes
 	if len(hashes) < 3 {
 		t.Errorf("Expected at least 3 different hashes, got %d", len(hashes))
@@ -292,11 +292,11 @@ func TestMockEmbeddingProvider_DomainIntegration(t *testing.T) {
 	provider := NewMockEmbeddingProvider(768, logger)
 
 	ctx := context.Background()
-	
+
 	// Test with different memory types content
 	testTexts := []string{
 		"Authentication decision: Use JWT tokens for API security",
-		"Repository pattern: Implement data access layer abstraction", 
+		"Repository pattern: Implement data access layer abstraction",
 		"Error solution: NullPointerException when accessing user.getName()",
 		"Code snippet: func validateUser(user *User) error { return nil }",
 	}
@@ -310,7 +310,7 @@ func TestMockEmbeddingProvider_DomainIntegration(t *testing.T) {
 
 		// Verify embedding is valid domain.EmbeddingVector
 		var _ domain.EmbeddingVector = embedding
-		
+
 		if len(embedding) != 768 {
 			t.Errorf("Expected 768-dimensional embedding, got %d", len(embedding))
 		}
@@ -363,7 +363,7 @@ func BenchmarkMockEmbeddingProvider_GenerateBatchEmbeddings(b *testing.B) {
 
 func BenchmarkSimpleHash(b *testing.B) {
 	text := "This is a test string for benchmarking the simple hash function performance."
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = simpleHash(text)

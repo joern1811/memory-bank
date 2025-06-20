@@ -12,9 +12,9 @@ func TestNewMemory(t *testing.T) {
 	title := "Test Memory"
 	content := "Test content"
 	context := "Test context"
-	
+
 	memory := NewMemory(projectID, memoryType, title, content, context)
-	
+
 	// Test basic fields
 	if memory.ProjectID != projectID {
 		t.Errorf("Expected ProjectID %s, got %s", projectID, memory.ProjectID)
@@ -31,7 +31,7 @@ func TestNewMemory(t *testing.T) {
 	if memory.Context != context {
 		t.Errorf("Expected Context '%s', got '%s'", context, memory.Context)
 	}
-	
+
 	// Test generated fields
 	if memory.ID == "" {
 		t.Error("Expected non-empty ID")
@@ -45,7 +45,7 @@ func TestNewMemory(t *testing.T) {
 	if memory.HasEmbedding {
 		t.Error("Expected HasEmbedding to be false for new memory")
 	}
-	
+
 	// Test tags initialization
 	if memory.Tags == nil {
 		t.Error("Expected Tags to be initialized")
@@ -53,12 +53,12 @@ func TestNewMemory(t *testing.T) {
 	if len(memory.Tags) != 0 {
 		t.Errorf("Expected empty Tags, got %d tags", len(memory.Tags))
 	}
-	
+
 	// Test SessionID is nil
 	if memory.SessionID != nil {
 		t.Error("Expected SessionID to be nil for new memory")
 	}
-	
+
 	// Test timestamps are recent
 	now := time.Now()
 	if now.Sub(memory.CreatedAt) > time.Second {
@@ -72,13 +72,13 @@ func TestNewMemory(t *testing.T) {
 func TestMemory_AddTag(t *testing.T) {
 	memory := NewMemory("proj_1", MemoryTypeCode, "Test", "Content", "Context")
 	originalUpdatedAt := memory.UpdatedAt
-	
+
 	// Sleep to ensure time difference
 	time.Sleep(time.Millisecond)
-	
+
 	// Add first tag
 	memory.AddTag("test-tag")
-	
+
 	if len(memory.Tags) != 1 {
 		t.Errorf("Expected 1 tag, got %d", len(memory.Tags))
 	}
@@ -88,22 +88,22 @@ func TestMemory_AddTag(t *testing.T) {
 	if !memory.UpdatedAt.After(originalUpdatedAt) {
 		t.Error("Expected UpdatedAt to be updated after adding tag")
 	}
-	
+
 	// Add duplicate tag
 	newUpdatedAt := memory.UpdatedAt
 	time.Sleep(time.Millisecond)
 	memory.AddTag("test-tag")
-	
+
 	if len(memory.Tags) != 1 {
 		t.Errorf("Expected 1 tag after adding duplicate, got %d", len(memory.Tags))
 	}
 	if !memory.UpdatedAt.After(newUpdatedAt) {
 		t.Error("Expected UpdatedAt to be updated even when adding duplicate tag")
 	}
-	
+
 	// Add different tag
 	memory.AddTag("another-tag")
-	
+
 	if len(memory.Tags) != 2 {
 		t.Errorf("Expected 2 tags, got %d", len(memory.Tags))
 	}
@@ -115,16 +115,16 @@ func TestMemory_AddTag(t *testing.T) {
 func TestMemory_SetEmbedding(t *testing.T) {
 	memory := NewMemory("proj_1", MemoryTypePattern, "Test", "Content", "Context")
 	originalUpdatedAt := memory.UpdatedAt
-	
+
 	if memory.HasEmbedding {
 		t.Error("Expected HasEmbedding to be false initially")
 	}
-	
+
 	// Sleep to ensure time difference
 	time.Sleep(time.Millisecond)
-	
+
 	memory.SetEmbedding()
-	
+
 	if !memory.HasEmbedding {
 		t.Error("Expected HasEmbedding to be true after SetEmbedding")
 	}
@@ -138,19 +138,19 @@ func TestMemory_GetEmbeddingText(t *testing.T) {
 	content := "Test Content"
 	context := "Test Context"
 	memory := NewMemory("proj_1", MemoryTypeDocumentation, title, content, context)
-	
+
 	expected := title + "\n" + content + "\n" + context
 	result := memory.GetEmbeddingText()
-	
+
 	if result != expected {
 		t.Errorf("Expected embedding text '%s', got '%s'", expected, result)
 	}
-	
+
 	// Test with empty fields
 	emptyMemory := NewMemory("proj_1", MemoryTypeCode, "", "", "")
 	emptyResult := emptyMemory.GetEmbeddingText()
 	expectedEmpty := "\n\n"
-	
+
 	if emptyResult != expectedEmpty {
 		t.Errorf("Expected empty embedding text '%s', got '%s'", expectedEmpty, emptyResult)
 	}
@@ -158,7 +158,7 @@ func TestMemory_GetEmbeddingText(t *testing.T) {
 
 func TestMemory_IsType(t *testing.T) {
 	memory := NewMemory("proj_1", MemoryTypeDecision, "Test", "Content", "Context")
-	
+
 	if !memory.IsType(MemoryTypeDecision) {
 		t.Error("Expected IsType to return true for correct type")
 	}
@@ -177,9 +177,9 @@ func TestNewDecision(t *testing.T) {
 	context := "API security requirements"
 	rationale := "JWT provides stateless authentication"
 	options := []string{"JWT", "Session-based", "OAuth"}
-	
+
 	decision := NewDecision(projectID, title, content, context, rationale, options)
-	
+
 	// Test that the embedded Memory is correct
 	if decision.Memory == nil {
 		t.Fatal("Expected Memory to be embedded")
@@ -190,7 +190,7 @@ func TestNewDecision(t *testing.T) {
 	if decision.Memory.Title != title {
 		t.Errorf("Expected Title '%s', got '%s'", title, decision.Memory.Title)
 	}
-	
+
 	// Test Decision-specific fields
 	if decision.Rationale != rationale {
 		t.Errorf("Expected Rationale '%s', got '%s'", rationale, decision.Rationale)
@@ -203,7 +203,7 @@ func TestNewDecision(t *testing.T) {
 			t.Errorf("Expected option[%d] '%s', got '%s'", i, option, decision.Options[i])
 		}
 	}
-	
+
 	// Test that Outcome is empty initially
 	if decision.Outcome != "" {
 		t.Errorf("Expected empty Outcome, got '%s'", decision.Outcome)
@@ -216,9 +216,9 @@ func TestNewPattern(t *testing.T) {
 	patternType := "Creational"
 	implementation := "class Singleton { private static instance; }"
 	useCase := "Database connection management"
-	
+
 	pattern := NewPattern(projectID, title, patternType, implementation, useCase)
-	
+
 	// Test that the embedded Memory is correct
 	if pattern.Memory == nil {
 		t.Fatal("Expected Memory to be embedded")
@@ -235,7 +235,7 @@ func TestNewPattern(t *testing.T) {
 	if pattern.Memory.Context != useCase {
 		t.Errorf("Expected Context to be use case, got '%s'", pattern.Memory.Context)
 	}
-	
+
 	// Test Pattern-specific fields
 	if pattern.PatternType != patternType {
 		t.Errorf("Expected PatternType '%s', got '%s'", patternType, pattern.PatternType)
@@ -246,7 +246,7 @@ func TestNewPattern(t *testing.T) {
 	if pattern.UseCase != useCase {
 		t.Errorf("Expected UseCase '%s', got '%s'", useCase, pattern.UseCase)
 	}
-	
+
 	// Test that Language is empty initially
 	if pattern.Language != "" {
 		t.Errorf("Expected empty Language, got '%s'", pattern.Language)
@@ -259,9 +259,9 @@ func TestNewErrorSolution(t *testing.T) {
 	errorSignature := "java.lang.NullPointerException at line 42"
 	solution := "Add null check before accessing object"
 	context := "User authentication service"
-	
+
 	errorSolution := NewErrorSolution(projectID, title, errorSignature, solution, context)
-	
+
 	// Test that the embedded Memory is correct
 	if errorSolution.Memory == nil {
 		t.Fatal("Expected Memory to be embedded")
@@ -278,7 +278,7 @@ func TestNewErrorSolution(t *testing.T) {
 	if errorSolution.Memory.Context != context {
 		t.Errorf("Expected Context '%s', got '%s'", context, errorSolution.Memory.Context)
 	}
-	
+
 	// Test ErrorSolution-specific fields
 	if errorSolution.ErrorSignature != errorSignature {
 		t.Errorf("Expected ErrorSignature '%s', got '%s'", errorSignature, errorSolution.ErrorSignature)
@@ -286,7 +286,7 @@ func TestNewErrorSolution(t *testing.T) {
 	if errorSolution.Solution != solution {
 		t.Errorf("Expected Solution '%s', got '%s'", solution, errorSolution.Solution)
 	}
-	
+
 	// Test that optional fields are empty initially
 	if errorSolution.StackTrace != "" {
 		t.Errorf("Expected empty StackTrace, got '%s'", errorSolution.StackTrace)
@@ -299,14 +299,14 @@ func TestNewErrorSolution(t *testing.T) {
 func TestGenerateID(t *testing.T) {
 	// Test ID format (should contain timestamp and random string)
 	id1 := generateID()
-	
+
 	if len(id1) == 0 {
 		t.Error("Expected non-empty ID")
 	}
 	if !strings.Contains(id1, "-") {
 		t.Error("Expected ID to contain separator")
 	}
-	
+
 	// Test that IDs start with timestamp-like pattern
 	parts := strings.Split(id1, "-")
 	if len(parts) != 2 {
@@ -318,12 +318,12 @@ func TestGenerateID(t *testing.T) {
 	if len(parts[1]) != 8 { // Random string part
 		t.Errorf("Expected random part to be 8 characters, got %d", len(parts[1]))
 	}
-	
+
 	// Test that IDs with different timestamps are unique (skip in short tests)
 	if !testing.Short() {
 		time.Sleep(time.Second) // Ensure different timestamp (second granularity)
 		id2 := generateID()
-		
+
 		if id1 == id2 {
 			t.Error("Expected generateID to produce unique IDs for different timestamps")
 		}
@@ -333,14 +333,14 @@ func TestGenerateID(t *testing.T) {
 func TestRandomString(t *testing.T) {
 	// Test different lengths
 	lengths := []int{0, 1, 5, 10, 20}
-	
+
 	for _, length := range lengths {
 		result := randomString(length)
 		if len(result) != length {
 			t.Errorf("Expected randomString(%d) to return string of length %d, got %d",
 				length, length, len(result))
 		}
-		
+
 		// Test that string contains only expected characters
 		charset := "abcdefghijklmnopqrstuvwxyz0123456789"
 		for _, char := range result {
@@ -349,7 +349,7 @@ func TestRandomString(t *testing.T) {
 			}
 		}
 	}
-	
+
 	// Test that the implementation is now truly random (fixed behavior)
 	// With true randomness, it's extremely unlikely to get identical strings
 	// (36^8 possibilities), but we'll test multiple times to be sure
@@ -363,7 +363,7 @@ func TestRandomString(t *testing.T) {
 	if allSame {
 		t.Error("randomString appears to be deterministic, but should be random")
 	}
-	
+
 	// Test that different lengths produce different results consistently
 	if len(randomString(5)) != 5 || len(randomString(10)) != 10 {
 		t.Error("randomString should respect the length parameter")

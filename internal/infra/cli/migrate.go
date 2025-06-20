@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/joern1811/memory-bank/internal/infra/database"
-	_ "modernc.org/sqlite"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	_ "modernc.org/sqlite"
 )
 
 // migrateCmd represents the migrate command

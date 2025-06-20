@@ -74,26 +74,26 @@ func TestMemoryBankServer_CreateMemoryResponse_Validation(t *testing.T) {
 func TestMemoryBankServer_StructureValidation(t *testing.T) {
 	// Test basic structure and type definitions
 	var server *MemoryBankServer
-	
+
 	// Verify the structure exists and has expected fields
 	if server == nil {
 		// This is expected - just testing compilation
 		t.Log("MemoryBankServer structure is properly defined")
 	}
-	
+
 	// Test that the request/response types compile correctly
 	var createReq CreateMemoryRequest
 	var createResp CreateMemoryResponse
-	
+
 	// Set some fields to verify they exist
 	createReq.ProjectID = "test"
 	createReq.Type = "decision"
 	createReq.Title = "test"
 	createReq.Content = "test"
-	
+
 	createResp.ID = "test"
 	createResp.CreatedAt = time.Now()
-	
+
 	// If we get here, the types are properly defined
 	t.Log("MCP request/response types are properly defined")
 }
