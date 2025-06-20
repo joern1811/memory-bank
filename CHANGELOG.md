@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Documentation cross-references and navigation
 
-## [1.10.0] - 2024-01-15
+## [1.10.0] - 2025-06-19
 
 ### Fixed
 - **CRITICAL**: Fixed semantic search returning 0 results due to ChromaDB distance metric mismatch
@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Semantic search now returns realistic similarity scores (0.8+ for relevant content)
 - Improved vector store integration reliability
 
-## [1.9.0] - 2024-01-10
+## [1.9.0] - 2025-06-18
 
 ### Changed
 - **BREAKING**: Migrated from ChromaDB v1 API to v2 API
@@ -56,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Backward compatibility validation for API migration
 - Enhanced error handling for ChromaDB v2 API responses
 
-## [1.8.0] - 2024-01-05
+## [1.8.0] - 2025-06-16
 
 ### Fixed
 - **CRITICAL**: Fixed MCP Protocol Integration bugs
@@ -74,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MCP server implementation now fully compliant with MCP specification
 - Improved integration with Claude Code and other MCP clients
 
-## [1.7.0] - 2024-01-01
+## [1.7.0] - 2025-06-15
 
 ### Added
 - **MCP System Prompt Resource**: Dynamic, context-aware system prompts
@@ -90,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dynamic content generation based on project state
 - Context-aware documentation and examples
 
-## [1.6.0] - 2023-12-15
+## [1.6.0] - 2025-06-15
 
 ### Added
 - **Enhanced Documentation**: Complete API documentation and user guides
@@ -114,7 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved user experience with better search feedback
 - Enhanced CLI with new search commands and options
 
-## [1.5.0] - 2023-12-01
+## [1.5.0] - 2025-06-15
 
 ### Added
 - **Performance Optimizations**:
@@ -134,7 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Memory leaks in long-running operations
 - Connection pooling issues with external services
 
-## [1.4.0] - 2023-11-15
+## [1.4.0] - 2025-06-15
 
 ### Added
 - **Complete CLI Interface**: Full traditional command-line interface with Cobra framework
@@ -167,7 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session state persistence and retrieval
 - CLI service integration and error handling
 
-## [1.3.0] - 2023-11-01
+## [1.3.0] - 2025-06-15
 
 ### Added
 - **Database Migrations**: Complete schema versioning system
@@ -190,7 +190,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI/CD pipeline
 - Quality checks and automated testing
 
-## [1.2.0] - 2023-10-15
+## [1.2.0] - 2025-06-15
 
 ### Added
 - **Complete MCP Server Implementation**: Full JSON-RPC protocol support
@@ -216,7 +216,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database connection handling and connection pooling
 - Vector store reliability and error recovery
 
-## [1.1.0] - 2023-10-01
+## [1.1.0] - 2025-06-15
 
 ### Added
 - **Infrastructure Layer**:
@@ -235,7 +235,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Graceful degradation when external services unavailable
 - Structured JSON logging with Logrus
 
-## [1.0.0] - 2023-09-15
+## [1.0.0] - 2025-06-15
 
 ### Added
 - **Domain Layer**: Complete entity definitions and value objects
@@ -256,7 +256,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SQLite database with automatic table initialization
 - Comprehensive error handling and validation
 
-## [0.1.0] - 2023-09-01
+## [0.1.0] - 2025-06-15
 
 ### Added
 - Initial project structure
