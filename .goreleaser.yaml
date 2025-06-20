@@ -70,7 +70,7 @@ release:
     
     ### Homebrew (macOS/Linux)
     ```bash
-    brew install joern1811/tap/memory-bank
+    brew install --cask joern1811/tap/memory-bank
     ```
     
     ### Manual Installation
