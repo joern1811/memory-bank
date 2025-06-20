@@ -901,6 +901,12 @@ func (m *MockVectorStore) ListCollections(ctx context.Context) ([]string, error)
 	return names, nil
 }
 
+// HealthCheck always returns success for the mock vector store
+func (m *MockVectorStore) HealthCheck(ctx context.Context) error {
+	m.logger.Debug("Mock vector store health check (always passes)")
+	return nil
+}
+
 // calculateDotProduct calculates the dot product similarity between two vectors
 func calculateDotProduct(a, b domain.EmbeddingVector) domain.Similarity {
 	if len(a) != len(b) {

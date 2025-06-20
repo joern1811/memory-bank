@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/joern1811/memory-bank/internal/domain"
+	"github.com/joern1811/memory-bank/internal/infra/embedding"
+	"github.com/joern1811/memory-bank/internal/infra/vector"
 	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -186,6 +189,12 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	mcpServer.AddTool(mcp.NewTool("version",
 		mcp.WithDescription("Get Memory Bank version information"),
 	), s.handleVersionTool)
+	
+	// System health tool
+	mcpServer.AddTool(mcp.NewTool("system_health",
+		mcp.WithDescription("Check system health and service connectivity"),
+		mcp.WithBoolean("verbose", mcp.Description("Include detailed service information")),
+	), s.handleSystemHealthTool)
 	
 	s.logger.Info("MCP tools and resources registered successfully")
 }
@@ -1966,6 +1975,29 @@ type VersionResponse struct {
 	Application string `json:"application"`
 }
 
+// HealthServiceStatus represents the health status of a service
+type HealthServiceStatus struct {
+	Service      string                 `json:"service"`
+	Status       string                 `json:"status"`
+	Available    bool                   `json:"available"`
+	ResponseTime string                 `json:"response_time"`
+	Details      map[string]interface{} `json:"details,omitempty"`
+	Error        string                 `json:"error,omitempty"`
+}
+
+// SystemHealthRequest represents the request for system health
+type SystemHealthRequest struct {
+	Verbose bool `json:"verbose,omitempty"`
+}
+
+// SystemHealthResponse represents the overall system health
+type SystemHealthResponse struct {
+	Overall       string                         `json:"overall"`
+	Timestamp     string                         `json:"timestamp"`
+	Services      []HealthServiceStatus          `json:"services"`
+	Configuration map[string]interface{}         `json:"configuration,omitempty"`
+}
+
 func (s *MemoryBankServer) handleVersion(ctx context.Context, params json.RawMessage) (interface{}, error) {
 	s.logger.Debug("Handling version request")
 
@@ -1984,4 +2016,227 @@ func (s *MemoryBankServer) handleVersion(ctx context.Context, params json.RawMes
 
 func (s *MemoryBankServer) handleVersionTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return s.wrapHandler(ctx, request, s.handleVersion)
+}
+
+func (s *MemoryBankServer) handleSystemHealth(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling system health check request")
+	
+	var req SystemHealthRequest
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &req); err != nil {
+			return nil, fmt.Errorf("invalid request parameters: %w", err)
+		}
+	}
+	
+	// Perform health checks
+	health := s.checkSystemHealth(ctx, req.Verbose)
+	
+	s.logger.WithField("overall_status", health.Overall).Info("System health check completed")
+	return health, nil
+}
+
+func (s *MemoryBankServer) handleSystemHealthTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleSystemHealth)
+}
+
+func (s *MemoryBankServer) checkSystemHealth(ctx context.Context, verbose bool) *SystemHealthResponse {
+	health := &SystemHealthResponse{
+		Timestamp: time.Now().Format(time.RFC3339),
+		Services:  make([]HealthServiceStatus, 0),
+	}
+	
+	// Add configuration if verbose
+	if verbose {
+		health.Configuration = map[string]interface{}{
+			"ollama_base_url":    getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
+			"ollama_model":       getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
+			"chromadb_base_url":  getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
+			"chromadb_collection": getEnvOrDefault("CHROMADB_COLLECTION", "memory_bank"),
+			"database_path":      getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
+		}
+	}
+	
+	// Check Ollama health
+	ollamaStatus := s.checkOllamaHealth(ctx, verbose)
+	health.Services = append(health.Services, ollamaStatus)
+	
+	// Check ChromaDB health
+	chromaStatus := s.checkChromaDBHealth(ctx, verbose)
+	health.Services = append(health.Services, chromaStatus)
+	
+	// Check database health (simplified check)
+	dbStatus := s.checkDatabaseHealth(ctx, verbose)
+	health.Services = append(health.Services, dbStatus)
+	
+	// Determine overall status
+	allHealthy := true
+	for _, service := range health.Services {
+		if !service.Available {
+			allHealthy = false
+			break
+		}
+	}
+	
+	if allHealthy {
+		health.Overall = "healthy"
+	} else {
+		health.Overall = "degraded"
+	}
+	
+	return health
+}
+
+func (s *MemoryBankServer) checkOllamaHealth(ctx context.Context, verbose bool) HealthServiceStatus {
+	status := HealthServiceStatus{
+		Service: "ollama",
+		Status:  "unknown",
+	}
+	
+	// Create Ollama provider for health checking
+	ollamaConfig := embedding.DefaultOllamaConfig()
+	if baseURL := os.Getenv("OLLAMA_BASE_URL"); baseURL != "" {
+		ollamaConfig.BaseURL = baseURL
+	}
+	if model := os.Getenv("OLLAMA_MODEL"); model != "" {
+		ollamaConfig.Model = model
+	}
+	
+	ollamaProvider := embedding.NewOllamaProvider(ollamaConfig, s.logger)
+	
+	// Measure response time
+	start := time.Now()
+	err := ollamaProvider.HealthCheck(ctx)
+	responseTime := time.Since(start)
+	
+	status.ResponseTime = responseTime.String()
+	
+	if err != nil {
+		status.Status = "unhealthy"
+		status.Available = false
+		status.Error = err.Error()
+		if verbose {
+			status.Details = map[string]interface{}{
+				"base_url": ollamaConfig.BaseURL,
+				"model":    ollamaConfig.Model,
+				"fallback": "mock provider",
+			}
+		}
+	} else {
+		status.Status = "healthy"
+		status.Available = true
+		if verbose {
+			status.Details = map[string]interface{}{
+				"base_url":   ollamaConfig.BaseURL,
+				"model":      ollamaConfig.Model,
+				"dimensions": ollamaProvider.GetDimensions(),
+			}
+		}
+	}
+	
+	return status
+}
+
+func (s *MemoryBankServer) checkChromaDBHealth(ctx context.Context, verbose bool) HealthServiceStatus {
+	status := HealthServiceStatus{
+		Service: "chromadb",
+		Status:  "unknown",
+	}
+	
+	// Create ChromaDB store for health checking
+	chromaConfig := vector.DefaultChromeDBConfig()
+	if baseURL := os.Getenv("CHROMADB_BASE_URL"); baseURL != "" {
+		chromaConfig.BaseURL = baseURL
+	}
+	if collection := os.Getenv("CHROMADB_COLLECTION"); collection != "" {
+		chromaConfig.Collection = collection
+	}
+	
+	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, s.logger)
+	
+	// Measure response time
+	start := time.Now()
+	err := chromaStore.HealthCheck(ctx)
+	responseTime := time.Since(start)
+	
+	status.ResponseTime = responseTime.String()
+	
+	if err != nil {
+		status.Status = "unhealthy"
+		status.Available = false
+		status.Error = err.Error()
+		if verbose {
+			status.Details = map[string]interface{}{
+				"base_url":   chromaConfig.BaseURL,
+				"collection": chromaConfig.Collection,
+				"tenant":     chromaConfig.Tenant,
+				"database":   chromaConfig.Database,
+				"fallback":   "mock vector store",
+			}
+		}
+	} else {
+		status.Status = "healthy"
+		status.Available = true
+		if verbose {
+			details := map[string]interface{}{
+				"base_url":   chromaConfig.BaseURL,
+				"collection": chromaConfig.Collection,
+				"tenant":     chromaConfig.Tenant,
+				"database":   chromaConfig.Database,
+			}
+			
+			// Try to get additional details
+			if collections, err := chromaStore.ListCollections(ctx); err == nil {
+				details["available_collections"] = collections
+				details["collections_count"] = len(collections)
+			}
+			
+			status.Details = details
+		}
+	}
+	
+	return status
+}
+
+func (s *MemoryBankServer) checkDatabaseHealth(ctx context.Context, verbose bool) HealthServiceStatus {
+	status := HealthServiceStatus{
+		Service: "database",
+		Status:  "unknown",
+	}
+	
+	// Simple database health check by trying to list projects
+	start := time.Now()
+	_, err := s.projectService.ListProjects(ctx)
+	responseTime := time.Since(start)
+	
+	status.ResponseTime = responseTime.String()
+	
+	if err != nil {
+		status.Status = "unhealthy"
+		status.Available = false
+		status.Error = err.Error()
+		if verbose {
+			status.Details = map[string]interface{}{
+				"path": getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
+				"type": "sqlite",
+			}
+		}
+	} else {
+		status.Status = "healthy"
+		status.Available = true
+		if verbose {
+			status.Details = map[string]interface{}{
+				"path": getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
+				"type": "sqlite",
+			}
+		}
+	}
+	
+	return status
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
