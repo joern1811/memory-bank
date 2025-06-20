@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/sirupsen/logrus"
 	"strings"
 )
@@ -16,7 +16,7 @@ import (
 func NewSQLiteDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
 	logger.WithField("db_path", dbPath).Info("Connecting to SQLite database")
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}

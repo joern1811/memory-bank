@@ -15,7 +15,7 @@ import (
 // setupTestDB creates an in-memory SQLite database for testing
 func setupTestDB(t *testing.T) (*sql.DB, func()) {
 	// Use in-memory database for tests
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}

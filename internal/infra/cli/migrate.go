@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/joern1811/memory-bank/internal/infra/database"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -135,7 +135,7 @@ var migrateStatusCmd = &cobra.Command{
 func connectToDatabase(dbPath string, logger *logrus.Logger) (*sql.DB, error) {
 	logger.WithField("db_path", dbPath).Info("Connecting to SQLite database")
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
