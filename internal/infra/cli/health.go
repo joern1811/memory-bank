@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/joern1811/memory-bank/internal/infra/embedding"
@@ -36,11 +40,18 @@ var healthCmd = &cobra.Command{
 - Ollama embedding provider
 - ChromaDB vector store
 - Database connectivity
-- Configuration validation`,
+- Configuration validation
+
+Use --watch to continuously monitor health status.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Get verbose flag
+		// Get flags
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		json, _ := cmd.Flags().GetBool("json")
+		watch, _ := cmd.Flags().GetBool("watch")
+		
+		if watch {
+			return runWatchMode(verbose, json)
+		}
 		
 		return runHealthCheck(verbose, json)
 	},
@@ -49,11 +60,18 @@ var healthCmd = &cobra.Command{
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Alias for health command",
-	Long:  `Alias for the health command - check system health and service connectivity.`,
+	Long:  `Alias for the health command - check system health and service connectivity.
+
+Use --watch to continuously monitor health status.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Get verbose flag
+		// Get flags
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		json, _ := cmd.Flags().GetBool("json")
+		watch, _ := cmd.Flags().GetBool("watch")
+		
+		if watch {
+			return runWatchMode(verbose, json)
+		}
 		
 		return runHealthCheck(verbose, json)
 	},
@@ -68,6 +86,72 @@ func runHealthCheck(verbose bool, jsonOutput bool) error {
 		return fmt.Errorf("failed to initialize services: %w", err)
 	}
 	
+	// Perform health checks
+	systemHealth := checkSystemHealth(ctx, services)
+	
+	// Output results
+	if jsonOutput {
+		return outputHealthJSON(systemHealth)
+	} else {
+		return outputHealthText(systemHealth, verbose)
+	}
+}
+
+func runWatchMode(verbose bool, jsonOutput bool) error {
+	// Set up signal handling for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	
+	go func() {
+		<-sigChan
+		fmt.Println("\nReceived interrupt signal, stopping health monitoring...")
+		cancel()
+	}()
+	
+	// Load services once
+	services, err := NewServiceContainerQuiet()
+	if err != nil {
+		return fmt.Errorf("failed to initialize services: %w", err)
+	}
+	
+	fmt.Println("🔍 Memory Bank Health Monitor - Press Ctrl+C to stop")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	
+	// Initial check
+	if err := performHealthCheck(ctx, services, verbose, jsonOutput); err != nil {
+		return err
+	}
+	
+	// Watch mode loop
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Health monitoring stopped.")
+			return nil
+		case <-ticker.C:
+			// Clear previous output (only in non-JSON mode)
+			if !jsonOutput {
+				fmt.Print("\033[H\033[2J") // Clear screen
+				fmt.Println("🔍 Memory Bank Health Monitor - Press Ctrl+C to stop")
+				fmt.Printf("Last updated: %s\n", time.Now().Format("15:04:05"))
+				fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			}
+			
+			if err := performHealthCheck(ctx, services, verbose, jsonOutput); err != nil {
+				if !jsonOutput {
+					fmt.Printf("Error performing health check: %v\n", err)
+				}
+				continue
+			}
+		}
+	}
+}
+
+func performHealthCheck(ctx context.Context, services *ServiceContainer, verbose bool, jsonOutput bool) error {
 	// Perform health checks
 	systemHealth := checkSystemHealth(ctx, services)
 	
@@ -182,43 +266,68 @@ func checkChromaDBHealth(ctx context.Context, services *ServiceContainer) Health
 	}
 	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, services.Logger)
 	
-	// Measure response time
-	start := time.Now()
-	err := chromaStore.HealthCheck(ctx)
-	responseTime := time.Since(start)
+	// Try health check with retry logic
+	const maxRetries = 3
+	var lastError error
 	
-	status.ResponseTime = responseTime
+	for retry := 0; retry < maxRetries; retry++ {
+		if retry > 0 {
+			fmt.Printf("  Retrying ChromaDB connection... (%d/%d)\n", retry+1, maxRetries)
+			time.Sleep(time.Duration(retry) * 500 * time.Millisecond) // Progressive backoff
+		}
+		
+		// Measure response time
+		start := time.Now()
+		err := chromaStore.HealthCheck(ctx)
+		responseTime := time.Since(start)
+		
+		status.ResponseTime = responseTime
+		lastError = err
+		
+		if err == nil {
+			// Success!
+			status.Status = "healthy"
+			status.Available = true
+			
+			// Try to get additional details
+			details := map[string]interface{}{
+				"base_url":   services.Config.ChromaDB.BaseURL,
+				"collection": services.Config.ChromaDB.Collection,
+				"tenant":     services.Config.ChromaDB.Tenant,
+				"database":   services.Config.ChromaDB.Database,
+			}
+			
+			// Try to list collections to get more info
+			if collections, err := chromaStore.ListCollections(ctx); err == nil {
+				details["available_collections"] = collections
+				details["collections_count"] = len(collections)
+			}
+			
+			status.Details = details
+			return status
+		}
+		
+		// Continue retry loop for transient errors
+		if retry < maxRetries-1 && isTransientError(err) {
+			continue
+		}
+		
+		// Final failure or non-transient error
+		break
+	}
 	
-	if err != nil {
-		status.Status = "unhealthy"
-		status.Available = false
-		status.Error = err.Error()
-		status.Details = map[string]interface{}{
-			"base_url":   services.Config.ChromaDB.BaseURL,
-			"collection": services.Config.ChromaDB.Collection,
-			"tenant":     services.Config.ChromaDB.Tenant,
-			"database":   services.Config.ChromaDB.Database,
-			"fallback":   "mock vector store",
-		}
-	} else {
-		status.Status = "healthy"
-		status.Available = true
-		
-		// Try to get additional details
-		details := map[string]interface{}{
-			"base_url":   services.Config.ChromaDB.BaseURL,
-			"collection": services.Config.ChromaDB.Collection,
-			"tenant":     services.Config.ChromaDB.Tenant,
-			"database":   services.Config.ChromaDB.Database,
-		}
-		
-		// Try to list collections to get more info
-		if collections, err := chromaStore.ListCollections(ctx); err == nil {
-			details["available_collections"] = collections
-			details["collections_count"] = len(collections)
-		}
-		
-		status.Details = details
+	// Health check failed after retries
+	status.Status = "unhealthy"
+	status.Available = false
+	status.Error = enhanceChromaDBError(lastError, services.Config.ChromaDB.BaseURL)
+	status.Details = map[string]interface{}{
+		"base_url":     services.Config.ChromaDB.BaseURL,
+		"collection":   services.Config.ChromaDB.Collection,
+		"tenant":       services.Config.ChromaDB.Tenant,
+		"database":     services.Config.ChromaDB.Database,
+		"fallback":     "mock vector store",
+		"retry_count":  maxRetries,
+		"setup_hints":  getChromaDBSetupHints(),
 	}
 	
 	return status
@@ -336,10 +445,121 @@ func formatServiceName(service string) string {
 	}
 }
 
+// isTransientError determines if an error is likely transient and worth retrying
+func isTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+	
+	errorStr := strings.ToLower(err.Error())
+	
+	// Common transient error patterns
+	transientPatterns := []string{
+		"connection refused",
+		"timeout",
+		"temporary failure",
+		"network is unreachable",
+		"connection reset",
+		"no route to host",
+	}
+	
+	for _, pattern := range transientPatterns {
+		if strings.Contains(errorStr, pattern) {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// enhanceChromaDBError provides enhanced error messages with specific setup hints
+func enhanceChromaDBError(err error, baseURL string) string {
+	if err == nil {
+		return ""
+	}
+	
+	originalError := err.Error()
+	errorStr := strings.ToLower(originalError)
+	
+	// Categorize error and provide specific hints
+	if strings.Contains(errorStr, "connection refused") {
+		return fmt.Sprintf("%s\n\nSetup Hint: ChromaDB is not running. Start it with:\n"+
+			"  Option 1 (uvx): uvx --from 'chromadb[server]' chroma run --host localhost --port 8000 --path ./chromadb_data\n"+
+			"  Option 2 (docker): docker run -p 8000:8000 -v ./chromadb_data:/chroma/chroma chromadb/chroma\n"+
+			"  Then verify with: curl %s/api/v2/heartbeat", originalError, baseURL)
+	}
+	
+	if strings.Contains(errorStr, "timeout") {
+		return fmt.Sprintf("%s\n\nSetup Hint: ChromaDB appears to be slow or overloaded.\n"+
+			"  - Check if ChromaDB is under heavy load\n"+
+			"  - Increase timeout in configuration\n"+
+			"  - Verify network connectivity to %s", originalError, baseURL)
+	}
+	
+	if strings.Contains(errorStr, "404") || strings.Contains(errorStr, "not found") {
+		return fmt.Sprintf("%s\n\nSetup Hint: ChromaDB endpoint not found.\n"+
+			"  - Verify ChromaDB is running on the correct port\n"+
+			"  - Check URL: %s\n"+
+			"  - Ensure you're using ChromaDB v2 API", originalError, baseURL)
+	}
+	
+	if strings.Contains(errorStr, "no such host") || strings.Contains(errorStr, "dns") {
+		return fmt.Sprintf("%s\n\nSetup Hint: DNS resolution failed.\n"+
+			"  - Check if hostname is correct: %s\n"+
+			"  - Try using 127.0.0.1 instead of localhost\n"+
+			"  - Verify network connectivity", originalError, baseURL)
+	}
+	
+	// Generic connection error
+	return fmt.Sprintf("%s\n\nSetup Hint: Unable to connect to ChromaDB.\n"+
+		"  - Ensure ChromaDB is running on %s\n"+
+		"  - Check firewall and network settings\n"+
+		"  - Verify ChromaDB logs for additional information", originalError, baseURL)
+}
+
+// getChromaDBSetupHints returns setup hints for ChromaDB
+func getChromaDBSetupHints() []string {
+	return []string{
+		"Start ChromaDB with uvx: uvx --from 'chromadb[server]' chroma run --host localhost --port 8000",
+		"Start ChromaDB with Docker: docker run -p 8000:8000 chromadb/chroma",
+		"Verify installation: curl http://localhost:8000/api/v2/heartbeat",
+		"Check ChromaDB logs for detailed error information",
+		"Memory Bank will fall back to mock vector store if ChromaDB is unavailable",
+	}
+}
+
+// QuickHealthCheck performs a quick health check and displays any service issues
+func QuickHealthCheck(ctx context.Context, services *ServiceContainer) {
+	// Quick checks - only check ChromaDB as it's most likely to fail
+	chromaConfig := vector.ChromaDBConfig{
+		BaseURL:    services.Config.ChromaDB.BaseURL,
+		Collection: services.Config.ChromaDB.Collection,
+		Tenant:     services.Config.ChromaDB.Tenant,
+		Database:   services.Config.ChromaDB.Database,
+		Timeout:    time.Duration(services.Config.ChromaDB.Timeout) * time.Second,
+	}
+	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, services.Logger)
+	
+	// Quick timeout for this check
+	quickCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	
+	if err := chromaStore.HealthCheck(quickCtx); err != nil {
+		fmt.Printf("⚠️  Warning: ChromaDB is not available (%s)\n", err.Error())
+		fmt.Printf("   💡 Falling back to mock vector store (semantic search disabled)\n")
+		fmt.Printf("   💡 Start ChromaDB: uvx --from 'chromadb[server]' chroma run --host localhost --port 8000\n\n")
+	}
+}
+
 func init() {
 	// Add flags
 	healthCmd.Flags().BoolP("json", "j", false, "output health status as JSON")
+	healthCmd.Flags().BoolP("verbose", "v", false, "show detailed service information")
+	healthCmd.Flags().BoolP("watch", "w", false, "watch mode - continuously monitor health status")
+	
 	statusCmd.Flags().BoolP("json", "j", false, "output health status as JSON")
+	statusCmd.Flags().BoolP("verbose", "v", false, "show detailed service information")
+	statusCmd.Flags().BoolP("watch", "w", false, "watch mode - continuously monitor health status")
 	
 	// Register commands
 	rootCmd.AddCommand(healthCmd)

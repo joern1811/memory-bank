@@ -56,6 +56,9 @@ Supported types: decision, pattern, error-solution, code, documentation`,
 
 		ctx := context.Background()
 		
+		// Quick health check for external services
+		QuickHealthCheck(ctx, services)
+		
 		fmt.Printf("Creating memory entry:\n")
 		fmt.Printf("  Type: %s\n", memoryType)
 		fmt.Printf("  Title: %s\n", title)

@@ -30,6 +30,9 @@ This is a convenience command that searches all projects and memory types.`,
 
 		ctx := context.Background()
 		
+		// Quick health check for external services
+		QuickHealthCheck(ctx, services)
+		
 		fmt.Printf("Global search for: %s\n", query)
 		fmt.Printf("Limit: %d, Threshold: %.2f\n", limit, threshold)
 		if showContent {
