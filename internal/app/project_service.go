@@ -3,10 +3,13 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/sirupsen/logrus"
-	"path/filepath"
 )
 
 // ProjectService implements the project service use cases
@@ -78,6 +81,9 @@ func (s *ProjectService) GetProjectByPath(ctx context.Context, path string) (*do
 // UpdateProject updates an existing project
 func (s *ProjectService) UpdateProject(ctx context.Context, project *domain.Project) error {
 	s.logger.WithField("project_id", project.ID).Info("Updating project")
+
+	// Update the timestamp
+	project.UpdatedAt = time.Now()
 
 	if err := s.projectRepo.Update(ctx, project); err != nil {
 		return fmt.Errorf("failed to update project: %w", err)
@@ -219,9 +225,8 @@ func (s *ProjectService) detectFramework(path, language string) string {
 	return ""
 }
 
-// fileExists checks if a file exists (simplified for now)
+// fileExists checks if a file exists
 func (s *ProjectService) fileExists(path string) bool {
-	// TODO: Implement proper file existence check
-	// For now, just return false to avoid external dependencies
-	return false
+	_, err := os.Stat(path)
+	return err == nil
 }

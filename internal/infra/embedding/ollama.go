@@ -242,7 +242,12 @@ func (m *MockEmbeddingProvider) GenerateEmbedding(ctx context.Context, text stri
 	hash := simpleHash(text)
 
 	for i := range embedding {
-		embedding[i] = float32((hash+i)%100) / 100.0
+		// Ensure positive values by using absolute value and proper modulo
+		value := ((hash + i) % 100)
+		if value < 0 {
+			value = -value
+		}
+		embedding[i] = float32(value) / 100.0
 	}
 
 	return embedding, nil

@@ -109,6 +109,12 @@ func (r *SQLiteSessionRepository) GetByID(ctx context.Context, id domain.Session
 	// Parse description to extract outcome and progress
 	r.parseDescription(description.String, session)
 
+	// Calculate and set session duration if completed
+	if session.EndTime != nil {
+		duration := session.EndTime.Sub(session.StartTime)
+		session.SessionDuration = &duration
+	}
+
 	r.logger.WithField("session_id", id).Debug("Session retrieved successfully")
 	return session, nil
 }
@@ -174,7 +180,7 @@ func (r *SQLiteSessionRepository) Update(ctx context.Context, session *domain.Se
 
 	result, err := r.db.ExecContext(ctx, query,
 		session.ProjectID,
-		session.TaskDescription,
+		session.Name,          // Use Name field for the name column
 		description,
 		session.Status,
 		session.StartTime,
@@ -249,7 +255,7 @@ func (r *SQLiteSessionRepository) ListByProject(ctx context.Context, projectID d
 		err := rows.Scan(
 			&session.ID,
 			&session.ProjectID,
-			&session.TaskDescription,
+			&session.Name,              // Scan into Name field, not TaskDescription
 			&description,
 			&session.Status,
 			&session.StartTime,
@@ -268,6 +274,12 @@ func (r *SQLiteSessionRepository) ListByProject(ctx context.Context, projectID d
 
 		// Parse description
 		r.parseDescription(description.String, session)
+
+		// Calculate and set session duration if completed
+		if session.EndTime != nil {
+			duration := session.EndTime.Sub(session.StartTime)
+			session.SessionDuration = &duration
+		}
 
 		sessions = append(sessions, session)
 	}
@@ -304,7 +316,7 @@ func (r *SQLiteSessionRepository) GetActiveSession(ctx context.Context, projectI
 	err := row.Scan(
 		&session.ID,
 		&session.ProjectID,
-		&session.TaskDescription,
+		&session.Name,              // Scan into Name field, not TaskDescription
 		&description,
 		&session.Status,
 		&session.StartTime,
@@ -326,6 +338,12 @@ func (r *SQLiteSessionRepository) GetActiveSession(ctx context.Context, projectI
 
 	// Parse description
 	r.parseDescription(description.String, session)
+
+	// Calculate and set session duration if completed
+	if session.EndTime != nil {
+		duration := session.EndTime.Sub(session.StartTime)
+		session.SessionDuration = &duration
+	}
 
 	r.logger.WithFields(logrus.Fields{
 		"project_id": projectID,
@@ -380,7 +398,7 @@ func (r *SQLiteSessionRepository) ListWithFilters(ctx context.Context, filters p
 		err := rows.Scan(
 			&session.ID,
 			&session.ProjectID,
-			&session.TaskDescription,
+			&session.Name,              // Scan into Name field, not TaskDescription
 			&description,
 			&session.Status,
 			&session.StartTime,
@@ -399,6 +417,12 @@ func (r *SQLiteSessionRepository) ListWithFilters(ctx context.Context, filters p
 
 		// Parse description
 		r.parseDescription(description.String, session)
+
+		// Calculate and set session duration if completed
+		if session.EndTime != nil {
+			duration := session.EndTime.Sub(session.StartTime)
+			session.SessionDuration = &duration
+		}
 
 		sessions = append(sessions, session)
 	}

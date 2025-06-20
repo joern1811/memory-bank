@@ -43,35 +43,53 @@ func TestNewChromaDBVectorStore(t *testing.T) {
 }
 
 func TestChromaDBVectorStore_Store(t *testing.T) {
+	// Mock collections response for getCollectionID
+	mockCollections := []chromaDBCollection{
+		{Name: "test_collection", ID: "test_col_id"},
+	}
+	
 	// Mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST request, got %s", r.Method)
+		switch r.URL.Path {
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections":
+			// Handle collection listing for getCollectionID
+			if r.Method != "GET" {
+				t.Errorf("Expected GET request for collections, got %s", r.Method)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mockCollections)
+			
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections/test_col_id/add":
+			// Handle actual store operation
+			if r.Method != "POST" {
+				t.Errorf("Expected POST request for add, got %s", r.Method)
+			}
+			
+			// Verify request body
+			var doc chromaDBDocument
+			if err := json.NewDecoder(r.Body).Decode(&doc); err != nil {
+				t.Errorf("Failed to decode request body: %v", err)
+			}
+			
+			if len(doc.IDs) != 1 || doc.IDs[0] != "test_id" {
+				t.Errorf("Expected ID 'test_id', got %v", doc.IDs)
+			}
+			
+			w.WriteHeader(http.StatusOK)
+			
+		default:
+			t.Errorf("Unexpected request path: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
 		}
-		
-		expectedPath := "/api/v2/collections/test_collection/add"
-		if r.URL.Path != expectedPath {
-			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
-		}
-		
-		// Verify request body
-		var doc chromaDBDocument
-		if err := json.NewDecoder(r.Body).Decode(&doc); err != nil {
-			t.Errorf("Failed to decode request body: %v", err)
-		}
-		
-		if len(doc.IDs) != 1 || doc.IDs[0] != "test_id" {
-			t.Errorf("Expected ID 'test_id', got %v", doc.IDs)
-		}
-		
-		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 	
-	// Create store
+	// Create store with default tenant/database
 	config := ChromaDBConfig{
 		BaseURL:    server.URL,
 		Collection: "test_collection",
+		Tenant:     "default_tenant",
+		Database:   "default_database",
 	}
 	store := NewChromaDBVectorStore(config, setupTestLogger())
 	
@@ -89,7 +107,7 @@ func TestChromaDBVectorStore_Store(t *testing.T) {
 }
 
 func TestChromaDBVectorStore_Store_Error(t *testing.T) {
-	// Mock server that returns an error
+	// Mock server that returns an error for collection listing
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Internal server error"))
@@ -99,6 +117,8 @@ func TestChromaDBVectorStore_Store_Error(t *testing.T) {
 	config := ChromaDBConfig{
 		BaseURL:    server.URL,
 		Collection: "test_collection",
+		Tenant:     "default_tenant",
+		Database:   "default_database",
 	}
 	store := NewChromaDBVectorStore(config, setupTestLogger())
 	
@@ -110,29 +130,46 @@ func TestChromaDBVectorStore_Store_Error(t *testing.T) {
 		t.Error("Expected error, got nil")
 	}
 	
-	if !strings.Contains(err.Error(), "chromadb API error") {
-		t.Errorf("Expected chromadb API error, got: %v", err)
+	if !strings.Contains(err.Error(), "ChromaDB API error") {
+		t.Errorf("Expected ChromaDB API error, got: %v", err)
 	}
 }
 
 func TestChromaDBVectorStore_Delete(t *testing.T) {
+	// Mock collections response for getCollectionID
+	mockCollections := []chromaDBCollection{
+		{Name: "test_collection", ID: "test_col_id"},
+	}
+	
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST request, got %s", r.Method)
+		switch r.URL.Path {
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections":
+			// Handle collection listing for getCollectionID
+			if r.Method != "GET" {
+				t.Errorf("Expected GET request for collections, got %s", r.Method)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mockCollections)
+			
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections/test_col_id/delete":
+			// Handle actual delete operation
+			if r.Method != "POST" {
+				t.Errorf("Expected POST request for delete, got %s", r.Method)
+			}
+			w.WriteHeader(http.StatusOK)
+			
+		default:
+			t.Errorf("Unexpected request path: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
 		}
-		
-		expectedPath := "/api/v2/collections/test_collection/delete"
-		if r.URL.Path != expectedPath {
-			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
-		}
-		
-		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 	
 	config := ChromaDBConfig{
 		BaseURL:    server.URL,
 		Collection: "test_collection",
+		Tenant:     "default_tenant",
+		Database:   "default_database",
 	}
 	store := NewChromaDBVectorStore(config, setupTestLogger())
 	
@@ -143,6 +180,11 @@ func TestChromaDBVectorStore_Delete(t *testing.T) {
 }
 
 func TestChromaDBVectorStore_Search(t *testing.T) {
+	// Mock collections response for getCollectionID
+	mockCollections := []chromaDBCollection{
+		{Name: "test_collection", ID: "test_col_id"},
+	}
+	
 	// Mock response data
 	mockResponse := chromaDBQueryResponse{
 		IDs:       [][]string{{"id1", "id2"}},
@@ -156,33 +198,46 @@ func TestChromaDBVectorStore_Search(t *testing.T) {
 	}
 	
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			t.Errorf("Expected POST request, got %s", r.Method)
+		switch r.URL.Path {
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections":
+			// Handle collection listing for getCollectionID
+			if r.Method != "GET" {
+				t.Errorf("Expected GET request for collections, got %s", r.Method)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mockCollections)
+			
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections/test_col_id/query":
+			// Handle actual search operation
+			if r.Method != "POST" {
+				t.Errorf("Expected POST request for query, got %s", r.Method)
+			}
+			
+			// Verify request body
+			var queryReq chromaDBQueryRequest
+			if err := json.NewDecoder(r.Body).Decode(&queryReq); err != nil {
+				t.Errorf("Failed to decode request body: %v", err)
+			}
+			
+			if queryReq.NResults != 5 {
+				t.Errorf("Expected NResults 5, got %d", queryReq.NResults)
+			}
+			
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mockResponse)
+			
+		default:
+			t.Errorf("Unexpected request path: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
 		}
-		
-		expectedPath := "/api/v2/collections/test_collection/query"
-		if r.URL.Path != expectedPath {
-			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
-		}
-		
-		// Verify request body
-		var queryReq chromaDBQueryRequest
-		if err := json.NewDecoder(r.Body).Decode(&queryReq); err != nil {
-			t.Errorf("Failed to decode request body: %v", err)
-		}
-		
-		if queryReq.NResults != 5 {
-			t.Errorf("Expected NResults 5, got %d", queryReq.NResults)
-		}
-		
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer server.Close()
 	
 	config := ChromaDBConfig{
 		BaseURL:    server.URL,
 		Collection: "test_collection",
+		Tenant:     "default_tenant",
+		Database:   "default_database",
 	}
 	store := NewChromaDBVectorStore(config, setupTestLogger())
 	
@@ -209,6 +264,11 @@ func TestChromaDBVectorStore_Search(t *testing.T) {
 }
 
 func TestChromaDBVectorStore_Search_WithThreshold(t *testing.T) {
+	// Mock collections response for getCollectionID
+	mockCollections := []chromaDBCollection{
+		{Name: "test_collection", ID: "test_col_id"},
+	}
+	
 	// Mock response with one result above threshold and one below
 	mockResponse := chromaDBQueryResponse{
 		IDs:       [][]string{{"id1", "id2"}},
@@ -222,14 +282,32 @@ func TestChromaDBVectorStore_Search_WithThreshold(t *testing.T) {
 	}
 	
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResponse)
+		switch r.URL.Path {
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections":
+			// Handle collection listing for getCollectionID
+			if r.Method != "GET" {
+				t.Errorf("Expected GET request for collections, got %s", r.Method)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mockCollections)
+			
+		case "/api/v2/tenants/default_tenant/databases/default_database/collections/test_col_id/query":
+			// Handle actual search operation
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(mockResponse)
+			
+		default:
+			t.Errorf("Unexpected request path: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}))
 	defer server.Close()
 	
 	config := ChromaDBConfig{
 		BaseURL:    server.URL,
 		Collection: "test_collection",
+		Tenant:     "default_tenant",
+		Database:   "default_database",
 	}
 	store := NewChromaDBVectorStore(config, setupTestLogger())
 	
@@ -255,7 +333,7 @@ func TestChromaDBVectorStore_CreateCollection(t *testing.T) {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
 		
-		expectedPath := "/api/v2/collections"
+		expectedPath := "/api/v2/tenants/default_tenant/databases/default_database/collections"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -264,7 +342,11 @@ func TestChromaDBVectorStore_CreateCollection(t *testing.T) {
 	}))
 	defer server.Close()
 	
-	config := ChromaDBConfig{BaseURL: server.URL}
+	config := ChromaDBConfig{
+		BaseURL:  server.URL,
+		Tenant:   "default_tenant",
+		Database: "default_database",
+	}
 	store := NewChromaDBVectorStore(config, setupTestLogger())
 	
 	err := store.CreateCollection(context.Background(), "new_collection")
@@ -284,7 +366,7 @@ func TestChromaDBVectorStore_ListCollections(t *testing.T) {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
 		
-		expectedPath := "/api/v2/collections"
+		expectedPath := "/api/v2/tenants/default_tenant/databases/default_database/collections"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -294,7 +376,11 @@ func TestChromaDBVectorStore_ListCollections(t *testing.T) {
 	}))
 	defer server.Close()
 	
-	config := ChromaDBConfig{BaseURL: server.URL}
+	config := ChromaDBConfig{
+		BaseURL:  server.URL,
+		Tenant:   "default_tenant",
+		Database: "default_database",
+	}
 	store := NewChromaDBVectorStore(config, setupTestLogger())
 	
 	collections, err := store.ListCollections(context.Background())

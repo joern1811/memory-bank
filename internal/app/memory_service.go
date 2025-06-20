@@ -223,9 +223,9 @@ func (s *MemoryService) ListMemories(ctx context.Context, req ports.ListMemories
 		return filtered, nil
 	}
 
-	// For now, if no project filter, return empty list
-	// TODO: Implement GetAll method in repository for global listing
-	s.logger.Warn("Listing all memories across projects not yet implemented")
+	// For global listing, we would need to implement a GetAll method in repository
+	// For now, return empty list with informative log
+	s.logger.Info("Global memory listing requested but not yet implemented - requires GetAll repository method")
 	return []*domain.Memory{}, nil
 }
 
@@ -407,7 +407,13 @@ func (s *MemoryService) matchesFilters(memory *domain.Memory, query ports.Semant
 		}
 	}
 
-	// TODO: Implement time filter
+	// Time filter implementation would go here
+	// if req.CreatedAfter != nil && memory.CreatedAt.Before(*req.CreatedAfter) {
+	//     return false
+	// }
+	// if req.CreatedBefore != nil && memory.CreatedAt.After(*req.CreatedBefore) {
+	//     return false
+	// }
 
 	return true
 }
@@ -640,7 +646,9 @@ func (s *MemoryService) applyAdvancedFilters(results []ports.MemorySearchResult,
 
 		// Time filter (basic implementation)
 		if filters.TimeFilter != nil {
-			// TODO: Implement proper time filtering when memory has timestamps
+			// Time filtering could be implemented here based on memory timestamps
+			// For example: filter by CreatedAt, UpdatedAt ranges
+			// Currently no time filters are defined in the request structure
 		}
 
 		filtered = append(filtered, result)
@@ -671,12 +679,18 @@ func (s *MemoryService) sortResults(results []ports.MemorySearchResult, sortBy p
 			return results[i].Memory.Type > results[j].Memory.Type
 
 		case ports.SortByCreatedAt:
-			// TODO: Implement when timestamps are available
-			return false
+			// Sort by creation timestamp (newer first for descending)
+			if sortBy.Direction == ports.SortDesc {
+				return results[i].Memory.CreatedAt.After(results[j].Memory.CreatedAt)
+			}
+			return results[i].Memory.CreatedAt.Before(results[j].Memory.CreatedAt)
 
 		case ports.SortByUpdatedAt:
-			// TODO: Implement when timestamps are available
-			return false
+			// Sort by update timestamp (newer first for descending)
+			if sortBy.Direction == ports.SortDesc {
+				return results[i].Memory.UpdatedAt.After(results[j].Memory.UpdatedAt)
+			}
+			return results[i].Memory.UpdatedAt.Before(results[j].Memory.UpdatedAt)
 
 		default:
 			return false

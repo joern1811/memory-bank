@@ -1,3 +1,14 @@
+// +build integration
+
+// Memory Search Debug Integration Test
+// This test performs comprehensive debugging of the Memory Bank search functionality
+// to identify and resolve semantic search issues. It creates memories, stores them
+// with real embeddings, and verifies the complete search pipeline.
+//
+// Purpose: Debug and validate end-to-end memory search workflow
+// Services: Uses real Ollama + ChromaDB services
+// Run with: go test -tags=integration ./internal/app -run TestMemorySearchDebug -v
+
 package app
 
 import (

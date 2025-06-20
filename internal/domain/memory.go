@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"crypto/rand"
 	"time"
 )
 
@@ -125,8 +126,19 @@ func generateID() string {
 func randomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, length)
+	
+	// Use crypto/rand for true randomness
+	randBytes := make([]byte, length)
+	if _, err := rand.Read(randBytes); err != nil {
+		// Fallback to deterministic behavior if crypto/rand fails
+		for i := range b {
+			b[i] = charset[i%len(charset)]
+		}
+		return string(b)
+	}
+	
 	for i := range b {
-		b[i] = charset[i%len(charset)] // Simplified for now
+		b[i] = charset[randBytes[i]%byte(len(charset))]
 	}
 	return string(b)
 }
