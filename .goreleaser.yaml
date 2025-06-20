@@ -104,16 +104,30 @@ homebrew_casks:
       name: "Jörn Dombrowski"
       email: "joern.dombrowski@gmail.com"
     skip_upload: auto
-    postinstall: |
-      system "#{binary} completion bash > #{HOMEBREW_PREFIX}/etc/bash_completion.d/memory-bank"
-      system "#{binary} completion zsh > #{HOMEBREW_PREFIX}/share/zsh/site-functions/_memory-bank"  
-      system "#{binary} completion fish > #{HOMEBREW_PREFIX}/share/fish/vendor_completions.d/memory-bank.fish"
+    caveats: |
+      Memory Bank works out-of-the-box with mock providers, but for enhanced performance, 
+      consider installing these optional services:
+
+      For local embedding generation:
+        brew install ollama
+        ollama pull nomic-embed-text
+
+      For vector search performance:
+        # Option 1: Python package
+        pip install chromadb
+
+        # Option 2: uvx (no installation needed)
+        uvx --from "chromadb[server]" chroma run --host localhost --port 8000
+
+        # Option 3: Docker
+        docker run -p 8000:8000 chromadb/chroma
+
+      Start Memory Bank MCP server:
+        memory-bank
     hooks:
       post:
         install: |
           system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/memory-bank"]
-    dependencies:
-      - name: ollama
-        type: optional
-      - name: chromadb
-        type: optional
+          system "#{staged_path}/memory-bank completion bash > #{HOMEBREW_PREFIX}/etc/bash_completion.d/memory-bank"
+          system "#{staged_path}/memory-bank completion zsh > #{HOMEBREW_PREFIX}/share/zsh/site-functions/_memory-bank"  
+          system "#{staged_path}/memory-bank completion fish > #{HOMEBREW_PREFIX}/share/fish/vendor_completions.d/memory-bank.fish"
