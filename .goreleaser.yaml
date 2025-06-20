@@ -29,19 +29,17 @@ builds:
 archives:
   - id: memory-bank
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - README.md
       - LICENSE
       - CHANGELOG.md
+    wrap_in_directory: true
 
 checksum:
   name_template: "checksums.txt"
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
@@ -104,6 +102,7 @@ brews:
     skip_upload: auto
     install: |
       bin.install "memory-bank"
+      generate_completions_from_executable(bin/"memory-bank", "completion", shells: [:bash, :zsh, :fish])
     test: |
       system "#{bin}/memory-bank", "--help"
     dependencies:
