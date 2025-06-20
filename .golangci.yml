@@ -23,7 +23,6 @@ linters-settings:
       - bools
       - buildtag
       - copylocks
-      - fieldalignment
       - httpresponse
       - loopclosure
       - lostcancel
@@ -37,6 +36,8 @@ linters-settings:
       - unreachable
       - unsafeptr
       - unusedresult
+    disable:
+      - fieldalignment
 
   golint:
     min-confidence: 0.8

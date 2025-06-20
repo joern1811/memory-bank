@@ -3,11 +3,12 @@ package app
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/joern1811/memory-bank/internal/domain"
 	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/sirupsen/logrus"
-	"sort"
-	"strings"
 )
 
 // MemoryService implements the memory service use cases
@@ -645,11 +646,11 @@ func (s *MemoryService) applyAdvancedFilters(results []ports.MemorySearchResult,
 		}
 
 		// Time filter (basic implementation)
-		if filters.TimeFilter != nil {
-			// Time filtering could be implemented here based on memory timestamps
-			// For example: filter by CreatedAt, UpdatedAt ranges
-			// Currently no time filters are defined in the request structure
-		}
+		// TODO: Implement time filtering when TimeFilter is properly defined
+		// if filters.TimeFilter != nil {
+		//     // Time filtering would be implemented here based on memory timestamps
+		//     // For example: filter by CreatedAt, UpdatedAt ranges
+		// }
 
 		filtered = append(filtered, result)
 	}
@@ -899,7 +900,11 @@ func (s *MemoryService) highlightText(text string, queryTerms []string) string {
 	for _, term := range queryTerms {
 		// Simple highlighting (in production, would use proper highlighting library)
 		result = strings.ReplaceAll(result, term, fmt.Sprintf("**%s**", term))
-		result = strings.ReplaceAll(result, strings.Title(term), fmt.Sprintf("**%s**", strings.Title(term)))
+		// Basic title case handling without deprecated strings.Title
+		if len(term) > 0 {
+			titleTerm := strings.ToUpper(term[:1]) + strings.ToLower(term[1:])
+			result = strings.ReplaceAll(result, titleTerm, fmt.Sprintf("**%s**", titleTerm))
+		}
 	}
 	return result
 }

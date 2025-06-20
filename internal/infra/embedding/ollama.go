@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/joern1811/memory-bank/internal/domain"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/joern1811/memory-bank/internal/domain"
+	"github.com/sirupsen/logrus"
 )
 
 // OllamaProvider implements the EmbeddingProvider interface using Ollama

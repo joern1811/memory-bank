@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+
 	"github.com/joern1811/memory-bank/internal/domain"
 )
 

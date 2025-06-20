@@ -149,7 +149,7 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 	// Wait for either context cancellation or server error
 	select {
 	case <-ctx.Done():
-		logger.Info("Context cancelled, shutting down server")
+		logger.Info("Context canceled, shutting down server")
 		return nil
 	case err := <-serverErr:
 		logger.WithError(err).Error("MCP server failed")

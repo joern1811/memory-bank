@@ -1942,7 +1942,7 @@ func (s *MemoryBankServer) handleAbortSession(ctx context.Context, params json.R
 	if len(abortedIDs) == 0 {
 		message = "No active sessions found to abort"
 	} else if len(abortedIDs) == 1 {
-		message = fmt.Sprintf("Successfully aborted 1 session")
+		message = "Successfully aborted 1 session"
 	} else {
 		message = fmt.Sprintf("Successfully aborted %d sessions", len(abortedIDs))
 	}
