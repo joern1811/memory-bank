@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/joern1811/memory-bank/internal/ports"
 	"github.com/spf13/cobra"
 )
 
@@ -28,25 +30,50 @@ If no path is provided, the current directory will be used.`,
 
 		name, _ := cmd.Flags().GetString("name")
 		description, _ := cmd.Flags().GetString("description")
+		language, _ := cmd.Flags().GetString("language")
+		framework, _ := cmd.Flags().GetString("framework")
 
 		if name == "" {
 			name = filepath.Base(projectPath)
 		}
 
-		fmt.Printf("Initializing project '%s' at path: %s\n", name, projectPath)
-		if description != "" {
-			fmt.Printf("Description: %s\n", description)
+		// Get services
+		services, err := GetServicesForCLI(cmd)
+		if err != nil {
+			return fmt.Errorf("failed to initialize services: %w", err)
 		}
-		
-		// Create a placeholder implementation for now
-		// TODO: Integrate with actual project service when CLI is fully implemented
-		fmt.Printf("Project initialization would create:\n")
-		fmt.Printf("  Name: %s\n", name)
-		fmt.Printf("  Path: %s\n", projectPath)
-		fmt.Printf("  Description: %s\n", description)
-		fmt.Printf("✓ Project initialization completed (placeholder implementation)\n")
-		
-		fmt.Println("✓ Project initialized successfully")
+
+		// Create initialization request
+		req := ports.InitializeProjectRequest{
+			Name:        name,
+			Description: description,
+			Language:    language,
+			Framework:   framework,
+		}
+
+		// Initialize project using the service
+		ctx := context.Background()
+		project, err := services.ProjectService.InitializeProject(ctx, projectPath, req)
+		if err != nil {
+			return fmt.Errorf("failed to initialize project: %w", err)
+		}
+
+		// Display results
+		fmt.Printf("✓ Project initialized successfully\n")
+		fmt.Printf("  ID: %s\n", project.ID)
+		fmt.Printf("  Name: %s\n", project.Name)
+		fmt.Printf("  Path: %s\n", project.Path)
+		if project.Description != "" {
+			fmt.Printf("  Description: %s\n", project.Description)
+		}
+		if project.Language != "" {
+			fmt.Printf("  Language: %s\n", project.Language)
+		}
+		if project.Framework != "" {
+			fmt.Printf("  Framework: %s\n", project.Framework)
+		}
+		fmt.Printf("  Created: %s\n", project.CreatedAt.Format("2006-01-02 15:04:05"))
+
 		return nil
 	},
 }
@@ -55,4 +82,6 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringP("name", "n", "", "project name (default: directory name)")
 	initCmd.Flags().StringP("description", "d", "", "project description")
+	initCmd.Flags().StringP("language", "l", "", "programming language (auto-detected if not specified)")
+	initCmd.Flags().StringP("framework", "f", "", "framework used (auto-detected if not specified)")
 }
