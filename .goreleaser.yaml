@@ -117,7 +117,7 @@ homebrew_casks:
         pip install chromadb
 
         # Option 2: uvx (no installation needed)
-        uvx --from "chromadb[server]" chroma run --host localhost --port 8000
+        uvx --from 'chromadb[server]' chroma run --host localhost --port 8000
 
         # Option 3: Docker
         docker run -p 8000:8000 chromadb/chroma
