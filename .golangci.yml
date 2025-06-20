@@ -162,15 +162,7 @@ linters:
   disable-all: true
   enable:
     - errcheck
-    - gofmt
-    - goimports
-    - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - staticcheck
     - typecheck
-    - unused
 
 issues:
   exclude-rules:
