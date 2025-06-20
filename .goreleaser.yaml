@@ -90,6 +90,7 @@ release:
 
 homebrew_casks:
   - name: memory-bank
+    binary: memory-bank
     repository:
       owner: joern1811
       name: homebrew-tap
@@ -103,3 +104,16 @@ homebrew_casks:
       name: "Jörn Dombrowski"
       email: "joern.dombrowski@gmail.com"
     skip_upload: auto
+    postinstall: |
+      system "#{binary} completion bash > #{HOMEBREW_PREFIX}/etc/bash_completion.d/memory-bank"
+      system "#{binary} completion zsh > #{HOMEBREW_PREFIX}/share/zsh/site-functions/_memory-bank"  
+      system "#{binary} completion fish > #{HOMEBREW_PREFIX}/share/fish/vendor_completions.d/memory-bank.fish"
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/memory-bank"]
+    dependencies:
+      - name: ollama
+        type: optional
+      - name: chromadb
+        type: optional
