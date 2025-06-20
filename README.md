@@ -85,14 +85,29 @@ memory-bank
 
 ## 📦 Installation
 
-### Option 1: Build from Source (Recommended)
+### Option 1: Homebrew (macOS/Linux) ⭐ Recommended
+
+```bash
+# Add the tap and install
+brew tap joern1811/tap
+brew install --cask joern1811/tap/memory-bank
+
+# Verify installation
+memory-bank --help
+```
+
+### Option 2: Pre-built Binaries
+
+Download the latest binary for your platform from [GitHub Releases](https://github.com/joern1811/memory-bank/releases).
+
+### Option 3: Build from Source
 
 ```bash
 # Prerequisites: Go 1.21+
 go version
 
 # Clone and build
-git clone https://github.com/memory-bank/memory-bank.git
+git clone https://github.com/joern1811/memory-bank.git
 cd memory-bank
 go mod tidy
 go build ./cmd/memory-bank
@@ -101,10 +116,10 @@ go build ./cmd/memory-bank
 ./memory-bank --help
 ```
 
-### Option 2: Direct Go Installation
+### Option 4: Direct Go Installation
 
 ```bash
-go install github.com/memory-bank/memory-bank/cmd/memory-bank@latest
+go install github.com/joern1811/memory-bank/cmd/memory-bank@latest
 ```
 
 ### External Services (Optional)

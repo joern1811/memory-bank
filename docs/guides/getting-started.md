@@ -21,23 +21,37 @@ Memory Bank works out-of-the-box with mock providers, so external dependencies a
 
 ## Installation
 
-### Option 1: Build from Source
+### Option 1: Homebrew (Recommended)
 
 ```bash
-# Clone or navigate to Memory Bank directory
-cd /path/to/memory-bank
+# Add the tap and install
+brew tap joern1811/tap
+brew install --cask joern1811/tap/memory-bank
+
+# Verify installation
+memory-bank --help
+```
+
+### Option 2: Pre-built Binaries
+
+Download the latest binary for your platform from [GitHub Releases](https://github.com/joern1811/memory-bank/releases).
+
+### Option 3: Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/joern1811/memory-bank.git
+cd memory-bank
 
 # Build the application
 go build ./cmd/memory-bank
 
-# Make it executable
+# Make it executable and add to PATH (optional)
 chmod +x memory-bank
-
-# Optional: Add to PATH
 sudo mv memory-bank /usr/local/bin/
 ```
 
-### Option 2: Direct Usage (Development)
+### Option 4: Direct Usage (Development)
 
 ```bash
 # Run directly with Go

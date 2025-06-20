@@ -160,7 +160,17 @@ The application can now be used directly from command line for:
 
 ## Getting Started
 
-### Quick Start (Mock Providers)
+### Quick Start (Homebrew)
+```bash
+# Install via Homebrew (recommended)
+brew tap joern1811/tap
+brew install --cask joern1811/tap/memory-bank
+
+# Start MCP server
+memory-bank
+```
+
+### Quick Start (Build from Source)
 ```bash
 # Build and run (works immediately with mock providers)
 go build ./cmd/memory-bank
