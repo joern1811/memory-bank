@@ -200,6 +200,19 @@ func (m *MockMemoryRepository) ListBySession(ctx context.Context, sessionID doma
 	return results, nil
 }
 
+func (m *MockMemoryRepository) ResetEmbeddingFlags(ctx context.Context, projectID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, memory := range m.memories {
+		if string(memory.ProjectID) == projectID {
+			memory.HasEmbedding = false
+		}
+	}
+
+	return nil
+}
+
 // MockEmbeddingProvider is a mock implementation of EmbeddingProvider
 type MockEmbeddingProvider struct {
 	mu               sync.RWMutex
