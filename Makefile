@@ -1,6 +1,6 @@
 # Memory Bank Makefile
 
-.PHONY: all build test test-unit test-integration test-all clean lint fmt vet deps help
+.PHONY: all build test test-unit test-integration test-all clean lint fmt vet deps help dev-start dev-stop prod-start prod-stop mcp-server mcp-inspector
 
 # Variables
 BINARY_NAME=memory-bank
@@ -104,6 +104,136 @@ dev-services-stop:
 	@docker stop memory-bank-chromadb 2>/dev/null || true
 	@docker rm memory-bank-chromadb 2>/dev/null || true
 
+# Start Memory Bank and ChromaDB for local development
+dev-start: build
+	@echo "Starting Memory Bank with ChromaDB for local development..."
+	@echo "Step 1: Starting ChromaDB..."
+	@if ! curl -s http://localhost:8000/api/v2/heartbeat > /dev/null 2>&1; then \
+		echo "Starting ChromaDB with uvx..."; \
+		uvx --from "chromadb[server]" chroma run --host localhost --port 8000 --path ./chromadb_data & \
+		echo "$$!" > .chromadb.pid; \
+		echo "ChromaDB started in background (PID: $$(cat .chromadb.pid))"; \
+		sleep 3; \
+	else \
+		echo "ChromaDB is already running"; \
+	fi
+	@echo "Step 2: Checking Ollama..."
+	@if ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; then \
+		echo "Starting Ollama..."; \
+		ollama serve & \
+		echo "$$!" > .ollama.pid; \
+		echo "Ollama started in background (PID: $$(cat .ollama.pid))"; \
+		sleep 3; \
+	else \
+		echo "Ollama is already running"; \
+	fi
+	@echo "Step 3: Pulling embedding model..."
+	@ollama pull nomic-embed-text || echo "Model pull failed or already exists"
+	@echo "Step 4: Starting Memory Bank MCP server..."
+	@echo "Memory Bank is ready for MCP client connections"
+	@echo ""
+	@echo "🚀 Local Development Environment Started:"
+	@echo "  - ChromaDB: http://localhost:8000"
+	@echo "  - Ollama: http://localhost:11434"
+	@echo "  - Memory Bank: Ready for MCP protocol"
+	@echo ""
+	@echo "📋 To use with MCP clients:"
+	@echo "  Command: $$(pwd)/memory-bank"
+	@echo "  Environment: Local development mode"
+
+# Start Memory Bank and ChromaDB for production environment
+prod-start: build
+	@echo "Starting Memory Bank with ChromaDB for production..."
+	@echo "Step 1: Starting ChromaDB..."
+	@if ! curl -s http://localhost:8000/api/v2/heartbeat > /dev/null 2>&1; then \
+		echo "Starting ChromaDB with uvx..."; \
+		uvx --from "chromadb[server]" chroma run --host localhost --port 8000 --path ~/.local/share/memory-bank/chromadb_data & \
+		echo "$$!" > .chromadb.pid; \
+		echo "ChromaDB started in background (PID: $$(cat .chromadb.pid))"; \
+		sleep 3; \
+	else \
+		echo "ChromaDB is already running"; \
+	fi
+	@echo "Step 2: Checking Ollama..."
+	@if ! curl -s http://localhost:11434/api/version > /dev/null 2>&1; then \
+		echo "Starting Ollama..."; \
+		ollama serve & \
+		echo "$$!" > .ollama.pid; \
+		echo "Ollama started in background (PID: $$(cat .ollama.pid))"; \
+		sleep 3; \
+	else \
+		echo "Ollama is already running"; \
+	fi
+	@echo "Step 3: Pulling embedding model..."
+	@ollama pull nomic-embed-text || echo "Model pull failed or already exists"
+	@echo "Step 4: Memory Bank is ready for production use"
+	@echo ""
+	@echo "🚀 Production Environment Started:"
+	@echo "  - ChromaDB: http://localhost:8000"
+	@echo "  - Ollama: http://localhost:11434"
+	@echo "  - Memory Bank: Ready for MCP protocol"
+	@echo ""
+	@echo "📋 MCP Client Configuration:"
+	@echo "  Command: $$(pwd)/memory-bank"
+	@echo "  Environment Variables:"
+	@echo "    OLLAMA_BASE_URL=http://localhost:11434"
+	@echo "    OLLAMA_MODEL=nomic-embed-text"
+	@echo "    CHROMADB_BASE_URL=http://localhost:8000"
+	@echo "    CHROMADB_COLLECTION=memory_bank"
+	@echo "    CHROMADB_DATA_PATH=~/.local/share/memory-bank/chromadb_data"
+	@echo "    MEMORY_BANK_DB_PATH=~/.local/share/memory-bank/memory_bank.db"
+
+# Stop all services
+dev-stop:
+	@echo "Stopping development services..."
+	@if [ -f .chromadb.pid ]; then \
+		echo "Stopping ChromaDB (PID: $$(cat .chromadb.pid))..."; \
+		kill $$(cat .chromadb.pid) 2>/dev/null || true; \
+		rm -f .chromadb.pid; \
+	fi
+	@if [ -f .ollama.pid ]; then \
+		echo "Stopping Ollama (PID: $$(cat .ollama.pid))..."; \
+		kill $$(cat .ollama.pid) 2>/dev/null || true; \
+		rm -f .ollama.pid; \
+	fi
+	@echo "Development services stopped"
+
+# Stop production services
+prod-stop:
+	@echo "Stopping production services..."
+	@if [ -f .chromadb.pid ]; then \
+		echo "Stopping ChromaDB (PID: $$(cat .chromadb.pid))..."; \
+		kill $$(cat .chromadb.pid) 2>/dev/null || true; \
+		rm -f .chromadb.pid; \
+	fi
+	@if [ -f .ollama.pid ]; then \
+		echo "Stopping Ollama (PID: $$(cat .ollama.pid))..."; \
+		kill $$(cat .ollama.pid) 2>/dev/null || true; \
+		rm -f .ollama.pid; \
+	fi
+	@echo "Production services stopped"
+
+# Start MCP server only (assumes services are already running)
+mcp-server: build
+	@echo "Starting Memory Bank MCP server..."
+	@echo "Checking service health..."
+	@./memory-bank health --verbose || echo "Warning: Some services may not be available"
+	@echo ""
+	@echo "🎯 Starting MCP server for client connections..."
+	@./memory-bank
+
+# Start MCP Inspector for development
+mcp-inspector: build
+	@echo "Starting MCP Inspector..."
+	@echo "Checking if port 6277 is available..."
+	@if lsof -ti:6277 > /dev/null 2>&1; then \
+		echo "Port 6277 is in use, killing existing process..."; \
+		lsof -ti:6277 | xargs kill; \
+		sleep 2; \
+	fi
+	@echo "Starting MCP Inspector with Memory Bank..."
+	@npx @modelcontextprotocol/inspector $$(pwd)/memory-bank
+
 # Create sample configuration
 config-sample:
 	@echo "Creating sample configuration..."
@@ -169,6 +299,12 @@ help:
 	@echo "  dev-setup     Set up development environment"
 	@echo "  dev-services  Start external services for testing"
 	@echo "  dev-services-stop Stop external services"
+	@echo "  dev-start     Start Memory Bank with services (local dev)"
+	@echo "  dev-stop      Stop all development services"
+	@echo "  prod-start    Start Memory Bank with services (production)"
+	@echo "  prod-stop     Stop all production services"
+	@echo "  mcp-server    Start MCP server only"
+	@echo "  mcp-inspector Start MCP Inspector for debugging"
 	@echo ""
 	@echo "Database Commands:"
 	@echo "  db-migrate    Run database migrations"
