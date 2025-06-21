@@ -8,17 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Complete documentation overhaul with advanced usage guide
-- Comprehensive troubleshooting guide with recovery procedures
-- Contributing guidelines and development documentation
-- Security policy and changelog documentation
+- Comprehensive development and production workflow targets in Makefile
+- Enhanced MCP configuration documentation with correct paths
+- Project-specific integration guides with dynamic analysis
 
 ### Changed
-- Enhanced getting started guide with more detailed examples
-- Improved API documentation with better examples
+- Streamlined Memory Bank documentation structure for better navigation
+- Updated MCP tool naming conventions to match actual implementation
+- Enhanced ChromaDB configuration fields documentation
 
 ### Fixed
+- MCP configuration paths in documentation examples
 - Documentation cross-references and navigation
+- Corrected MCP tool naming inconsistencies
 
 ## [1.10.0] - 2025-06-19
 

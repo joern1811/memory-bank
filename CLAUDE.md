@@ -323,25 +323,19 @@ session_complete "Successfully implemented JWT authentication with middleware, e
 
 ## Recent Updates
 
-### v1.10 - ChromaDB Distance Metric Fix
-- Fixed semantic search returning 0 results
-- Configured ChromaDB to use cosine distance metric
-- Enhanced metadata handling for ChromaDB compatibility
+### Latest - Documentation & Configuration Updates
+- Fixed MCP configuration paths in documentation
+- Added comprehensive development and production workflow targets
+- Streamlined Memory Bank documentation structure
+- Corrected MCP tool naming conventions in docs
+- Updated ChromaDB configuration fields documentation
 
-### v1.9 - ChromaDB v2 API Migration
-- Migrated from deprecated v1 API to v2 API
-- Updated all vector operations to use v2 endpoints
-- Enhanced health checks with dedicated heartbeat endpoint
-
-### v1.8 - Complete MCP Server
-- Fixed MCP protocol integration bugs
-- All 16 MCP tools properly registered
-- Complete Memory, Project, and Session operations
-
-### Key Features Completed
+### Production Release Features
 - Complete MCP server with 16 tools
-- CLI interface with session management
+- CLI interface with session management  
 - Advanced search (faceted, enhanced, suggestions)
+- Dynamic MCP resources with project analysis
+- Homebrew Cask distribution setup
 - Performance optimizations (caching, batching)
 - Database migrations and configuration management
 
