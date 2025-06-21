@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -51,6 +52,26 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	)
 
 	mcpServer.AddResource(systemPromptResource, s.handleSystemPromptResource)
+
+	// Register project integration guide resource
+	projectGuideResource := mcp.NewResource(
+		"guide://memory-bank/project-setup",
+		"Memory Bank Project Integration Guide",
+		mcp.WithResourceDescription("Dynamic project-specific CLAUDE.md integration guide with intelligent project analysis"),
+		mcp.WithMIMEType("text/plain"),
+	)
+
+	mcpServer.AddResource(projectGuideResource, s.handleProjectGuideResource)
+
+	// Register static integration guide resource
+	staticGuideResource := mcp.NewResource(
+		"guide://memory-bank/claude-integration",
+		"Memory Bank CLAUDE.md Integration Templates",
+		mcp.WithResourceDescription("Static templates and instructions for integrating Memory Bank with Claude Desktop and Claude Code"),
+		mcp.WithMIMEType("text/plain"),
+	)
+
+	mcpServer.AddResource(staticGuideResource, s.handleStaticGuideResource)
 
 	// Register Memory operations as tools
 	mcpServer.AddTool(mcp.NewTool("memory_create",
@@ -2048,11 +2069,13 @@ func (s *MemoryBankServer) checkSystemHealth(ctx context.Context, verbose bool) 
 	// Add configuration if verbose
 	if verbose {
 		health.Configuration = map[string]interface{}{
-			"ollama_base_url":     getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
-			"ollama_model":        getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
-			"chromadb_base_url":   getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
-			"chromadb_collection": getEnvOrDefault("CHROMADB_COLLECTION", "memory_bank"),
-			"database_path":       getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
+			"ollama_base_url":      getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
+			"ollama_model":         getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
+			"chromadb_base_url":    getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
+			"chromadb_collection":  getEnvOrDefault("CHROMADB_COLLECTION", "memory_bank"),
+			"chromadb_data_path":   getEnvOrDefault("CHROMADB_DATA_PATH", "./chromadb_data"),
+			"chromadb_auto_start":  getEnvOrDefault("CHROMADB_AUTO_START", "false"),
+			"database_path":        getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
 		}
 	}
 
@@ -2150,6 +2173,12 @@ func (s *MemoryBankServer) checkChromaDBHealth(ctx context.Context, verbose bool
 	if collection := os.Getenv("CHROMADB_COLLECTION"); collection != "" {
 		chromaConfig.Collection = collection
 	}
+	if dataPath := os.Getenv("CHROMADB_DATA_PATH"); dataPath != "" {
+		chromaConfig.DataPath = dataPath
+	}
+	if autoStart := os.Getenv("CHROMADB_AUTO_START"); autoStart == "true" {
+		chromaConfig.AutoStart = true
+	}
 
 	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, s.logger)
 
@@ -2170,6 +2199,8 @@ func (s *MemoryBankServer) checkChromaDBHealth(ctx context.Context, verbose bool
 				"collection": chromaConfig.Collection,
 				"tenant":     chromaConfig.Tenant,
 				"database":   chromaConfig.Database,
+				"data_path":  chromaConfig.DataPath,
+				"auto_start": chromaConfig.AutoStart,
 				"fallback":   "mock vector store",
 			}
 		}
@@ -2182,6 +2213,8 @@ func (s *MemoryBankServer) checkChromaDBHealth(ctx context.Context, verbose bool
 				"collection": chromaConfig.Collection,
 				"tenant":     chromaConfig.Tenant,
 				"database":   chromaConfig.Database,
+				"data_path":  chromaConfig.DataPath,
+				"auto_start": chromaConfig.AutoStart,
 			}
 
 			// Try to get additional details
@@ -2239,4 +2272,782 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// handleProjectGuideResource handles requests for the dynamic project integration guide resource
+func (s *MemoryBankServer) handleProjectGuideResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	s.logger.Debug("Handling project integration guide resource request")
+
+	// Generate dynamic project-specific integration guide
+	guide, err := s.generateProjectIntegrationGuide(ctx)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to generate project integration guide")
+		return nil, fmt.Errorf("failed to generate project integration guide: %w", err)
+	}
+
+	// Create text resource contents
+	textContent := mcp.TextResourceContents{
+		URI:      request.Params.URI,
+		MIMEType: "text/plain",
+		Text:     guide,
+	}
+
+	s.logger.Info("Project integration guide resource generated successfully")
+	return []mcp.ResourceContents{textContent}, nil
+}
+
+// handleStaticGuideResource handles requests for the static integration guide resource
+func (s *MemoryBankServer) handleStaticGuideResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	s.logger.Debug("Handling static integration guide resource request")
+
+	// Generate static integration guide with templates
+	guide := s.generateStaticIntegrationGuide()
+
+	// Create text resource contents
+	textContent := mcp.TextResourceContents{
+		URI:      request.Params.URI,
+		MIMEType: "text/plain",
+		Text:     guide,
+	}
+
+	s.logger.Info("Static integration guide resource generated successfully")
+	return []mcp.ResourceContents{textContent}, nil
+}
+
+// generateProjectIntegrationGuide creates a dynamic, project-specific integration guide
+func (s *MemoryBankServer) generateProjectIntegrationGuide(ctx context.Context) (string, error) {
+	// Detect current working directory and analyze project
+	currentDir, err := os.Getwd()
+	if err != nil {
+		s.logger.WithError(err).Warn("Failed to get current directory")
+		currentDir = "unknown"
+	}
+
+	// Analyze project structure and technology stack
+	projectAnalysis := s.analyzeProject(currentDir)
+	
+	// Get existing project and memories for context
+	var existingProject *domain.Project
+	var existingMemories []ports.MemorySearchResult
+	
+	// Try to find existing project by path
+	if projects, err := s.projectService.ListProjects(ctx); err == nil {
+		for _, project := range projects {
+			if project.Path == currentDir {
+				existingProject = project
+				break
+			}
+		}
+	}
+
+	// Get existing memories if project exists
+	if existingProject != nil {
+		searchReq := ports.SemanticSearchRequest{
+			Query:     "", // Empty query to get all memories
+			ProjectID: &existingProject.ID,
+			Limit:     100,
+			Threshold: 0.0,
+		}
+		if memories, err := s.memoryService.SearchMemories(ctx, searchReq); err == nil {
+			existingMemories = memories
+		}
+	}
+
+	// Generate customized CLAUDE.md content
+	guide := s.buildProjectGuide(currentDir, projectAnalysis, existingProject, existingMemories)
+	
+	return guide, nil
+}
+
+// ProjectAnalysis contains detected project information
+type ProjectAnalysis struct {
+	ProjectType    string
+	TechStack      []string
+	HasPackageJSON bool
+	HasGoMod       bool
+	HasPyProject   bool
+	HasDockerfile  bool
+	HasMakefile    bool
+	SuggestedTags  []string
+	MemoryTypes    []string
+}
+
+// analyzeProject analyzes the current project directory to detect technology stack
+func (s *MemoryBankServer) analyzeProject(projectPath string) ProjectAnalysis {
+	analysis := ProjectAnalysis{
+		ProjectType:   "unknown",
+		TechStack:     []string{},
+		SuggestedTags: []string{},
+		MemoryTypes:   []string{"decision", "pattern", "error_solution", "code", "documentation"},
+	}
+
+	// Check for common project files
+	checkFile := func(filename string) bool {
+		_, err := os.Stat(filepath.Join(projectPath, filename))
+		return err == nil
+	}
+
+	// Detect technology stack
+	if checkFile("package.json") {
+		analysis.HasPackageJSON = true
+		analysis.TechStack = append(analysis.TechStack, "javascript", "node")
+		analysis.SuggestedTags = append(analysis.SuggestedTags, "javascript", "node", "npm")
+		
+		// Check for specific frameworks
+		if checkFile("next.config.js") || checkFile("next.config.ts") {
+			analysis.TechStack = append(analysis.TechStack, "nextjs")
+			analysis.SuggestedTags = append(analysis.SuggestedTags, "nextjs", "react", "frontend")
+			analysis.ProjectType = "web-app"
+		} else if checkFile("src/App.js") || checkFile("src/App.tsx") {
+			analysis.TechStack = append(analysis.TechStack, "react")
+			analysis.SuggestedTags = append(analysis.SuggestedTags, "react", "frontend")
+			analysis.ProjectType = "web-app"
+		}
+	}
+
+	if checkFile("go.mod") {
+		analysis.HasGoMod = true
+		analysis.TechStack = append(analysis.TechStack, "go")
+		analysis.SuggestedTags = append(analysis.SuggestedTags, "go", "backend")
+		
+		// Check for specific patterns
+		if checkFile("cmd") {
+			analysis.ProjectType = "cli-tool"
+			analysis.SuggestedTags = append(analysis.SuggestedTags, "cli")
+		} else if checkFile("internal") || checkFile("pkg") {
+			analysis.ProjectType = "api"
+			analysis.SuggestedTags = append(analysis.SuggestedTags, "api", "microservice")
+		}
+	}
+
+	if checkFile("requirements.txt") || checkFile("pyproject.toml") || checkFile("setup.py") {
+		analysis.HasPyProject = true
+		analysis.TechStack = append(analysis.TechStack, "python")
+		analysis.SuggestedTags = append(analysis.SuggestedTags, "python")
+		
+		// Check for data science patterns
+		if checkFile("notebooks") || checkFile("data") {
+			analysis.ProjectType = "data-science"
+			analysis.SuggestedTags = append(analysis.SuggestedTags, "data", "ml", "analysis")
+		}
+	}
+
+	if checkFile("Dockerfile") {
+		analysis.HasDockerfile = true
+		analysis.TechStack = append(analysis.TechStack, "docker")
+		analysis.SuggestedTags = append(analysis.SuggestedTags, "docker", "deployment")
+	}
+
+	if checkFile("Makefile") {
+		analysis.HasMakefile = true
+		analysis.SuggestedTags = append(analysis.SuggestedTags, "build", "automation")
+	}
+
+	// Additional infrastructure detection
+	if checkFile("terraform") {
+		analysis.TechStack = append(analysis.TechStack, "terraform")
+		analysis.SuggestedTags = append(analysis.SuggestedTags, "terraform", "infrastructure")
+	}
+
+	if checkFile("k8s") || checkFile("kubernetes") {
+		analysis.TechStack = append(analysis.TechStack, "kubernetes")
+		analysis.SuggestedTags = append(analysis.SuggestedTags, "kubernetes", "k8s", "deployment")
+	}
+
+	// Default project type if not detected
+	if analysis.ProjectType == "unknown" {
+		if len(analysis.TechStack) > 0 {
+			analysis.ProjectType = "library"
+		} else {
+			analysis.ProjectType = "general"
+		}
+	}
+
+	return analysis
+}
+
+// buildProjectGuide constructs the complete project-specific guide
+func (s *MemoryBankServer) buildProjectGuide(projectPath string, analysis ProjectAnalysis, existingProject *domain.Project, existingMemories []ports.MemorySearchResult) string {
+	var guide strings.Builder
+
+	// Header
+	guide.WriteString("# Memory Bank - Project Integration Guide\n\n")
+	guide.WriteString("*This guide has been automatically generated based on your current project structure and existing memories.*\n\n")
+
+	// Project Analysis Section
+	guide.WriteString("## 📊 Project Analysis\n\n")
+	guide.WriteString(fmt.Sprintf("- **Project Path**: `%s`\n", projectPath))
+	guide.WriteString(fmt.Sprintf("- **Project Type**: %s\n", analysis.ProjectType))
+	guide.WriteString(fmt.Sprintf("- **Technology Stack**: %s\n", strings.Join(analysis.TechStack, ", ")))
+	
+	if existingProject != nil {
+		guide.WriteString(fmt.Sprintf("- **Memory Bank Status**: ✅ Initialized (Project ID: `%s`)\n", string(existingProject.ID)))
+		guide.WriteString(fmt.Sprintf("- **Existing Memories**: %d entries\n", len(existingMemories)))
+	} else {
+		guide.WriteString("- **Memory Bank Status**: ❌ Not initialized\n")
+	}
+	guide.WriteString("\n")
+
+	// Current Status Section
+	if existingProject != nil {
+		guide.WriteString("## 📈 Current Memory Status\n\n")
+		
+		// Analyze existing memories by type
+		typeCount := make(map[string]int)
+		tagUsage := make(map[string]int)
+		
+		for _, memory := range existingMemories {
+			typeCount[string(memory.Memory.Type)]++
+			for _, tag := range memory.Memory.Tags {
+				tagUsage[tag]++
+			}
+		}
+		
+		if len(typeCount) > 0 {
+			guide.WriteString("### Memory Types:\n")
+			for memType, count := range typeCount {
+				guide.WriteString(fmt.Sprintf("- **%s**: %d entries\n", memType, count))
+			}
+			guide.WriteString("\n")
+		}
+		
+		if len(tagUsage) > 0 {
+			guide.WriteString("### Most Used Tags:\n")
+			// Show top 10 tags
+			count := 0
+			for tag, usage := range tagUsage {
+				if count >= 10 {
+					break
+				}
+				guide.WriteString(fmt.Sprintf("- `%s` (%d uses)\n", tag, usage))
+				count++
+			}
+			guide.WriteString("\n")
+		}
+	}
+
+	// Setup Instructions
+	if existingProject == nil {
+		guide.WriteString("## 🚀 Quick Setup\n\n")
+		guide.WriteString("Since this project is not yet initialized in Memory Bank, start with:\n\n")
+		guide.WriteString("```markdown\n")
+		guide.WriteString("Initialize this project in Memory Bank:\n")
+		guide.WriteString("- Use `project/init` to register this project\n")
+		guide.WriteString("- Copy the CLAUDE.md template below to your project root\n")
+		guide.WriteString("- Start documenting your first architectural decisions\n")
+		guide.WriteString("```\n\n")
+	}
+
+	// Customized CLAUDE.md Template
+	guide.WriteString("## 📝 Customized CLAUDE.md Template\n\n")
+	guide.WriteString("Copy this template to your project's `CLAUDE.md` file:\n\n")
+	guide.WriteString("```markdown\n")
+	guide.WriteString(s.generateProjectSpecificCLAUDEmd(analysis, existingProject))
+	guide.WriteString("```\n\n")
+
+	// Project-Specific Recommendations
+	guide.WriteString("## 💡 Project-Specific Recommendations\n\n")
+	guide.WriteString(s.generateProjectRecommendations(analysis, existingMemories))
+
+	// Next Steps
+	guide.WriteString("## ✅ Next Steps\n\n")
+	if existingProject == nil {
+		guide.WriteString("1. **Initialize Project**: Use Memory Bank to register this project\n")
+		guide.WriteString("2. **Add CLAUDE.md**: Copy the template above to your project root\n")
+		guide.WriteString("3. **Document Initial Decisions**: Store your first architectural decisions\n")
+		guide.WriteString("4. **Start Development Session**: Use session management for complex tasks\n")
+	} else {
+		guide.WriteString("1. **Update CLAUDE.md**: Enhance your existing CLAUDE.md with the template above\n")
+		guide.WriteString("2. **Review Existing Memories**: Check if any memories need updating\n")
+		guide.WriteString("3. **Improve Tagging**: Consider adopting the suggested tagging strategy\n")
+		guide.WriteString("4. **Expand Documentation**: Add missing patterns and decisions\n")
+	}
+	guide.WriteString("\n")
+
+	// Footer
+	guide.WriteString("---\n\n")
+	guide.WriteString("*This guide was generated at " + time.Now().Format("2006-01-02 15:04:05") + " based on your current project structure.*\n")
+	guide.WriteString("*Refresh this resource to get updated recommendations as your project evolves.*\n")
+
+	return guide.String()
+}
+
+// generateProjectSpecificCLAUDEmd creates a customized CLAUDE.md template
+func (s *MemoryBankServer) generateProjectSpecificCLAUDEmd(analysis ProjectAnalysis, existingProject *domain.Project) string {
+	var template strings.Builder
+
+	template.WriteString("# Memory Bank Integration\n\n")
+	template.WriteString("## Project Configuration\n\n")
+	template.WriteString(fmt.Sprintf("- **Project Type**: %s\n", analysis.ProjectType))
+	template.WriteString(fmt.Sprintf("- **Tech Stack**: %s\n", strings.Join(analysis.TechStack, ", ")))
+	
+	if existingProject != nil {
+		template.WriteString(fmt.Sprintf("- **Project ID**: %s\n", string(existingProject.ID)))
+	} else {
+		template.WriteString("- **Project ID**: [TO BE SET AFTER INITIALIZATION]\n")
+	}
+	template.WriteString("\n")
+
+	template.WriteString("## Memory Bank Protocol (MANDATORY)\n\n")
+	template.WriteString("When Memory Bank MCP tools are available, Claude MUST:\n\n")
+	template.WriteString("1. **ALWAYS START** with `memory/search` using project context\n")
+	template.WriteString("2. **SEARCH BEFORE IMPLEMENTING** - Check existing patterns and solutions\n")
+	template.WriteString("3. **DOCUMENT DECISIONS** - Store all architectural choices with rationale\n")
+	template.WriteString("4. **STORE PATTERNS** - Save reusable code patterns and best practices\n")
+	template.WriteString("5. **LOG ERRORS** - Document error solutions for future reference\n")
+	template.WriteString("6. **USE SESSIONS** - Track progress on complex, multi-step tasks\n\n")
+
+	template.WriteString("## Project-Specific Memory Types\n\n")
+	for _, memType := range analysis.MemoryTypes {
+		switch memType {
+		case "decision":
+			template.WriteString("- **Decision**: Architectural choices, technology selections, design patterns\n")
+		case "pattern":
+			template.WriteString("- **Pattern**: Reusable code templates, design patterns, configuration examples\n")
+		case "error_solution":
+			template.WriteString("- **ErrorSolution**: Bug fixes, troubleshooting guides, common issues\n")
+		case "code":
+			template.WriteString("- **Code**: Utility functions, snippets, examples, boilerplate\n")
+		case "documentation":
+			template.WriteString("- **Documentation**: API docs, setup guides, deployment instructions\n")
+		}
+	}
+	template.WriteString("\n")
+
+	template.WriteString("## Tagging Strategy\n\n")
+	template.WriteString("Use these tags consistently:\n\n")
+	template.WriteString("### Technology Tags\n")
+	for _, tech := range analysis.TechStack {
+		template.WriteString(fmt.Sprintf("- `%s`\n", tech))
+	}
+	template.WriteString("\n")
+
+	template.WriteString("### Domain Tags\n")
+	for _, tag := range analysis.SuggestedTags {
+		template.WriteString(fmt.Sprintf("- `%s`\n", tag))
+	}
+	template.WriteString("\n")
+
+	template.WriteString("### Component Tags\n")
+	switch analysis.ProjectType {
+	case "web-app":
+		template.WriteString("- `frontend`, `backend`, `database`, `api`, `ui`, `auth`\n")
+	case "cli-tool":
+		template.WriteString("- `cli`, `commands`, `config`, `output`, `parsing`\n")
+	case "api":
+		template.WriteString("- `endpoint`, `middleware`, `validation`, `auth`, `database`\n")
+	case "data-science":
+		template.WriteString("- `preprocessing`, `model`, `analysis`, `visualization`, `pipeline`\n")
+	default:
+		template.WriteString("- `core`, `utils`, `config`, `tests`, `docs`\n")
+	}
+	template.WriteString("\n")
+
+	template.WriteString("## Automatic Behaviors\n\n")
+	template.WriteString("Claude MUST automatically:\n\n")
+	template.WriteString("1. Search for existing knowledge before implementing features\n")
+	template.WriteString("2. Store architectural decisions with alternatives considered\n")
+	template.WriteString("3. Document reusable patterns with usage examples\n")
+	template.WriteString("4. Save error solutions with prevention strategies\n")
+	template.WriteString("5. Use consistent tagging as defined above\n")
+	template.WriteString("6. Reference existing memories in explanations\n")
+	template.WriteString("7. Ask permission before storing new memories\n\n")
+
+	template.WriteString("## Session Management\n\n")
+	template.WriteString("Use sessions for:\n")
+	switch analysis.ProjectType {
+	case "web-app":
+		template.WriteString("- New feature implementation (frontend + backend)\n")
+		template.WriteString("- UI/UX improvements and redesigns\n")
+		template.WriteString("- Performance optimization tasks\n")
+		template.WriteString("- Security enhancements and audits\n")
+	case "cli-tool":
+		template.WriteString("- New command implementation\n")
+		template.WriteString("- Configuration system changes\n")
+		template.WriteString("- Output format modifications\n")
+		template.WriteString("- Cross-platform compatibility work\n")
+	case "api":
+		template.WriteString("- New endpoint development\n")
+		template.WriteString("- Database schema changes\n")
+		template.WriteString("- Authentication/authorization updates\n")
+		template.WriteString("- API versioning and migration\n")
+	case "data-science":
+		template.WriteString("- Model development and training\n")
+		template.WriteString("- Data pipeline construction\n")
+		template.WriteString("- Analysis and reporting tasks\n")
+		template.WriteString("- Visualization and dashboard creation\n")
+	default:
+		template.WriteString("- Multi-file feature implementations\n")
+		template.WriteString("- Complex refactoring tasks\n")
+		template.WriteString("- Architecture changes\n")
+		template.WriteString("- Integration projects\n")
+	}
+	template.WriteString("\n")
+
+	template.WriteString("## Search Keywords\n\n")
+	template.WriteString("Common search terms for this project:\n")
+	keywords := s.generateSearchKeywords(analysis)
+	for _, keyword := range keywords {
+		template.WriteString(fmt.Sprintf("- \"%s\"\n", keyword))
+	}
+
+	return template.String()
+}
+
+// generateSearchKeywords creates relevant search keywords based on project analysis
+func (s *MemoryBankServer) generateSearchKeywords(analysis ProjectAnalysis) []string {
+	keywords := []string{}
+
+	// Base keywords for all projects
+	keywords = append(keywords, "architecture", "configuration", "deployment", "testing", "error handling")
+
+	// Project-type specific keywords
+	switch analysis.ProjectType {
+	case "web-app":
+		keywords = append(keywords, "authentication", "routing", "state management", "API integration", "responsive design")
+	case "cli-tool":
+		keywords = append(keywords, "command parsing", "configuration files", "output formatting", "argument validation")
+	case "api":
+		keywords = append(keywords, "endpoint design", "middleware", "request validation", "response formatting", "rate limiting")
+	case "data-science":
+		keywords = append(keywords, "data preprocessing", "model training", "feature engineering", "visualization", "pipeline")
+	}
+
+	// Technology-specific keywords
+	for _, tech := range analysis.TechStack {
+		switch tech {
+		case "react":
+			keywords = append(keywords, "component design", "hooks", "state management")
+		case "go":
+			keywords = append(keywords, "goroutines", "channels", "error handling")
+		case "python":
+			keywords = append(keywords, "virtual environment", "dependencies", "packaging")
+		case "docker":
+			keywords = append(keywords, "containerization", "image optimization", "multi-stage builds")
+		}
+	}
+
+	return keywords
+}
+
+// generateProjectRecommendations creates specific recommendations based on project analysis
+func (s *MemoryBankServer) generateProjectRecommendations(analysis ProjectAnalysis, existingMemories []ports.MemorySearchResult) string {
+	var recommendations strings.Builder
+
+	// Technology-specific recommendations
+	switch analysis.ProjectType {
+	case "web-app":
+		recommendations.WriteString("### Web Application Best Practices\n")
+		recommendations.WriteString("- Document component architecture and state management patterns\n")
+		recommendations.WriteString("- Store API integration patterns and error handling strategies\n")
+		recommendations.WriteString("- Save performance optimization techniques and metrics\n")
+		recommendations.WriteString("- Record security implementations (auth, validation, sanitization)\n\n")
+
+	case "cli-tool":
+		recommendations.WriteString("### CLI Tool Best Practices\n")
+		recommendations.WriteString("- Document command structure and argument parsing patterns\n")
+		recommendations.WriteString("- Store configuration file formats and validation logic\n")
+		recommendations.WriteString("- Save cross-platform compatibility solutions\n")
+		recommendations.WriteString("- Record user experience patterns (help text, error messages)\n\n")
+
+	case "api":
+		recommendations.WriteString("### API Development Best Practices\n")
+		recommendations.WriteString("- Document endpoint design patterns and RESTful conventions\n")
+		recommendations.WriteString("- Store middleware implementations and request/response patterns\n")
+		recommendations.WriteString("- Save authentication and authorization strategies\n")
+		recommendations.WriteString("- Record database integration patterns and query optimizations\n\n")
+
+	case "data-science":
+		recommendations.WriteString("### Data Science Best Practices\n")
+		recommendations.WriteString("- Document data preprocessing pipelines and transformations\n")
+		recommendations.WriteString("- Store model architectures and hyperparameter configurations\n")
+		recommendations.WriteString("- Save visualization patterns and reporting templates\n")
+		recommendations.WriteString("- Record experiment tracking and reproducibility practices\n\n")
+	}
+
+	// Memory gap analysis
+	if len(existingMemories) > 0 {
+		recommendations.WriteString("### Memory Gap Analysis\n")
+		
+		typeCount := make(map[string]int)
+		for _, memory := range existingMemories {
+			typeCount[string(memory.Memory.Type)]++
+		}
+		
+		// Check for missing important memory types
+		if typeCount["decision"] == 0 {
+			recommendations.WriteString("- ⚠️ **Missing Decisions**: Start documenting architectural decisions\n")
+		}
+		if typeCount["pattern"] == 0 {
+			recommendations.WriteString("- ⚠️ **Missing Patterns**: Begin storing reusable code patterns\n")
+		}
+		if typeCount["error_solution"] == 0 {
+			recommendations.WriteString("- ⚠️ **Missing Error Solutions**: Document troubleshooting knowledge\n")
+		}
+		recommendations.WriteString("\n")
+	}
+
+	// Technology-specific memory suggestions
+	for _, tech := range analysis.TechStack {
+		switch tech {
+		case "go":
+			recommendations.WriteString("### Go-Specific Recommendations\n")
+			recommendations.WriteString("- Store common error handling patterns\n")
+			recommendations.WriteString("- Document goroutine and channel usage patterns\n")
+			recommendations.WriteString("- Save interface design decisions\n")
+			recommendations.WriteString("- Record testing strategies and mock patterns\n\n")
+
+		case "react":
+			recommendations.WriteString("### React-Specific Recommendations\n")
+			recommendations.WriteString("- Document component composition patterns\n")
+			recommendations.WriteString("- Store custom hook implementations\n")
+			recommendations.WriteString("- Save state management decisions (Context, Redux, Zustand)\n")
+			recommendations.WriteString("- Record performance optimization techniques\n\n")
+
+		case "python":
+			recommendations.WriteString("### Python-Specific Recommendations\n")
+			recommendations.WriteString("- Document dependency management strategies\n")
+			recommendations.WriteString("- Store common utility functions and decorators\n")
+			recommendations.WriteString("- Save testing patterns and fixtures\n")
+			recommendations.WriteString("- Record packaging and deployment configurations\n\n")
+		}
+	}
+
+	return recommendations.String()
+}
+
+// generateStaticIntegrationGuide creates the static integration guide with templates
+func (s *MemoryBankServer) generateStaticIntegrationGuide() string {
+	return `# Memory Bank - CLAUDE.md Integration Templates
+
+This resource provides static templates and instructions for integrating Memory Bank with Claude Desktop and Claude Code. Use these templates as starting points and customize them for your specific projects.
+
+## Global CLAUDE.md Configuration
+
+Add this to your global CLAUDE.md file (~/.config/claude/CLAUDE.md):
+
+` + "```markdown" + `
+## Memory Bank Protocol (GLOBAL)
+
+### Automatic Memory Bank Usage
+When Memory Bank MCP tools are detected, Claude MUST:
+
+1. **ALWAYS START** with memory/search using project context
+2. **AUTOMATICALLY STORE** all decisions, patterns, and solutions
+3. **PROACTIVELY REFERENCE** existing knowledge in responses
+4. **CONTINUOUSLY UPDATE** memory with new learnings
+
+### Required Workflow
+1. **Session Start**: Search existing knowledge (memory/search)
+2. **Before Implementation**: Check for existing patterns
+3. **During Work**: Document decisions and store solutions
+4. **After Completion**: Store lessons learned and update patterns
+
+### Memory Integration Rules
+- Reference existing memories in explanations
+- Always store architectural decisions with rationale
+- Document error solutions with prevention strategies
+- Tag consistently using project-specific conventions
+- Use sessions for complex multi-step work
+
+### Enforcement
+- Never implement without first searching existing knowledge
+- Always ask permission before storing new memories
+- Proactively suggest memory storage for important decisions
+- Reference memory IDs in responses for traceability
+` + "```" + `
+
+## Project-Specific Template
+
+Copy this template to your project's CLAUDE.md file and customize:
+
+` + "```markdown" + `
+## Memory Bank Integration (PROJECT-SPECIFIC)
+
+### Project Context
+- Project Type: [web-app/api/cli-tool/library/data-science]
+- Tech Stack: [list your technologies]
+- Project ID: [set after project/init]
+
+### Required Memory Types
+- **Decisions**: [specific to your project]
+- **Patterns**: [reusable patterns for your domain]
+- **ErrorSolutions**: [common errors in your tech stack]
+- **Code**: [useful snippets for your project]
+- **Documentation**: [project-specific docs]
+
+### Tagging Strategy
+Required tags for this project:
+- Technology: [your tech stack tags]
+- Domain: [your domain-specific tags]
+- Component: [your architecture components]
+- Complexity: simple, medium, complex
+
+### Search Keywords
+Common search terms for this project:
+- [domain-specific terminology]
+- [technology-specific patterns]
+- [architecture concepts]
+
+### Automatic Behaviors
+When working on this project, Claude MUST:
+1. Search for existing implementations before coding
+2. Store all architectural decisions
+3. Document reusable patterns
+4. Save error solutions with prevention strategies
+5. Use consistent tagging strategy
+6. Reference existing memories in explanations
+
+### Session Management
+Use sessions for:
+- Multi-file feature implementations
+- Complex refactoring tasks
+- Bug investigation and resolution
+- Architecture planning and implementation
+` + "```" + `
+
+## Technology-Specific Templates
+
+### Web Application Template
+
+` + "```markdown" + `
+### Web App Memory Configuration
+- **Decisions**: Framework choice, state management, routing, deployment
+- **Patterns**: Component patterns, API integration, authentication flows
+- **ErrorSolutions**: CORS issues, state bugs, performance problems
+- **Code**: Utility hooks, validation schemas, middleware functions
+
+### Tagging Strategy
+- Technology: react, javascript, typescript, html, css
+- Domain: frontend, backend, api, database, auth
+- Component: component, service, util, config, test
+
+### Session Usage
+- Feature development (frontend + backend)
+- UI/UX improvements
+- Performance optimization
+- Security implementation
+` + "```" + `
+
+### CLI Tool Template
+
+` + "```markdown" + `
+### CLI Tool Memory Configuration
+- **Decisions**: Command structure, configuration format, output design
+- **Patterns**: Argument parsing, command patterns, plugin architecture
+- **ErrorSolutions**: Cross-platform issues, dependency problems, user errors
+- **Code**: Command handlers, utility functions, configuration validators
+
+### Tagging Strategy
+- Technology: [go/python/rust/etc], cli, terminal
+- Domain: commands, config, output, validation
+- Component: cmd, util, config, parser, formatter
+
+### Session Usage
+- New command implementation
+- Configuration system changes
+- Cross-platform compatibility
+- Plugin development
+` + "```" + `
+
+### API Development Template
+
+` + "```markdown" + `
+### API Memory Configuration
+- **Decisions**: Framework choice, database design, authentication method
+- **Patterns**: Endpoint patterns, middleware, validation, error handling
+- **ErrorSolutions**: Database connection issues, validation errors, auth problems
+- **Code**: Middleware functions, validation schemas, utility functions
+
+### Tagging Strategy
+- Technology: [fastapi/express/gin/etc], api, rest, graphql
+- Domain: endpoint, middleware, auth, database, validation
+- Component: handler, service, model, middleware, util
+
+### Session Usage
+- Endpoint development
+- Database schema changes
+- Authentication implementation
+- API versioning
+` + "```" + `
+
+### Data Science Template
+
+` + "```markdown" + `
+### Data Science Memory Configuration
+- **Decisions**: Model architecture, feature selection, evaluation metrics
+- **Patterns**: Data pipelines, preprocessing steps, visualization templates
+- **ErrorSolutions**: Data quality issues, model performance problems, pipeline failures
+- **Code**: Preprocessing functions, model utilities, visualization scripts
+
+### Tagging Strategy
+- Technology: python, pandas, sklearn, tensorflow, pytorch
+- Domain: data, model, preprocessing, analysis, visualization
+- Component: pipeline, model, feature, metric, plot
+
+### Session Usage
+- Model development
+- Data pipeline creation
+- Analysis projects
+- Visualization development
+` + "```" + `
+
+## Implementation Checklist
+
+### 1. Global Setup
+- [ ] Add Memory Bank protocol to global CLAUDE.md
+- [ ] Configure MCP server in Claude Desktop/Code
+- [ ] Test connection with memory/search
+
+### 2. Project Setup
+- [ ] Initialize project with project/init
+- [ ] Copy and customize project template
+- [ ] Document initial architectural decisions
+- [ ] Set up tagging strategy
+
+### 3. Usage Workflow
+- [ ] Start sessions with memory search
+- [ ] Store decisions as they're made
+- [ ] Document patterns when discovered
+- [ ] Save error solutions immediately
+- [ ] Use consistent tagging
+
+### 4. Maintenance
+- [ ] Weekly: Review and update memories
+- [ ] Monthly: Clean up duplicate entries
+- [ ] Quarterly: Reorganize tag structure
+- [ ] Continuously: Improve search strategies
+
+## Best Practices
+
+### Memory Creation
+- Use descriptive, searchable titles
+- Include sufficient context for future use
+- Structure content with markdown formatting
+- Link to related memories when relevant
+- Tag consistently and meaningfully
+
+### Search Strategies
+- Use semantic queries over exact matches
+- Start broad, then narrow with filters
+- Leverage faceted search for complex queries
+- Use suggestions for discovery
+- Reference memory IDs in documentation
+
+### Session Management
+- Start sessions for multi-step work
+- Log progress at meaningful milestones
+- Complete sessions with outcome summaries
+- Use sessions to maintain context
+
+### Tag Management
+- Establish consistent tagging conventions
+- Use hierarchical tags when appropriate
+- Review and standardize tags regularly
+- Include both technical and domain tags
+- Maintain a project tag glossary
+
+---
+
+*For dynamic, project-specific integration guides, use the guide://memory-bank/project-setup resource.*`
 }
