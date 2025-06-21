@@ -120,6 +120,8 @@ func NewServiceContainerWithOptions(configPath string, quiet bool) (*ServiceCont
 		Tenant:     cfg.ChromaDB.Tenant,
 		Database:   cfg.ChromaDB.Database,
 		Timeout:    time.Duration(cfg.ChromaDB.Timeout) * time.Second,
+		DataPath:   cfg.ChromaDB.DataPath,
+		AutoStart:  cfg.ChromaDB.AutoStart,
 	}
 	chromaStore := vector.NewChromaDBVectorStore(chromaConfig, logger)
 

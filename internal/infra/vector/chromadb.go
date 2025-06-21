@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,6 +25,8 @@ type ChromaDBVectorStore struct {
 	collectionID string
 	tenant       string
 	database     string
+	dataPath     string
+	autoStart    bool
 	client       *http.Client
 	logger       *logrus.Logger
 }
@@ -33,6 +38,8 @@ type ChromaDBConfig struct {
 	Tenant     string        `json:"tenant"`
 	Database   string        `json:"database"`
 	Timeout    time.Duration `json:"timeout"`
+	DataPath   string        `json:"data_path"`   // Expected ChromaDB data directory
+	AutoStart  bool          `json:"auto_start"`  // Whether to auto-start ChromaDB if not running
 }
 
 // DefaultChromeDBConfig returns default configuration for ChromaDB
@@ -43,6 +50,8 @@ func DefaultChromeDBConfig() ChromaDBConfig {
 		Tenant:     "default_tenant",
 		Database:   "default_database",
 		Timeout:    30 * time.Second,
+		DataPath:   "./chromadb_data",  // Default data directory
+		AutoStart:  false,              // Don't auto-start by default
 	}
 }
 
@@ -64,6 +73,8 @@ func NewChromaDBVectorStore(config ChromaDBConfig, logger *logrus.Logger) *Chrom
 		collection: config.Collection,
 		tenant:     config.Tenant,
 		database:   config.Database,
+		dataPath:   config.DataPath,
+		autoStart:  config.AutoStart,
 		client: &http.Client{
 			Timeout:   config.Timeout,
 			Transport: transport,
@@ -758,6 +769,36 @@ func (c *ChromaDBVectorStore) ListCollections(ctx context.Context) ([]string, er
 func (c *ChromaDBVectorStore) HealthCheck(ctx context.Context) error {
 	c.logger.Debug("Performing ChromaDB health check")
 
+	// First check if ChromaDB is running
+	err := c.checkChromaDBConnection(ctx)
+	if err != nil {
+		// If auto-start is enabled and ChromaDB is not running, try to start it
+		if c.autoStart && c.isConnectionError(err) {
+			c.logger.Info("ChromaDB not running, attempting to auto-start...")
+			if startErr := c.startChromaDB(ctx); startErr != nil {
+				return fmt.Errorf("chromadb not running and auto-start failed: %w", startErr)
+			}
+			// Retry connection after starting
+			if retryErr := c.checkChromaDBConnection(ctx); retryErr != nil {
+				return fmt.Errorf("chromadb auto-start succeeded but connection still failed: %w", retryErr)
+			}
+		} else {
+			return err
+		}
+	}
+
+	// Validate ChromaDB configuration
+	if err := c.validateChromaDBConfiguration(ctx); err != nil {
+		c.logger.WithError(err).Warn("ChromaDB configuration validation failed")
+		// Don't fail health check for configuration warnings, just log them
+	}
+
+	c.logger.Info("ChromaDB health check passed")
+	return nil
+}
+
+// checkChromaDBConnection checks if ChromaDB is accessible
+func (c *ChromaDBVectorStore) checkChromaDBConnection(ctx context.Context) error {
 	// Use the dedicated heartbeat endpoint for health checks
 	url := fmt.Sprintf("%s/api/v2/heartbeat", c.baseURL)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -768,7 +809,7 @@ func (c *ChromaDBVectorStore) HealthCheck(ctx context.Context) error {
 	// Execute request
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("chromadb health check failed: %w", err)
+		return fmt.Errorf("chromadb connection failed: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -782,7 +823,140 @@ func (c *ChromaDBVectorStore) HealthCheck(ctx context.Context) error {
 		return fmt.Errorf("chromadb health check failed (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	c.logger.Info("ChromaDB health check passed")
+	return nil
+}
+
+// isConnectionError checks if the error is a connection error (vs configuration error)
+func (c *ChromaDBVectorStore) isConnectionError(err error) bool {
+	errStr := err.Error()
+	return strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "no such host") ||
+		strings.Contains(errStr, "connection failed") ||
+		strings.Contains(errStr, "timeout")
+}
+
+// validateChromaDBConfiguration checks if the running ChromaDB instance matches expected configuration
+func (c *ChromaDBVectorStore) validateChromaDBConfiguration(ctx context.Context) error {
+	// Check if the expected data path exists and is being used
+	if c.dataPath != "" {
+		absDataPath, err := filepath.Abs(c.dataPath)
+		if err != nil {
+			return fmt.Errorf("failed to resolve data path %s: %w", c.dataPath, err)
+		}
+
+		// Check if data directory exists
+		if _, err := os.Stat(absDataPath); os.IsNotExist(err) {
+			return fmt.Errorf("expected ChromaDB data directory does not exist: %s", absDataPath)
+		}
+
+		// Try to detect if ChromaDB is using the expected path by checking running processes
+		if err := c.validateChromaDBProcessPath(absDataPath); err != nil {
+			return fmt.Errorf("chromadb process validation failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// validateChromaDBProcessPath checks if any running ChromaDB process uses the expected data path
+func (c *ChromaDBVectorStore) validateChromaDBProcessPath(expectedPath string) error {
+	// Use ps to find ChromaDB processes
+	cmd := exec.Command("ps", "aux")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to list processes: %w", err)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	var chromaProcesses []string
+	
+	for _, line := range lines {
+		if strings.Contains(line, "chroma run") && strings.Contains(line, "--path") {
+			chromaProcesses = append(chromaProcesses, line)
+		}
+	}
+
+	if len(chromaProcesses) == 0 {
+		return fmt.Errorf("no running ChromaDB processes found with --path argument")
+	}
+
+	// Check if any process uses the expected path
+	for _, process := range chromaProcesses {
+		if strings.Contains(process, expectedPath) {
+			c.logger.WithFields(logrus.Fields{
+				"expected_path": expectedPath,
+				"process":       process,
+			}).Debug("Found ChromaDB process with matching data path")
+			return nil
+		}
+	}
+
+	// Log all found processes for debugging
+	c.logger.WithFields(logrus.Fields{
+		"expected_path":     expectedPath,
+		"found_processes":   chromaProcesses,
+	}).Warn("ChromaDB running with different data path than expected")
+
+	return fmt.Errorf("chromadb process found but using different data path (expected: %s)", expectedPath)
+}
+
+// startChromaDB attempts to start ChromaDB with the correct configuration
+func (c *ChromaDBVectorStore) startChromaDB(ctx context.Context) error {
+	if c.dataPath == "" {
+		return fmt.Errorf("cannot auto-start ChromaDB: no data path configured")
+	}
+
+	// Ensure data directory exists
+	absDataPath, err := filepath.Abs(c.dataPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve data path: %w", err)
+	}
+
+	if err := os.MkdirAll(absDataPath, 0755); err != nil {
+		return fmt.Errorf("failed to create data directory %s: %w", absDataPath, err)
+	}
+
+	c.logger.WithField("data_path", absDataPath).Info("Starting ChromaDB server...")
+
+	// Extract host and port from baseURL
+	host := "localhost"
+	port := "8000"
+	if strings.Contains(c.baseURL, "://") {
+		parts := strings.Split(c.baseURL, "://")
+		if len(parts) > 1 {
+			hostPort := parts[1]
+			if strings.Contains(hostPort, ":") {
+				hostPortParts := strings.Split(hostPort, ":")
+				host = hostPortParts[0]
+				port = hostPortParts[1]
+			}
+		}
+	}
+
+	// Try to start ChromaDB using uvx (preferred) or direct chroma command
+	cmd := exec.CommandContext(ctx, "uvx", "--from", "chromadb[server]", "chroma", "run", 
+		"--host", host, "--port", port, "--path", absDataPath)
+	
+	// Start process in background
+	if err := cmd.Start(); err != nil {
+		// Fallback to direct chroma command if uvx is not available
+		cmd = exec.CommandContext(ctx, "chroma", "run", 
+			"--host", host, "--port", port, "--path", absDataPath)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to start ChromaDB (tried uvx and direct chroma): %w", err)
+		}
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"host":      host,
+		"port":      port,
+		"data_path": absDataPath,
+		"pid":       cmd.Process.Pid,
+	}).Info("ChromaDB server started successfully")
+
+	// Wait a moment for the server to start
+	time.Sleep(2 * time.Second)
+
 	return nil
 }
 

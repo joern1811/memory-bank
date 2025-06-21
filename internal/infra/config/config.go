@@ -36,6 +36,8 @@ type ChromaDB struct {
 	Tenant     string `mapstructure:"tenant" yaml:"tenant" json:"tenant"`
 	Database   string `mapstructure:"database" yaml:"database" json:"database"`
 	Timeout    int    `mapstructure:"timeout" yaml:"timeout" json:"timeout"` // seconds
+	DataPath   string `mapstructure:"data_path" yaml:"data_path" json:"data_path"`
+	AutoStart  bool   `mapstructure:"auto_start" yaml:"auto_start" json:"auto_start"`
 }
 
 // Logging configuration
@@ -56,6 +58,8 @@ func LoadConfig(configPath string) (*Config, error) {
 	viper.SetDefault("chromadb.tenant", "default_tenant")
 	viper.SetDefault("chromadb.database", "default_database")
 	viper.SetDefault("chromadb.timeout", 30)
+	viper.SetDefault("chromadb.data_path", "./chromadb_data")
+	viper.SetDefault("chromadb.auto_start", false)
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("logging.format", "json")
 
@@ -128,11 +132,13 @@ func findAndLoadConfig() error {
 func overrideWithLegacyEnvVars() {
 	// Legacy environment variables mapping
 	legacyMappings := map[string]string{
-		"MEMORY_BANK_DB_PATH": "database.path",
-		"OLLAMA_BASE_URL":     "ollama.base_url",
-		"OLLAMA_MODEL":        "ollama.model",
-		"CHROMADB_BASE_URL":   "chromadb.base_url",
-		"CHROMADB_COLLECTION": "chromadb.collection",
+		"MEMORY_BANK_DB_PATH":    "database.path",
+		"OLLAMA_BASE_URL":        "ollama.base_url",
+		"OLLAMA_MODEL":           "ollama.model",
+		"CHROMADB_BASE_URL":      "chromadb.base_url",
+		"CHROMADB_COLLECTION":    "chromadb.collection",
+		"CHROMADB_DATA_PATH":     "chromadb.data_path",
+		"CHROMADB_AUTO_START":    "chromadb.auto_start",
 	}
 
 	for envVar, configKey := range legacyMappings {
