@@ -154,8 +154,23 @@ func (c *ChromaDBVectorStore) ensureCollectionID(ctx context.Context) error {
 	c.logger.Debug("Loading collection ID")
 	id, err := c.getCollectionID(ctx, c.collection)
 	if err != nil {
-		c.logger.WithError(err).Error("Failed to get collection ID")
-		return err
+		// If collection doesn't exist, create it
+		if strings.Contains(err.Error(), "not found") {
+			c.logger.WithField("collection", c.collection).Info("Collection not found, creating it")
+			if createErr := c.CreateCollection(ctx, c.collection); createErr != nil {
+				c.logger.WithError(createErr).Error("Failed to create collection")
+				return fmt.Errorf("failed to create collection: %w", createErr)
+			}
+			// Try to get the collection ID again after creation
+			id, err = c.getCollectionID(ctx, c.collection)
+			if err != nil {
+				c.logger.WithError(err).Error("Failed to get collection ID after creation")
+				return err
+			}
+		} else {
+			c.logger.WithError(err).Error("Failed to get collection ID")
+			return err
+		}
 	}
 
 	c.collectionID = id
@@ -645,6 +660,11 @@ func (c *ChromaDBVectorStore) CreateCollection(ctx context.Context, name string)
 		"metadata": map[string]interface{}{
 			"description": "Memory Bank collection",
 			"hnsw:space":  "cosine", // Use cosine distance metric
+		},
+		"configuration": map[string]interface{}{
+			"hnsw": map[string]interface{}{
+				"space": "cosine", // Use cosine distance metric
+			},
 		},
 	}
 
