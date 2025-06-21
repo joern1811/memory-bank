@@ -106,6 +106,10 @@ var configShowCmd = &cobra.Command{
 		fmt.Printf("\n\nChromaDB:")
 		fmt.Printf("\n  Base URL: %s", cfg.ChromaDB.BaseURL)
 		fmt.Printf("\n  Collection: %s", cfg.ChromaDB.Collection)
+		fmt.Printf("\n  Tenant: %s", cfg.ChromaDB.Tenant)
+		fmt.Printf("\n  Database: %s", cfg.ChromaDB.Database)
+		fmt.Printf("\n  Data Path: %s", cfg.ChromaDB.DataPath)
+		fmt.Printf("\n  Auto Start: %t", cfg.ChromaDB.AutoStart)
 		fmt.Printf("\n  Timeout: %d seconds", cfg.ChromaDB.Timeout)
 
 		fmt.Printf("\n\nLogging:")
