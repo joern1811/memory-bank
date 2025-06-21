@@ -28,6 +28,10 @@ type MemoryService interface {
 	CreateDecision(ctx context.Context, req CreateDecisionRequest) (*domain.Decision, error)
 	CreatePattern(ctx context.Context, req CreatePatternRequest) (*domain.Pattern, error)
 	CreateErrorSolution(ctx context.Context, req CreateErrorSolutionRequest) (*domain.ErrorSolution, error)
+	
+	// Cleanup operations
+	RegenerateEmbedding(ctx context.Context, memoryID domain.MemoryID) error
+	CleanupEmbeddings(ctx context.Context, projectID domain.ProjectID) (*CleanupResult, error)
 }
 
 // ProjectService defines the primary port for project operations
@@ -260,4 +264,13 @@ type SearchSuggestion struct {
 	Frequency int     `json:"frequency"`
 	Relevance float64 `json:"relevance"`
 	Type      string  `json:"type"` // "tag", "title", "content", "type"
+}
+
+// CleanupResult represents the result of a cleanup operation
+type CleanupResult struct {
+	TotalMemories       int      `json:"total_memories"`
+	MemoriesProcessed   int      `json:"memories_processed"`
+	EmbeddingsGenerated int      `json:"embeddings_generated"`
+	Errors              int      `json:"errors"`
+	ErrorMessages       []string `json:"error_messages,omitempty"`
 }

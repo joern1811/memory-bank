@@ -595,3 +595,21 @@ func (r *SQLiteMemoryRepository) InitializeSchema(ctx context.Context) error {
 	r.logger.Info("Memory database schema initialized successfully")
 	return nil
 }
+
+// ResetEmbeddingFlags resets all embedding flags for memories in a project
+func (r *SQLiteMemoryRepository) ResetEmbeddingFlags(ctx context.Context, projectID string) error {
+	query := `UPDATE memories SET has_embedding = FALSE WHERE project_id = ?`
+	
+	result, err := r.db.ExecContext(ctx, query, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to reset embedding flags: %w", err)
+	}
+	
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	
+	r.logger.WithField("rows_affected", rowsAffected).Info("Reset embedding flags")
+	return nil
+}

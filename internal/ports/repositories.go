@@ -25,6 +25,9 @@ type MemoryRepository interface {
 
 	// Session-related operations
 	ListBySession(ctx context.Context, sessionID domain.SessionID) ([]*domain.Memory, error)
+	
+	// Cleanup operations
+	ResetEmbeddingFlags(ctx context.Context, projectID string) error
 }
 
 // MemoryMetadata represents lightweight memory metadata for efficient queries

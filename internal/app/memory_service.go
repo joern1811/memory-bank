@@ -962,3 +962,92 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// RegenerateEmbedding regenerates the embedding for a specific memory
+func (s *MemoryService) RegenerateEmbedding(ctx context.Context, memoryID domain.MemoryID) error {
+	// Get the memory
+	memory, err := s.memoryRepo.GetByID(ctx, memoryID)
+	if err != nil {
+		return fmt.Errorf("failed to get memory: %w", err)
+	}
+
+	// Generate embedding
+	embeddingText := fmt.Sprintf("%s %s", memory.Title, memory.Content)
+	embedding, err := s.embeddingProvider.GenerateEmbedding(ctx, embeddingText)
+	if err != nil {
+		s.logger.WithError(err).Warn("Failed to generate embedding, but memory exists")
+		return fmt.Errorf("failed to generate embedding: %w", err)
+	}
+
+	// Store in vector store
+	if err := s.vectorStore.Store(ctx, string(memory.ID), embedding, map[string]interface{}{
+		"type":    string(memory.Type),
+		"title":   memory.Title,
+		"content": memory.Content,
+	}); err != nil {
+		s.logger.WithError(err).Warn("Failed to store embedding in vector store")
+		return fmt.Errorf("failed to store embedding: %w", err)
+	}
+
+	// Update embedding flag
+	memory.HasEmbedding = true
+	if err := s.memoryRepo.Update(ctx, memory); err != nil {
+		return fmt.Errorf("failed to update memory embedding flag: %w", err)
+	}
+
+	s.logger.WithField("memory_id", memory.ID).Info("Successfully regenerated embedding")
+	return nil
+}
+
+// CleanupEmbeddings resets all embedding flags and regenerates embeddings for all memories in a project
+func (s *MemoryService) CleanupEmbeddings(ctx context.Context, projectID domain.ProjectID) (*ports.CleanupResult, error) {
+	s.logger.WithField("project_id", projectID).Info("Starting embedding cleanup")
+
+	// Get all memories for the project
+	memories, err := s.memoryRepo.ListByProject(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list memories: %w", err)
+	}
+
+	result := &ports.CleanupResult{
+		TotalMemories:     len(memories),
+		MemoriesProcessed: 0,
+		EmbeddingsGenerated: 0,
+		Errors:           0,
+		ErrorMessages:    []string{},
+	}
+
+	// Reset all embedding flags first
+	if err := s.memoryRepo.ResetEmbeddingFlags(ctx, string(projectID)); err != nil {
+		return result, fmt.Errorf("failed to reset embedding flags: %w", err)
+	}
+
+	s.logger.WithField("count", len(memories)).Info("Reset embedding flags for all memories")
+
+	// Try to delete the ChromaDB collection to clean up old embeddings
+	if err := s.vectorStore.DeleteCollection(ctx, "memory_bank"); err != nil {
+		s.logger.WithError(err).Warn("Failed to delete ChromaDB collection, continuing anyway")
+	}
+
+	// Regenerate embeddings for all memories
+	for _, memory := range memories {
+		result.MemoriesProcessed++
+		
+		if err := s.RegenerateEmbedding(ctx, memory.ID); err != nil {
+			result.Errors++
+			errorMsg := fmt.Sprintf("Memory %s: %v", memory.ID, err)
+			result.ErrorMessages = append(result.ErrorMessages, errorMsg)
+			s.logger.WithError(err).WithField("memory_id", memory.ID).Error("Failed to regenerate embedding")
+		} else {
+			result.EmbeddingsGenerated++
+		}
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"total_memories":       result.TotalMemories,
+		"embeddings_generated": result.EmbeddingsGenerated,
+		"errors":              result.Errors,
+	}).Info("Embedding cleanup completed")
+
+	return result, nil
+}
