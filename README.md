@@ -2,7 +2,7 @@
 
 [![Go Version](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Build Status](https://github.com/memory-bank/memory-bank/workflows/CI/badge.svg)](https://github.com/memory-bank/memory-bank/actions)
+[![Build Status](https://github.com/joern1811/memory-bank/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/joern1811/memory-bank/actions)
 
 A semantic memory management system for developers that integrates with Claude Code via MCP (Model Context Protocol). Memory Bank helps you capture, organize, and retrieve development knowledge using AI-powered semantic search.
 
