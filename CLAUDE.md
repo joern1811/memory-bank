@@ -73,13 +73,16 @@ uvx --from "chromadb[server]" chroma run --host localhost --port 8000 --path ./c
 
 ### Claude Desktop Configuration
 
-Add to `~/.config/claude-desktop/config.json`:
+Add to your Claude Desktop configuration file:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "memory-bank": {
       "command": "memory-bank",
+      "args": [],
       "env": {
         "MEMORY_BANK_DB_PATH": "~/memory_bank.db"
       }
@@ -90,13 +93,32 @@ Add to `~/.config/claude-desktop/config.json`:
 
 ### Claude Code Configuration
 
-Add to VS Code `settings.json`:
+**Option 1 - Project scope** (recommended for team projects):
+Create `.mcp.json` in your project root:
 
 ```json
 {
-  "claude-code.mcpServers": {
+  "mcpServers": {
     "memory-bank": {
       "command": "memory-bank",
+      "args": [],
+      "env": {
+        "MEMORY_BANK_DB_PATH": "./memory_bank.db"
+      }
+    }
+  }
+}
+```
+
+**Option 2 - User scope** (for all your projects):
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "memory-bank": {
+      "command": "memory-bank", 
+      "args": [],
       "env": {
         "MEMORY_BANK_DB_PATH": "~/memory_bank.db"
       }
@@ -192,6 +214,27 @@ When Memory Bank MCP tools are available, Claude MUST:
 3. **DURING DEVELOPMENT**: Document decisions and patterns
 4. **AFTER SOLVING**: Store solutions with prevention strategies
 5. **COMPLEX WORK**: Use sessions for multi-step tasks
+
+### Session Management Protocol
+For complex tasks (3+ files, new features, debugging), Claude MUST:
+
+1. **Start Session**: Use `session_start` with descriptive title and project context
+2. **Log Progress**: Use `session_log` at key milestones with specific progress updates
+3. **Complete Session**: Use `session_complete` with summary of outcomes and lessons learned
+
+**Session Usage Examples:**
+```
+# Start complex task
+session_start "Implementing JWT authentication system" --project my_project
+
+# Log key progress points
+session_log "Created JWT middleware with token validation"
+session_log "Added login/logout endpoints with proper error handling" 
+session_log "Implemented protected route middleware"
+
+# Complete with summary
+session_complete "Successfully implemented JWT authentication with middleware, endpoints, and route protection. All tests passing."
+```
 
 ### Memory Types
 - `decision`: Architectural choices with rationale
