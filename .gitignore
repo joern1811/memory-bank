@@ -61,7 +61,7 @@ config.yaml
 config.json
 
 # ChromaDB data directory
-chroma_data/
+chromadb_data/
 
 # Ollama models cache (if stored locally)
 .ollama/
