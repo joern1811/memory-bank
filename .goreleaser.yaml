@@ -36,7 +36,7 @@ archives:
       - README.md
       - LICENSE
       - CHANGELOG.md
-    wrap_in_directory: true
+    wrap_in_directory: false
 
 checksum:
   name_template: "checksums.txt"
@@ -90,7 +90,8 @@ release:
 
 homebrew_casks:
   - name: memory-bank
-    binary: memory-bank
+    ids:
+      - memory-bank
     repository:
       owner: joern1811
       name: homebrew-tap
@@ -98,6 +99,7 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Casks
     homepage: "https://github.com/joern1811/memory-bank"
+    binary: "memory-bank"
     description: "Semantic memory management system for Claude Code using hexagonal architecture"
     license: "MIT"
     commit_author:
