@@ -221,6 +221,8 @@ Add to your Claude Desktop configuration file (`~/.config/claude-desktop/config.
         "OLLAMA_MODEL": "nomic-embed-text",
         "CHROMADB_BASE_URL": "http://localhost:8000",
         "CHROMADB_COLLECTION": "memory_bank",
+        "CHROMADB_DATA_PATH": "/path/to/chromadb_data",
+        "CHROMADB_AUTO_START": "false",
         "MEMORY_BANK_DB_PATH": "/path/to/memory_bank.db"
       }
     }
@@ -242,6 +244,8 @@ Add to your VS Code settings (`settings.json`):
         "OLLAMA_MODEL": "nomic-embed-text",
         "CHROMADB_BASE_URL": "http://localhost:8000",
         "CHROMADB_COLLECTION": "memory_bank",
+        "CHROMADB_DATA_PATH": "/path/to/chromadb_data",
+        "CHROMADB_AUTO_START": "false",
         "MEMORY_BANK_DB_PATH": "/path/to/memory_bank.db"
       }
     }
@@ -299,6 +303,8 @@ For any MCP client that supports stdio transport:
     "OLLAMA_MODEL": "nomic-embed-text",
     "CHROMADB_BASE_URL": "http://localhost:8000",
     "CHROMADB_COLLECTION": "memory_bank",
+    "CHROMADB_DATA_PATH": "/path/to/chromadb_data",
+    "CHROMADB_AUTO_START": "false",
     "MEMORY_BANK_DB_PATH": "/path/to/memory_bank.db"
   }
 }
@@ -317,6 +323,8 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - CHROMADB_BASE_URL=http://chromadb:8000
+      - CHROMADB_DATA_PATH=/data/chromadb_data
+      - CHROMADB_AUTO_START=false
       - MEMORY_BANK_DB_PATH=/data/memory_bank.db
     volumes:
       - ./data:/data
@@ -351,6 +359,8 @@ volumes:
 | `OLLAMA_MODEL` | `nomic-embed-text` | Embedding model name |
 | `CHROMADB_BASE_URL` | `http://localhost:8000` | ChromaDB server URL |
 | `CHROMADB_COLLECTION` | `memory_bank` | ChromaDB collection name |
+| `CHROMADB_DATA_PATH` | `./chromadb_data` | ChromaDB data directory path |
+| `CHROMADB_AUTO_START` | `false` | Auto-start ChromaDB if not running |
 | `MEMORY_BANK_DB_PATH` | `./memory_bank.db` | SQLite database path |
 | `MEMORY_BANK_LOG_LEVEL` | `info` | Logging level (debug, info, warn, error) |
 
@@ -445,6 +455,8 @@ export OLLAMA_BASE_URL="http://localhost:11434"
 export OLLAMA_MODEL="nomic-embed-text"
 export CHROMADB_BASE_URL="http://localhost:8000"
 export CHROMADB_COLLECTION="memory_bank"
+export CHROMADB_DATA_PATH="./chromadb_data"
+export CHROMADB_AUTO_START="false"
 export MEMORY_BANK_DB_PATH="./memory_bank.db"
 ```
 
