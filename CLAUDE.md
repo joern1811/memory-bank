@@ -448,6 +448,501 @@ export CHROMADB_COLLECTION="memory_bank"
 export MEMORY_BANK_DB_PATH="./memory_bank.db"
 ```
 
+## Claude Integration Guide
+
+### Optimal Usage with Claude Desktop and Claude Code
+
+Memory Bank is designed as an MCP server and integrates seamlessly with Claude Desktop and Claude Code. Here are the best practices for efficient usage:
+
+#### 1. Initial Setup and Configuration
+
+**Getting Started:**
+```bash
+# 1. Install Memory Bank (Homebrew recommended)
+brew tap joern1811/tap
+brew install --cask joern1811/tap/memory-bank
+
+# 2. Install Ollama for local embeddings
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull nomic-embed-text
+
+# 3. Start ChromaDB for vector search (optional, works without)
+uvx --from "chromadb[server]" chroma run --host localhost --port 8000 --path ./chromadb_data &
+```
+
+**Claude Desktop Configuration:**
+```json
+{
+  "mcpServers": {
+    "memory-bank": {
+      "command": "memory-bank",
+      "env": {
+        "MEMORY_BANK_DB_PATH": "~/memory_bank.db"
+      }
+    }
+  }
+}
+```
+
+#### 2. Efficient Usage Strategies
+
+**Project Setup (First Use):**
+1. **Initialize Project**: Have Claude register the project using `project/init`
+2. **Codebase Analysis**: Ask Claude to document important architectural decisions
+3. **Pattern Documentation**: Capture recurring code patterns and design principles
+
+**Ongoing Development:**
+- **Before New Features**: Search for similar implementations (`memory/search`)
+- **After Problem Solving**: Document solutions for future reference
+- **During Code Reviews**: Capture important insights and improvements
+
+#### 3. Using Memory Types Effectively
+
+**Decision (Architectural Decisions):**
+```
+"Store the decision to use JWT instead of sessions, with rationale and alternatives"
+```
+
+**Pattern (Reusable Solutions):**
+```
+"Document the Repository pattern we use for database access"
+```
+
+**ErrorSolution (Error Solutions):**
+```
+"Store the solution for the CORS error in API calls"
+```
+
+**Code (Code Snippets):**
+```
+"Store the authentication middleware pattern"
+```
+
+#### 4. Search Strategies for Maximum Efficiency
+
+**Use Semantic Search:**
+- Use descriptive terms instead of exact variable names
+- Example: "authentication middleware" instead of "authMiddleware"
+
+**Advanced Search for Specific Cases:**
+- `memory/faceted-search` for complex filters
+- `memory/enhanced-search` for best relevance scoring
+- `memory/search-suggestions` for ideas and inspiration
+
+#### 5. Session Management for Complex Tasks
+
+**Longer Development Tasks:**
+```bash
+# Start session
+"Start a new session for implementing user authentication"
+
+# Document progress
+"Log progress: JWT middleware implemented and tested"
+
+# Complete session
+"Complete the session: Authentication fully implemented"
+```
+
+#### 6. Workflow Integration Best Practices
+
+**For New Features:**
+1. **Research**: "Search for similar implementations for feature X"
+2. **Planning**: "Document the architectural decision for feature X"
+3. **Implementation**: Start session and document progress
+4. **Completion**: Store patterns and lessons learned
+
+**For Debugging:**
+1. **Get Context**: "Search for similar errors or solutions"
+2. **Document Solution**: "Store the solution for problem Y"
+3. **Prevention**: "Document how to prevent this error in the future"
+
+**For Code Reviews:**
+1. **Pattern Check**: "Check if we have similar patterns already documented"
+2. **Improvements**: "Store improvement suggestions from the review"
+3. **Standards**: "Update our coding standards based on insights"
+
+#### 7. Leverage System Prompt Resource
+
+Memory Bank automatically provides a contextual system prompt:
+- **Project-Specific Information**: Current memories and context
+- **Usage Guidelines**: Dynamic best practices
+- **Examples**: Realistic use cases based on your project
+
+#### 8. Tips for Claude Interaction
+
+**Effective Prompts:**
+- "Use Memory Bank to document [specific task]"
+- "Search Memory Bank for [concrete problem]"
+- "Store this solution for future reference"
+
+**Automated Workflows:**
+- Ask Claude to automatically document important decisions
+- Have patterns and solutions proactively stored
+- Use search suggestions for new ideas
+
+**Project Continuity:**
+- Start each session with memory research
+- Always document important insights
+- Conduct regular "knowledge reviews"
+
+#### 9. Common Use Cases
+
+**New Team Member Onboarding:**
+```
+"Create a summary of all important architectural decisions for new developers"
+```
+
+**Refactoring Projects:**
+```
+"Search for all patterns affected by the old implementation"
+```
+
+**Bug Tracking:**
+```
+"Document frequent bugs and their solutions for monitoring"
+```
+
+**Performance Optimization:**
+```
+"Collect all performance optimizations and their impacts"
+```
+
+#### 10. Integration with Existing Workflows
+
+**Git Integration:**
+- Document important commit messages and their context
+- Store merge strategies and their rationale
+
+**CI/CD Processes:**
+- Capture build optimizations and their impacts
+- Document deployment strategies and lessons learned
+
+**Code Review Process:**
+- Store recurring review comments as patterns
+- Document team standards and their evolution
+
+### Pro Tips for Maximum Efficiency
+
+1. **Proactive Documentation**: Have Claude automatically store important decisions in Memory Bank
+2. **Semantic Tags**: Use consistent, meaningful tags for better search
+3. **Regular Reviews**: Monthly "memory reviews" to update outdated information
+4. **Cross-Project Learning**: Use Memory Bank across projects for shared knowledge
+5. **Error Prevention**: Document not just solutions, but also prevention strategies
+
+## CLAUDE.md Integration Instructions
+
+### Mandatory Memory Bank Protocol
+
+To ensure Claude consistently uses Memory Bank for project continuity and knowledge management, add these instructions to your project's `CLAUDE.md` file:
+
+#### Required System Behavior
+
+```markdown
+## Memory Bank Integration (MANDATORY)
+
+### Memory Bank Protocol - ALWAYS FOLLOW
+When Memory Bank MCP tools are available, you MUST:
+
+1. **START EVERY SESSION**: Begin with memory search to understand project context
+   - Use `memory/search` with project-relevant keywords
+   - Review existing decisions, patterns, and solutions
+   - Understand previous architectural choices
+
+2. **BEFORE ANY MAJOR TASK**: Search for existing knowledge
+   - Use `memory/search` for similar implementations
+   - Check `memory/faceted-search` for related patterns
+   - Review `memory/enhanced-search` for best matches
+
+3. **DURING DEVELOPMENT**: Document decisions and patterns
+   - Use `memory/create` for architectural decisions (type: "decision")
+   - Store reusable patterns (type: "pattern")
+   - Document error solutions (type: "error_solution")
+   - Save useful code snippets (type: "code")
+
+4. **AFTER PROBLEM SOLVING**: Always store solutions
+   - Document the problem context
+   - Store the solution with explanation
+   - Add prevention strategies
+   - Tag appropriately for future search
+
+5. **SESSION MANAGEMENT**: Use for complex tasks
+   - Start sessions with `session/start` for multi-step work
+   - Log progress with `session/log` at milestones
+   - Complete sessions with `session/complete` and summary
+
+### Automatic Memory Management Rules
+
+#### Project Initialization (First Time)
+- ALWAYS use `project/init` to register new projects
+- Document initial architecture decisions
+- Store setup patterns and configuration choices
+
+#### Decision Documentation (MANDATORY)
+For ANY architectural decision, you MUST:
+1. Search existing decisions first
+2. Document the decision with rationale
+3. Include alternatives considered
+4. Store with relevant tags
+
+#### Pattern Recognition (AUTOMATIC)
+When you identify reusable patterns:
+1. Check if similar patterns exist
+2. Document the pattern with examples
+3. Include usage guidelines
+4. Tag for easy retrieval
+
+#### Error Resolution (REQUIRED)
+For ANY error or bug fix:
+1. Search for similar previous errors
+2. Document the error signature
+3. Store the complete solution
+4. Add prevention strategies
+
+### Memory Search Strategy
+
+#### Search Hierarchy (Follow This Order)
+1. **Basic Search**: `memory/search` with descriptive terms
+2. **Enhanced Search**: `memory/enhanced-search` for better relevance
+3. **Faceted Search**: `memory/faceted-search` for complex filtering
+4. **Suggestions**: `memory/search-suggestions` for discovery
+
+#### Search Keywords
+- Use semantic descriptions, not code names
+- Example: "user authentication" not "authHandler"
+- Include technology stack terms
+- Use problem-domain language
+
+### Tagging Strategy (MANDATORY)
+
+#### Required Tags
+- **Technology**: `javascript`, `python`, `react`, `api`, etc.
+- **Domain**: `auth`, `database`, `frontend`, `backend`, etc.
+- **Type**: `pattern`, `decision`, `error`, `optimization`, etc.
+- **Complexity**: `simple`, `medium`, `complex`
+
+#### Tag Consistency
+- Always use lowercase
+- Use singular forms
+- Be specific but not overly narrow
+- Include project-specific tags
+
+### Memory Maintenance
+
+#### Regular Tasks (AUTOMATED)
+- Weekly: Review and update outdated memories
+- Monthly: Clean up duplicate entries
+- Quarterly: Reorganize tag structure
+
+#### Quality Checks
+- Ensure all decisions have rationale
+- Verify patterns include examples
+- Check error solutions are complete
+- Validate tags are consistent
+```
+
+### Integration Examples for CLAUDE.md
+
+#### For Web Development Projects
+```markdown
+## Memory Bank Configuration
+
+### Project-Specific Instructions
+- Always search for existing API patterns before creating new endpoints
+- Document all database schema changes as decisions
+- Store reusable UI components as patterns
+- Tag with: `api`, `database`, `frontend`, `backend`, `react`, `node`
+
+### Required Memory Types
+- **Decisions**: API design choices, database schemas, architecture patterns
+- **Patterns**: Reusable components, utility functions, configuration templates
+- **ErrorSolutions**: CORS issues, authentication bugs, deployment problems
+- **Code**: Middleware patterns, validation schemas, test utilities
+```
+
+#### For Data Science Projects
+```markdown
+## Memory Bank Configuration
+
+### Project-Specific Instructions
+- Search for existing data processing patterns
+- Document model architecture decisions
+- Store preprocessing pipelines as patterns
+- Tag with: `data`, `ml`, `preprocessing`, `model`, `analysis`
+
+### Required Memory Types
+- **Decisions**: Model selection, feature engineering choices, evaluation metrics
+- **Patterns**: Data pipelines, visualization templates, model training workflows
+- **ErrorSolutions**: Data quality issues, performance bottlenecks, deployment problems
+- **Code**: Preprocessing functions, evaluation scripts, utility modules
+```
+
+#### For DevOps Projects
+```markdown
+## Memory Bank Configuration
+
+### Project-Specific Instructions
+- Search for existing deployment patterns
+- Document infrastructure decisions
+- Store configuration templates as patterns
+- Tag with: `devops`, `deployment`, `infrastructure`, `ci-cd`, `monitoring`
+
+### Required Memory Types
+- **Decisions**: Tool selection, architecture choices, security policies
+- **Patterns**: Deployment scripts, monitoring configurations, backup strategies
+- **ErrorSolutions**: Deployment failures, performance issues, security incidents
+- **Code**: Automation scripts, configuration files, monitoring queries
+```
+
+### Enforcement Instructions for CLAUDE.md
+
+Add this section to ensure consistent behavior:
+
+```markdown
+## Memory Bank Enforcement
+
+### Mandatory Behaviors
+Claude MUST follow these rules when Memory Bank is available:
+
+1. **No work without search**: Never implement without first searching existing knowledge
+2. **Document everything**: Every decision, pattern, and solution must be stored
+3. **Tag consistently**: Use project-specific tagging strategy
+4. **Session tracking**: Use sessions for complex, multi-step work
+5. **Proactive storage**: Don't wait to be asked - store knowledge automatically
+
+### Violation Consequences
+If Claude fails to use Memory Bank:
+- Restart the conversation
+- Explicitly remind of Memory Bank requirements
+- Request immediate search and documentation
+
+### Success Indicators
+- Begins sessions with memory search
+- References existing knowledge in responses
+- Automatically stores new decisions and patterns
+- Uses appropriate tags and memory types
+- Maintains session context for complex tasks
+```
+
+## System Prompt Instructions
+
+### For Global CLAUDE.md Configuration
+
+Add these instructions to your global `~/.config/claude/CLAUDE.md` to ensure Memory Bank is used consistently across all projects:
+
+```markdown
+## Memory Bank Protocol (GLOBAL)
+
+### Automatic Memory Bank Usage
+When Memory Bank MCP tools are detected, Claude MUST:
+
+1. **ALWAYS START** with `memory/search` using project context
+2. **AUTOMATICALLY STORE** all decisions, patterns, and solutions
+3. **PROACTIVELY REFERENCE** existing knowledge in responses
+4. **CONTINUOUSLY UPDATE** memory with new learnings
+
+### Required Workflow
+1. **Session Start**: Search existing knowledge (`memory/search`)
+2. **Before Implementation**: Check for existing patterns
+3. **During Work**: Document decisions and store solutions
+4. **After Completion**: Store lessons learned and update patterns
+
+### Memory Integration Rules
+- Reference existing memories in explanations
+- Always store architectural decisions with rationale
+- Document error solutions with prevention strategies
+- Tag consistently using project-specific conventions
+- Use sessions for complex multi-step work
+
+### Enforcement
+- Never implement without first searching existing knowledge
+- Always ask permission before storing new memories
+- Proactively suggest memory storage for important decisions
+- Reference memory IDs in responses for traceability
+```
+
+### Project-Specific CLAUDE.md Template
+
+Copy this template to your project's `CLAUDE.md` file and customize the tags and memory types:
+
+```markdown
+## Memory Bank Integration (PROJECT-SPECIFIC)
+
+### Project Context
+- Project Type: [web-app/api/cli-tool/library/etc]
+- Tech Stack: [technologies used]
+- Memory Database: [path to memory bank database]
+
+### Required Memory Types for This Project
+- **Decisions**: [specific decision types for this project]
+- **Patterns**: [reusable patterns relevant to this project]
+- **ErrorSolutions**: [common error types in this project]
+- **Code**: [useful code snippets for this project]
+
+### Tagging Strategy
+Required tags for this project:
+- Technology: [project-specific tech tags]
+- Domain: [project domain tags]
+- Component: [project component tags]
+- Complexity: [simple, medium, complex]
+
+### Search Keywords
+Common search terms for this project:
+- [list of semantic terms relevant to the project]
+- [domain-specific terminology]
+- [technology-specific patterns]
+
+### Automatic Behaviors
+When working on this project, Claude MUST:
+1. Search for existing implementations before coding
+2. Store all architectural decisions
+3. Document reusable patterns
+4. Save error solutions with prevention strategies
+5. Use consistent tagging strategy
+6. Reference existing memories in explanations
+
+### Session Management
+Use sessions for:
+- Multi-file feature implementations
+- Complex refactoring tasks
+- Bug investigation and resolution
+- Architecture planning and implementation
+
+### Quality Assurance
+- All memories must have clear, descriptive titles
+- Decisions must include rationale and alternatives
+- Patterns must include usage examples
+- Error solutions must include prevention strategies
+- Tags must follow project conventions
+```
+
+### Implementation Checklist
+
+To implement Memory Bank in your projects:
+
+#### 1. Global Configuration
+- [ ] Add Memory Bank protocol to global `~/.config/claude/CLAUDE.md`
+- [ ] Configure MCP server in Claude Desktop/Code
+- [ ] Test MCP connection with `memory/search`
+
+#### 2. Project Setup
+- [ ] Copy project-specific template to project's `CLAUDE.md`
+- [ ] Customize memory types and tags for project
+- [ ] Initialize project with `project/init`
+- [ ] Document initial architectural decisions
+
+#### 3. Workflow Integration
+- [ ] Start each session with memory search
+- [ ] Document decisions as they're made
+- [ ] Store patterns when identified
+- [ ] Save error solutions immediately
+- [ ] Use sessions for complex work
+
+#### 4. Maintenance
+- [ ] Weekly: Review and update memories
+- [ ] Monthly: Clean up duplicate entries
+- [ ] Quarterly: Reorganize tag structure
+- [ ] Continuously: Improve search keywords and tagging
+
 ### Current Usage (Both MCP Server and CLI)
 
 #### MCP Server Mode
@@ -635,6 +1130,31 @@ export MEMORY_BANK_DB_PATH="./memory_bank.db"
   - **Integration Tips**: Workflow optimization suggestions
   - **Real-time Examples**: Usage patterns based on existing project content
 
+#### Dynamic Project Integration Guide ✅
+- **URI**: `guide://memory-bank/project-setup`
+- **Type**: Dynamic project-specific integration guide
+- **Description**: Intelligent project analysis with customized CLAUDE.md templates
+- **MIME Type**: `text/plain`
+- **Features**:
+  - **Automatic Project Detection**: Analyzes current directory structure and tech stack
+  - **Customized CLAUDE.md**: Generates project-specific templates and configurations
+  - **Memory Analysis**: Reviews existing memories and suggests improvements
+  - **Tagging Strategy**: Project-specific tag recommendations
+  - **Gap Analysis**: Identifies missing memory types and documentation
+  - **Next Steps**: Actionable recommendations for project setup
+
+#### Static Integration Templates ✅
+- **URI**: `guide://memory-bank/claude-integration`
+- **Type**: Static integration templates and best practices
+- **Description**: Comprehensive templates for different project types and workflows
+- **MIME Type**: `text/plain`
+- **Features**:
+  - **Global CLAUDE.md**: Template for cross-project Memory Bank integration
+  - **Project Templates**: Ready-to-use templates for web apps, APIs, CLI tools, data science
+  - **Implementation Checklists**: Step-by-step setup and maintenance guides
+  - **Best Practices**: Memory creation, search strategies, and tag management
+  - **Technology-Specific**: Customized recommendations for different tech stacks
+
 Example resource access:
 ```json
 {
@@ -645,12 +1165,44 @@ Example resource access:
 }
 ```
 
-Returns comprehensive system prompt with:
+```json
+{
+  "method": "resources/read",
+  "params": {
+    "uri": "guide://memory-bank/project-setup"
+  }
+}
+```
+
+```json
+{
+  "method": "resources/read",
+  "params": {
+    "uri": "guide://memory-bank/claude-integration"
+  }
+}
+```
+
+**System Prompt Resource** returns:
 - Project-specific memory summaries
 - Memory type usage guidelines  
 - MCP method reference
 - Best practices for development workflow integration
 - Context-aware usage examples
+
+**Dynamic Project Guide** returns:
+- Intelligent project analysis (tech stack, structure, existing memories)
+- Customized CLAUDE.md template ready for copy-paste
+- Project-specific tagging strategies and search keywords
+- Gap analysis and actionable next steps
+- Technology-specific recommendations
+
+**Static Integration Templates** returns:
+- Global CLAUDE.md configuration templates
+- Project-specific templates for different domains
+- Implementation checklists and maintenance guides
+- Best practices for memory management and search
+- Technology-specific configuration examples
 
 ### MCP Methods (Implemented)
 
