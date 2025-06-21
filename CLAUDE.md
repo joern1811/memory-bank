@@ -281,10 +281,10 @@ For script-based testing:
 echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | ./memory-bank
 
 # Test memory search
-echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "memory/search", "arguments": {"query": "authentication"}}}' | ./memory-bank
+echo '{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "memory_search", "arguments": {"query": "authentication"}}}' | ./memory-bank
 
 # Test project listing  
-echo '{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "project/list", "arguments": {}}}' | ./memory-bank
+echo '{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "project_list", "arguments": {}}}' | ./memory-bank
 ```
 
 ### Generic MCP Client Configuration
@@ -499,12 +499,12 @@ uvx --from "chromadb[server]" chroma run --host localhost --port 8000 --path ./c
 #### 2. Efficient Usage Strategies
 
 **Project Setup (First Use):**
-1. **Initialize Project**: Have Claude register the project using `project/init`
+1. **Initialize Project**: Have Claude register the project using `project_init`
 2. **Codebase Analysis**: Ask Claude to document important architectural decisions
 3. **Pattern Documentation**: Capture recurring code patterns and design principles
 
 **Ongoing Development:**
-- **Before New Features**: Search for similar implementations (`memory/search`)
+- **Before New Features**: Search for similar implementations (`memory_search`)
 - **After Problem Solving**: Document solutions for future reference
 - **During Code Reviews**: Capture important insights and improvements
 
@@ -537,9 +537,9 @@ uvx --from "chromadb[server]" chroma run --host localhost --port 8000 --path ./c
 - Example: "authentication middleware" instead of "authMiddleware"
 
 **Advanced Search for Specific Cases:**
-- `memory/faceted-search` for complex filters
-- `memory/enhanced-search` for best relevance scoring
-- `memory/search-suggestions` for ideas and inspiration
+- `memory_faceted-search` for complex filters
+- `memory_enhanced-search` for best relevance scoring
+- `memory_search-suggestions` for ideas and inspiration
 
 #### 5. Session Management for Complex Tasks
 
@@ -656,17 +656,17 @@ To ensure Claude consistently uses Memory Bank for project continuity and knowle
 When Memory Bank MCP tools are available, you MUST:
 
 1. **START EVERY SESSION**: Begin with memory search to understand project context
-   - Use `memory/search` with project-relevant keywords
+   - Use `memory_search` with project-relevant keywords
    - Review existing decisions, patterns, and solutions
    - Understand previous architectural choices
 
 2. **BEFORE ANY MAJOR TASK**: Search for existing knowledge
-   - Use `memory/search` for similar implementations
-   - Check `memory/faceted-search` for related patterns
-   - Review `memory/enhanced-search` for best matches
+   - Use `memory_search` for similar implementations
+   - Check `memory_faceted-search` for related patterns
+   - Review `memory_enhanced-search` for best matches
 
 3. **DURING DEVELOPMENT**: Document decisions and patterns
-   - Use `memory/create` for architectural decisions (type: "decision")
+   - Use `memory_create` for architectural decisions (type: "decision")
    - Store reusable patterns (type: "pattern")
    - Document error solutions (type: "error_solution")
    - Save useful code snippets (type: "code")
@@ -678,14 +678,14 @@ When Memory Bank MCP tools are available, you MUST:
    - Tag appropriately for future search
 
 5. **SESSION MANAGEMENT**: Use for complex tasks
-   - Start sessions with `session/start` for multi-step work
-   - Log progress with `session/log` at milestones
-   - Complete sessions with `session/complete` and summary
+   - Start sessions with `session_start` for multi-step work
+   - Log progress with `session_log` at milestones
+   - Complete sessions with `session_complete` and summary
 
 ### Automatic Memory Management Rules
 
 #### Project Initialization (First Time)
-- ALWAYS use `project/init` to register new projects
+- ALWAYS use `project_init` to register new projects
 - Document initial architecture decisions
 - Store setup patterns and configuration choices
 
@@ -713,10 +713,10 @@ For ANY error or bug fix:
 ### Memory Search Strategy
 
 #### Search Hierarchy (Follow This Order)
-1. **Basic Search**: `memory/search` with descriptive terms
-2. **Enhanced Search**: `memory/enhanced-search` for better relevance
-3. **Faceted Search**: `memory/faceted-search` for complex filtering
-4. **Suggestions**: `memory/search-suggestions` for discovery
+1. **Basic Search**: `memory_search` with descriptive terms
+2. **Enhanced Search**: `memory_enhanced-search` for better relevance
+3. **Faceted Search**: `memory_faceted-search` for complex filtering
+4. **Suggestions**: `memory_search-suggestions` for discovery
 
 #### Search Keywords
 - Use semantic descriptions, not code names
@@ -847,13 +847,13 @@ Add these instructions to your global `~/.config/claude/CLAUDE.md` to ensure Mem
 ### Automatic Memory Bank Usage
 When Memory Bank MCP tools are detected, Claude MUST:
 
-1. **ALWAYS START** with `memory/search` using project context
+1. **ALWAYS START** with `memory_search` using project context
 2. **AUTOMATICALLY STORE** all decisions, patterns, and solutions
 3. **PROACTIVELY REFERENCE** existing knowledge in responses
 4. **CONTINUOUSLY UPDATE** memory with new learnings
 
 ### Required Workflow
-1. **Session Start**: Search existing knowledge (`memory/search`)
+1. **Session Start**: Search existing knowledge (`memory_search`)
 2. **Before Implementation**: Check for existing patterns
 3. **During Work**: Document decisions and store solutions
 4. **After Completion**: Store lessons learned and update patterns
@@ -934,12 +934,12 @@ To implement Memory Bank in your projects:
 #### 1. Global Configuration
 - [ ] Add Memory Bank protocol to global `~/.config/claude/CLAUDE.md`
 - [ ] Configure MCP server in Claude Desktop/Code
-- [ ] Test MCP connection with `memory/search`
+- [ ] Test MCP connection with `memory_search`
 
 #### 2. Project Setup
 - [ ] Copy project-specific template to project's `CLAUDE.md`
 - [ ] Customize memory types and tags for project
-- [ ] Initialize project with `project/init`
+- [ ] Initialize project with `project_init`
 - [ ] Document initial architectural decisions
 
 #### 3. Workflow Integration
@@ -1219,7 +1219,7 @@ Example resource access:
 ### MCP Methods (Implemented)
 
 #### Memory Operations
-- **`memory/create`**: Create new memory entry
+- **`memory_create`**: Create new memory entry
   ```json
   {
     "project_id": "proj_123",
@@ -1231,7 +1231,7 @@ Example resource access:
   }
   ```
 
-- **`memory/search`**: Semantic search across memories
+- **`memory_search`**: Semantic search across memories
   ```json
   {
     "query": "authentication patterns",
@@ -1241,7 +1241,7 @@ Example resource access:
   }
   ```
 
-- **`memory/faceted-search`**: Advanced search with facets and filters ✅
+- **`memory_faceted-search`**: Advanced search with facets and filters ✅
   ```json
   {
     "query": "authentication patterns",
@@ -1259,7 +1259,7 @@ Example resource access:
   }
   ```
 
-- **`memory/enhanced-search`**: Enhanced search with relevance scoring ✅
+- **`memory_enhanced-search`**: Enhanced search with relevance scoring ✅
   ```json
   {
     "query": "JWT implementation",
@@ -1270,7 +1270,7 @@ Example resource access:
   }
   ```
 
-- **`memory/search-suggestions`**: Get intelligent search suggestions ✅
+- **`memory_search-suggestions`**: Get intelligent search suggestions ✅
   ```json
   {
     "partial_query": "auth",
@@ -1279,13 +1279,13 @@ Example resource access:
   }
   ```
 
-- **`memory/get`**: Retrieve specific memory by ID
-- **`memory/update`**: Update existing memory entry
-- **`memory/delete`**: Delete memory entry
-- **`memory/list`**: List memories with optional filters
+- **`memory_get`**: Retrieve specific memory by ID
+- **`memory_update`**: Update existing memory entry
+- **`memory_delete`**: Delete memory entry
+- **`memory_list`**: List memories with optional filters
 
 #### Project Operations  
-- **`project/init`**: Initialize new project
+- **`project_init`**: Initialize new project
   ```json
   {
     "name": "My Project",
@@ -1294,16 +1294,16 @@ Example resource access:
   }
   ```
 
-- **`project/get`**: Get project by ID or path
-- **`project/list`**: List all projects
+- **`project_get`**: Get project by ID or path
+- **`project_list`**: List all projects
 
 #### Session Operations ✅
-- **`session/start`**: Start development session
-- **`session/log`**: Log session progress  
-- **`session/complete`**: Complete session
-- **`session/get`**: Get session details
-- **`session/list`**: List sessions with filtering
-- **`session/abort`**: Abort active sessions
+- **`session_start`**: Start development session
+- **`session_log`**: Log session progress  
+- **`session_complete`**: Complete session
+- **`session_get`**: Get session details
+- **`session_list`**: List sessions with filtering
+- **`session_abort`**: Abort active sessions
 
 ### CLI Commands
 - `init`: Initialize project
