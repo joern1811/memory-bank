@@ -7,20 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.8] - 2025-06-21
+
 ### Added
-- Comprehensive development and production workflow targets in Makefile
-- Enhanced MCP configuration documentation with correct paths
-- Project-specific integration guides with dynamic analysis
+- Comprehensive cleanup functionality for regenerating corrupted embeddings
+- Enhanced CLI configuration matching MCP server settings
+- Support for ChromaDB data path configuration and validation
 
 ### Changed
+- Improved ChromaDB collection creation with proper cosine distance configuration
+- Enhanced error handling and progress reporting for cleanup operations
 - Streamlined Memory Bank documentation structure for better navigation
-- Updated MCP tool naming conventions to match actual implementation
-- Enhanced ChromaDB configuration fields documentation
 
 ### Fixed
-- MCP configuration paths in documentation examples
-- Documentation cross-references and navigation
-- Corrected MCP tool naming inconsistencies
+- **CRITICAL**: ChromaDB embedding search functionality completely broken due to database path issues
+- ChromaDB distance metric configuration ensuring proper cosine similarity calculations
+- Test compilation errors with missing ResetEmbeddingFlags method in MockMemoryRepository
+- Memory cleanup and embedding regeneration for corrupted vector data
+- CLI configuration display showing all ChromaDB fields including tenant, database, and data path
 
 ## [1.10.0] - 2025-06-19
 
