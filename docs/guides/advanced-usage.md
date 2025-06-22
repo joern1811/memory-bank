@@ -109,22 +109,23 @@ memory-bank search suggestions "auth" --project my-api --limit 10
 
 #### Suggestion Response
 
-```json
-{
-  "suggestions": [
-    {
-      "query": "authentication middleware patterns",
-      "reason": "Based on 5 related memories",
-      "confidence": 0.9
-    },
-    {
-      "query": "JWT token validation",
-      "reason": "Matches existing code patterns",
-      "confidence": 0.85
-    }
-  ]
-}
+The command returns a simple list of suggested search terms based on your existing memory content:
+
 ```
+Search suggestions for 'auth':
+1. authentication
+2. authorization  
+3. middleware
+4. jwt
+5. token
+6. security
+7. login
+8. oauth
+9. session
+10. verify
+```
+
+Suggestions are ranked by frequency in your existing memories.
 
 ## Advanced Session Management
 
@@ -198,74 +199,65 @@ memory-bank session list \
 
 ## Configuration Management
 
-### Advanced Configuration
+### Environment-Based Configuration
 
-Create environment-specific configurations:
-
-```yaml
-# ~/.memory-bank/config.yaml
-environments:
-  development:
-    database:
-      path: "./dev_memory_bank.db"
-    embedding:
-      provider: "ollama"
-    vector:
-      provider: "mock"  # Faster for development
-    
-  production:
-    database:
-      path: "/data/memory_bank.db"
-    embedding:
-      provider: "ollama"
-      ollama:
-        base_url: "http://ollama-service:11434"
-    vector:
-      provider: "chromadb"
-      chromadb:
-        base_url: "http://chromadb-service:8000"
-        tenant: "production"
-        database: "memory_bank"
-
-# Performance tuning
-performance:
-  embedding:
-    batch_size: 10
-    cache_size: 1000
-    cache_ttl: "1h"
-  
-  vector:
-    max_results: 100
-    timeout: "30s"
-  
-  database:
-    max_connections: 25
-    connection_timeout: "10s"
-
-# Search configuration
-search:
-  default_threshold: 0.7
-  max_results: 50
-  highlight_enabled: true
-  suggestion_limit: 10
-```
-
-### Configuration Validation and Management
+Memory Bank uses environment variables for configuration. Create environment-specific setups:
 
 ```bash
-# Validate configuration
-memory-bank config validate
+# Development environment
+export MEMORY_BANK_DB_PATH="./dev_memory_bank.db"
+export OLLAMA_BASE_URL="http://localhost:11434"
+export CHROMADB_BASE_URL="http://localhost:8000"
+export MEMORY_BANK_LOG_LEVEL="debug"
+
+# Production environment  
+export MEMORY_BANK_DB_PATH="/data/memory_bank.db"
+export OLLAMA_BASE_URL="http://ollama-service:11434"
+export CHROMADB_BASE_URL="http://chromadb-service:8000"
+export MEMORY_BANK_LOG_LEVEL="info"
+```
+
+### Configuration via .env Files
+
+Create environment-specific `.env` files:
+
+```bash
+# .env.development
+MEMORY_BANK_DB_PATH=./dev_memory_bank.db
+OLLAMA_BASE_URL=http://localhost:11434
+CHROMADB_BASE_URL=http://localhost:8000
+MEMORY_BANK_LOG_LEVEL=debug
+
+# .env.production
+MEMORY_BANK_DB_PATH=/data/memory_bank.db
+OLLAMA_BASE_URL=http://ollama-service:11434
+CHROMADB_BASE_URL=http://chromadb-service:8000
+MEMORY_BANK_LOG_LEVEL=info
+```
+
+### Configuration Management Scripts
+
+```bash
+# Load development environment
+load_dev_config() {
+  export $(cat .env.development | grep -v '^#' | xargs)
+  echo "Development configuration loaded"
+}
+
+# Load production environment
+load_prod_config() {
+  export $(cat .env.production | grep -v '^#' | xargs)
+  echo "Production configuration loaded"
+}
 
 # Show current configuration
-memory-bank config show
-
-# Set specific configuration values
-memory-bank config set embedding.provider ollama
-memory-bank config set vector.chromadb.base_url http://localhost:8001
-
-# Environment-specific configuration
-memory-bank --env production config show
-memory-bank --env development session start "Test feature"
+show_config() {
+  echo "Current Memory Bank Configuration:"
+  echo "DB Path: ${MEMORY_BANK_DB_PATH:-./memory_bank.db}"
+  echo "Ollama URL: ${OLLAMA_BASE_URL:-http://localhost:11434}"
+  echo "ChromaDB URL: ${CHROMADB_BASE_URL:-http://localhost:8000}"
+  echo "Log Level: ${MEMORY_BANK_LOG_LEVEL:-info}"
+}
 ```
 
 ## Integration Patterns
@@ -385,168 +377,170 @@ find ./docs -name "*.md" -exec memory-bank memory create \
 memory-bank memory reindex --project my-api --batch-size 20
 ```
 
-#### Connection Pool Configuration
+### Search Performance Tips
 
-```yaml
-performance:
-  ollama:
-    max_connections: 10
-    connection_timeout: "30s"
-    request_timeout: "60s"
-  
-  chromadb:
-    max_connections: 15
-    connection_timeout: "10s"
-    request_timeout: "30s"
-    batch_size: 50
-```
+#### Threshold Optimization
 
-### Search Performance Tuning
-
-#### Cache Configuration
-
-```yaml
-performance:
-  embedding:
-    cache_enabled: true
-    cache_size: 1000        # Number of embeddings to cache
-    cache_ttl: "1h"         # Time to live
-    
-  search:
-    result_cache_enabled: true
-    result_cache_size: 100  # Number of search results to cache
-    result_cache_ttl: "10m"
-```
-
-#### Search Optimization
+Use appropriate similarity thresholds for different use cases:
 
 ```bash
-# Use specific thresholds for different content types
+# High precision for code patterns (fewer, more relevant results)
 memory-bank search "database patterns" \
   --type pattern \
-  --threshold 0.8 \        # Higher precision for code patterns
+  --threshold 0.8 \
   --limit 10
 
+# Lower threshold for general concepts (more comprehensive results)
 memory-bank search "general approach" \
   --type decision \
-  --threshold 0.6 \        # Lower threshold for decisions
+  --threshold 0.6 \
   --limit 20
+
+# Very specific searches (exact matches preferred)
+memory-bank search enhanced "JWT middleware implementation" \
+  --threshold 0.9 \
+  --limit 5
 ```
+
+#### Search Strategy Recommendations
+
+- **Code searches**: Use threshold 0.8+ for precise matches
+- **Decision searches**: Use threshold 0.6-0.7 for broader context
+- **Error solutions**: Use threshold 0.7+ for accurate fixes
+- **Documentation**: Use threshold 0.5-0.6 for comprehensive coverage
 
 ## Data Management and Migration
 
-### Backup and Restore
+### Manual Backup and Restore
+
+Since Memory Bank uses SQLite, you can manually backup and restore the database:
 
 ```bash
-# Create backup
-memory-bank backup create --output memory-bank-$(date +%Y%m%d).backup
+# Create backup by copying SQLite database
+cp "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "memory-bank-$(date +%Y%m%d).db.backup"
 
 # Restore from backup
-memory-bank backup restore --input memory-bank-20240115.backup
+cp "memory-bank-20240115.db.backup" "${MEMORY_BANK_DB_PATH:-./memory_bank.db}"
 
-# Export to different formats
-memory-bank export --format json --output memories.json
-memory-bank export --format csv --output memories.csv --project my-api
+# Export memories to JSON using SQLite
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  ".mode json" \
+  ".output memories.json" \
+  "SELECT * FROM memories;"
+
+# Export specific project
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  ".mode json" \
+  ".output project-memories.json" \
+  "SELECT * FROM memories WHERE project_id = 'my-project';"
 ```
 
 ### Memory Lifecycle Management
 
-#### Automatic Cleanup
+#### Manual Cleanup with SQL
 
 ```bash
-# Archive old memories
-memory-bank memory archive \
-  --older-than "6 months" \
-  --type error_solution \
-  --auto-confirm
+# View old memories (older than 6 months)
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  "SELECT id, title, type, created_at FROM memories 
+   WHERE created_at < datetime('now', '-6 months')
+   ORDER BY created_at;"
 
-# Delete draft memories
-memory-bank memory delete \
-  --tag draft \
-  --older-than "30 days" \
-  --auto-confirm
+# Delete old error solutions manually
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  "DELETE FROM memories 
+   WHERE type = 'error_solution' 
+   AND created_at < datetime('now', '-6 months');"
 
-# Merge duplicate memories
-memory-bank memory deduplicate \
-  --threshold 0.95 \
-  --interactive
+# Find potential duplicates (same title)
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  "SELECT title, COUNT(*) as count FROM memories 
+   GROUP BY title 
+   HAVING count > 1;"
 ```
 
-#### Content Migration
+#### Content Migration with SQL
 
 ```bash
-# Migrate from legacy format
-memory-bank migrate from-legacy \
-  --input legacy-memories.json \
-  --mapping-file migration-map.yaml
-
 # Update memory types
-memory-bank memory update-type \
-  --from "note" \
-  --to "documentation" \
-  --project old-project
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  "UPDATE memories SET type = 'documentation' WHERE type = 'note';"
 
-# Bulk tag update
-memory-bank memory retag \
-  --old-tag "database" \
-  --new-tag "persistence" \
-  --project my-api
+# Bulk tag updates (requires manual editing of tags JSON)
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  "SELECT id, tags FROM memories WHERE tags LIKE '%database%';"
+
+# Update project assignments
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  "UPDATE memories SET project_id = 'new-project' WHERE project_id = 'old-project';"
 ```
 
 ## Monitoring and Analytics
 
-### Usage Analytics
+### Basic Analytics
 
 ```bash
-# Memory usage statistics
-memory-bank stats memory --project my-api --timeframe month
+# View memory count by type
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT type, COUNT(*) FROM memories GROUP BY type;"
 
-# Search analytics
-memory-bank stats search --queries --popular-terms --timeframe week
+# Recent session activity
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT title, status, created_at FROM sessions ORDER BY created_at DESC LIMIT 10;"
 
-# Session productivity metrics
-memory-bank stats sessions --completion-rate --avg-duration --project my-api
+# Project memory distribution
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT project_id, COUNT(*) FROM memories GROUP BY project_id;"
 ```
 
 ### Health Monitoring
 
 ```bash
-# Check system health
-memory-bank health check --verbose
-
-# Service availability
-memory-bank health services --ollama --chromadb --database
-
-# Performance metrics
-memory-bank health performance --embedding-speed --search-speed
+# Check service availability
+check_services() {
+  echo "=== Memory Bank Health Check ==="
+  
+  # Database
+  if [ -f "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" ]; then
+    echo "✓ Database: Available"
+  else
+    echo "✗ Database: Missing"
+  fi
+  
+  # Ollama
+  if curl -s "${OLLAMA_BASE_URL:-http://localhost:11434}/api/tags" >/dev/null 2>&1; then
+    echo "✓ Ollama: Running"
+  else
+    echo "⚠ Ollama: Unavailable (using mock)"
+  fi
+  
+  # ChromaDB
+  if curl -s "${CHROMADB_BASE_URL:-http://localhost:8000}/api/v2/heartbeat" >/dev/null 2>&1; then
+    echo "✓ ChromaDB: Running"
+  else
+    echo "⚠ ChromaDB: Unavailable (using mock)"
+  fi
+}
 ```
 
-### Custom Metrics and Reporting
+### Custom Metrics Scripts
 
-```yaml
-# ~/.memory-bank/metrics.yaml
-custom_metrics:
-  decision_tracking:
-    query: "type:decision created:last_month"
-    alert_threshold: 5
-    description: "Track architectural decisions per month"
+```bash
+# Track decision frequency
+track_decisions() {
+  local timeframe=${1:-"7 days"}
+  echo "Decisions in the last $timeframe:"
   
-  error_resolution_rate:
-    query: "type:error_solution tags:resolved"
-    timeframe: "week"
-    description: "Weekly error resolution tracking"
+  sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+    "SELECT COUNT(*) FROM memories 
+     WHERE type='decision' 
+     AND created_at >= datetime('now', '-$timeframe');"
+}
 
-reporting:
-  daily_summary:
-    enabled: true
-    time: "18:00"
-    include: ["new_memories", "session_completions", "search_activity"]
-  
-  weekly_digest:
-    enabled: true
-    day: "friday"
-    format: "markdown"
-    email: "team@company.com"
+# Weekly activity summary
+weekly_summary() {
+  echo "=== Weekly Memory Bank Summary ==="
+  echo "New memories: $(sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT COUNT(*) FROM memories WHERE created_at >= datetime('now', '-7 days');")"
+  echo "Completed sessions: $(sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT COUNT(*) FROM sessions WHERE status='completed' AND created_at >= datetime('now', '-7 days');")"
+  echo "Active projects: $(sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT COUNT(DISTINCT project_id) FROM memories WHERE created_at >= datetime('now', '-7 days');")"
+}
 ```
 
 ## Advanced Automation
@@ -599,34 +593,52 @@ git log --since="1 week ago" --pretty=format:"%s" | \
 
 ### API and Scripting
 
-#### REST API Wrapper
+#### MCP JSON-RPC Wrapper
 
 ```bash
 #!/bin/bash
-# memory-api.sh - REST API wrapper around Memory Bank
+# memory-mcp.sh - JSON-RPC wrapper for Memory Bank
 
-start_api_server() {
-  memory-bank api server --port 8080 --auth-token $API_TOKEN &
-  echo $! > /tmp/memory-api.pid
-}
-
-# Create memory via API
+# Create memory via MCP
 create_memory() {
-  curl -X POST http://localhost:8080/api/v1/memories \
-    -H "Authorization: Bearer $API_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"type\": \"$1\",
-      \"title\": \"$2\",
-      \"content\": \"$3\",
-      \"tags\": [\"$4\"]
-    }"
+  local type="$1"
+  local title="$2" 
+  local content="$3"
+  local tags="$4"
+  
+  echo "{
+    \"jsonrpc\": \"2.0\",
+    \"id\": 1,
+    \"method\": \"tools/call\",
+    \"params\": {
+      \"name\": \"memory_create\",
+      \"arguments\": {
+        \"type\": \"$type\",
+        \"title\": \"$title\",
+        \"content\": \"$content\",
+        \"tags\": [\"$tags\"]
+      }
+    }
+  }" | memory-bank
 }
 
-# Search via API
+# Search via MCP
 search_memories() {
-  curl -X GET "http://localhost:8080/api/v1/search?q=$1&limit=$2" \
-    -H "Authorization: Bearer $API_TOKEN"
+  local query="$1"
+  local limit="${2:-10}"
+  
+  echo "{
+    \"jsonrpc\": \"2.0\",
+    \"id\": 1,
+    \"method\": \"tools/call\",
+    \"params\": {
+      \"name\": \"memory_search\",
+      \"arguments\": {
+        \"query\": \"$query\",
+        \"limit\": $limit
+      }
+    }
+  }" | memory-bank
 }
 ```
 
@@ -701,13 +713,13 @@ def format_search_results(memories):
 ```bash
 # Enable debug logging
 export MEMORY_BANK_LOG_LEVEL=debug
-memory-bank search "query" --debug
+memory-bank search "query"
 
-# Verbose output for all operations
-memory-bank --verbose memory create --type decision --title "Test"
-
-# Performance profiling
-memory-bank --profile search "complex query" --limit 100
+# Check current configuration
+echo "DB Path: ${MEMORY_BANK_DB_PATH:-./memory_bank.db}"
+echo "Ollama URL: ${OLLAMA_BASE_URL:-http://localhost:11434}"
+echo "ChromaDB URL: ${CHROMADB_BASE_URL:-http://localhost:8000}"
+echo "Log Level: ${MEMORY_BANK_LOG_LEVEL:-info}"
 ```
 
 ### Common Performance Issues
@@ -715,120 +727,107 @@ memory-bank --profile search "complex query" --limit 100
 #### Slow Search Performance
 
 ```bash
-# Check embedding generation time
-memory-bank benchmark embedding --count 10
+# Check if services are running
+curl -s "${OLLAMA_BASE_URL:-http://localhost:11434}/api/tags" > /dev/null && echo "Ollama: OK" || echo "Ollama: ERROR"
+curl -s "${CHROMADB_BASE_URL:-http://localhost:8000}/api/v2/heartbeat" > /dev/null && echo "ChromaDB: OK" || echo "ChromaDB: ERROR"
 
-# Check vector search performance  
-memory-bank benchmark search --queries 50
+# Use higher thresholds for faster searches
+memory-bank search "query" --threshold 0.8 --limit 10
 
-# Optimize search configuration
-memory-bank config set search.default_threshold 0.8  # Higher threshold = faster
-memory-bank config set vector.chromadb.timeout 10s   # Lower timeout
+# Use enhanced search for better relevance
+memory-bank search enhanced "specific query" --threshold 0.7
 ```
 
-#### Memory Usage Optimization
+#### Service Connection Issues
 
 ```bash
-# Monitor memory usage
-memory-bank stats memory-usage --verbose
+# Test Ollama connection
+curl "${OLLAMA_BASE_URL:-http://localhost:11434}/api/tags"
 
-# Clear caches
-memory-bank cache clear --all
+# Test ChromaDB connection  
+curl "${CHROMADB_BASE_URL:-http://localhost:8000}/api/v2/heartbeat"
 
-# Optimize database
-memory-bank database optimize --vacuum --reindex
+# Fall back to mock providers if services unavailable
+# Memory Bank automatically falls back to mock implementations
 ```
 
 ### Advanced Debugging
 
-#### Vector Store Debugging
+#### MCP Protocol Debugging
 
 ```bash
-# Check vector store health
-memory-bank debug vector-store --test-connection --test-operations
+# Test MCP server directly
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | memory-bank
 
-# Validate embeddings
-memory-bank debug embeddings --check-dimensions --check-validity
+# Use MCP Inspector for interactive debugging
+npx @modelcontextprotocol/inspector memory-bank
 
-# Inspect search pipeline
-memory-bank debug search "query" --explain --trace
+# Test specific MCP tools
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "memory_search", "arguments": {"query": "test"}}}' | memory-bank
 ```
 
 #### Database Debugging
 
 ```bash
-# Check database integrity
-memory-bank debug database --check-integrity --check-indexes
+# Check SQLite database
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" ".tables"
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT COUNT(*) FROM memories;"
 
-# Analyze query performance
-memory-bank debug database --explain-queries --slow-query-log
-
-# Database statistics
-memory-bank debug database --stats --table-sizes
+# View recent memories
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" "SELECT title, type, created_at FROM memories ORDER BY created_at DESC LIMIT 5;"
 ```
 
 ## Security and Access Control
 
-### Authentication and Authorization
+### Current Security Model
 
-```yaml
-# security.yaml
-authentication:
-  enabled: true
-  method: "jwt"  # or "api_key", "basic"
-  
-  jwt:
-    secret: "${JWT_SECRET}"
-    expiry: "24h"
-    
-  api_key:
-    header: "X-API-Key"
-    keys:
-      - name: "development"
-        key: "${DEV_API_KEY}"
-        permissions: ["read", "write"]
-      - name: "production"
-        key: "${PROD_API_KEY}"
-        permissions: ["read"]
+Memory Bank operates as a **local development tool** without built-in authentication:
 
-authorization:
-  project_based: true
-  default_permissions: ["read"]
-  
-  roles:
-    admin:
-      permissions: ["read", "write", "delete", "admin"]
-    developer:
-      permissions: ["read", "write"]
-    readonly:
-      permissions: ["read"]
+```bash
+# Security is based on OS-level access control
+# 1. File system permissions control database access
+ls -la "${MEMORY_BANK_DB_PATH:-./memory_bank.db}"
+
+# 2. MCP protocol is designed for local use
+# No network authentication required for Claude Code integration
+
+# 3. Binary permissions
+ls -la $(which memory-bank)
+
+# 4. Local service access only
+echo "Ollama: ${OLLAMA_BASE_URL:-http://localhost:11434}"
+echo "ChromaDB: ${CHROMADB_BASE_URL:-http://localhost:8000}"
 ```
 
-### Data Privacy and Encryption
+**Security Assumptions:**
+- Single-user local environment
+- Trusted local processes only
+- No network exposure required
+- OS-level user authentication sufficient
 
-```yaml
-privacy:
-  encryption:
-    enabled: true
-    algorithm: "AES-256-GCM"
-    key_source: "environment"  # or "file", "vault"
-    
-  data_masking:
-    enabled: true
-    patterns:
-      - type: "email"
-        replacement: "[EMAIL]"
-      - type: "api_key"
-        pattern: "(sk-[a-zA-Z0-9]{32,})"
-        replacement: "[API_KEY]"
-      - type: "password"
-        pattern: "(password|passwd|pwd)[:=]\\s*([^\\s]+)"
-        replacement: "$1: [REDACTED]"
+### Data Privacy Recommendations
 
-audit:
-  enabled: true
-  log_file: "/var/log/memory-bank/audit.log"
-  events: ["create", "update", "delete", "search", "access"]
+Since Memory Bank stores content in plain text SQLite:
+
+```bash
+# Manual data privacy practices
+# 1. Avoid storing sensitive information
+echo "❌ Don't store: passwords, API keys, secrets, tokens"
+echo "✅ Use placeholders: password: '[REDACTED]', api_key: '[HIDDEN]'"
+
+# 2. Review stored content for sensitive data
+sqlite3 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}" \
+  "SELECT title, content FROM memories WHERE 
+   content LIKE '%password%' OR 
+   content LIKE '%secret%' OR 
+   content LIKE '%token%' OR
+   content LIKE '%key%';"
+
+# 3. Secure database file permissions
+chmod 600 "${MEMORY_BANK_DB_PATH:-./memory_bank.db}"
+
+# 4. Secure backup files
+find . -name "*.db.backup" -exec chmod 600 {} \;
 ```
 
-This advanced usage guide provides comprehensive coverage of Memory Bank's sophisticated features, enabling power users to leverage the full potential of the semantic memory management system.
+This advanced usage guide provides comprehensive coverage of Memory Bank's actual features, accurately reflecting the current implementation without fictional security systems.
