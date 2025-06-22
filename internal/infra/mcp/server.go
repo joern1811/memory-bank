@@ -73,6 +73,56 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 
 	mcpServer.AddResource(staticGuideResource, s.handleStaticGuideResource)
 
+	// Register debugging session starter prompt
+	debuggingSessionPrompt := mcp.NewPrompt(
+		"start-debugging-session",
+		mcp.WithPromptDescription("Start a structured debugging session with memory-guided problem solving"),
+		mcp.WithArgument("error_message", 
+			mcp.ArgumentDescription("The error message or problem description you're trying to debug"),
+			mcp.RequiredArgument()),
+		mcp.WithArgument("context", 
+			mcp.ArgumentDescription("Additional context about when/how the error occurs (optional)")),
+	)
+
+	mcpServer.AddPrompt(debuggingSessionPrompt, s.handleStartDebuggingSessionPrompt)
+
+	// Register memory pattern creation prompt
+	memoryPatternPrompt := mcp.NewPrompt(
+		"create-memory-pattern",
+		mcp.WithPromptDescription("Store a reusable code pattern or solution in Memory Bank"),
+		mcp.WithArgument("pattern_name",
+			mcp.ArgumentDescription("Name for the pattern (e.g., 'JWT Authentication Middleware')"),
+			mcp.RequiredArgument()),
+		mcp.WithArgument("pattern_code",
+			mcp.ArgumentDescription("The code or implementation details"),
+			mcp.RequiredArgument()),
+		mcp.WithArgument("use_case",
+			mcp.ArgumentDescription("When and why to use this pattern")),
+	)
+
+	mcpServer.AddPrompt(memoryPatternPrompt, s.handleCreateMemoryPatternPrompt)
+
+	// Register solution search prompt
+	searchSolutionsPrompt := mcp.NewPrompt(
+		"search-solutions",
+		mcp.WithPromptDescription("Find similar solutions and patterns in your Memory Bank"),
+		mcp.WithArgument("problem_description",
+			mcp.ArgumentDescription("Describe the problem or feature you're working on"),
+			mcp.RequiredArgument()),
+		mcp.WithArgument("technology",
+			mcp.ArgumentDescription("Specific technology or framework (optional)")),
+	)
+
+	mcpServer.AddPrompt(searchSolutionsPrompt, s.handleSearchSolutionsPrompt)
+
+	// Register session review prompt
+	sessionReviewPrompt := mcp.NewPrompt(
+		"session-review",
+		mcp.WithPromptDescription("Review your current development session and get guidance on next steps"),
+	)
+
+	mcpServer.AddPrompt(sessionReviewPrompt, s.handleSessionReviewPrompt)
+
 	// Register Memory operations as tools
 	mcpServer.AddTool(mcp.NewTool("memory_create",
 		mcp.WithDescription("Create a new memory entry"),
@@ -3050,4 +3100,182 @@ Use sessions for:
 ---
 
 *For dynamic, project-specific integration guides, use the guide://memory-bank/project-setup resource.*`
+}
+
+// handleStartDebuggingSessionPrompt handles the debugging session starter prompt
+func (s *MemoryBankServer) handleStartDebuggingSessionPrompt(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	s.logger.Debug("Handling start debugging session prompt request")
+
+	errorMessage := request.Params.Arguments["error_message"]
+	context := request.Params.Arguments["context"]
+
+	// Build the conversation starter
+	promptText := fmt.Sprintf(`I need help debugging this issue:
+
+**Error:** %s`, errorMessage)
+
+	if context != "" {
+		promptText += fmt.Sprintf(`
+
+**Context:** %s`, context)
+	}
+
+	promptText += `
+
+Please help me:
+1. Search for similar errors in my Memory Bank
+2. Start a debugging session to track our progress
+3. Guide me through a systematic debugging process
+4. Document any solutions we find for future reference
+
+Let's start by searching for similar issues and then create a debugging session.`
+
+	result := &mcp.GetPromptResult{
+		Description: "Start a structured debugging session with memory-guided problem solving",
+		Messages: []mcp.PromptMessage{
+			{
+				Role: mcp.RoleUser,
+				Content: mcp.TextContent{
+					Type: "text",
+					Text: promptText,
+				},
+			},
+		},
+	}
+
+	s.logger.Info("Start debugging session prompt generated successfully")
+	return result, nil
+}
+
+// handleCreateMemoryPatternPrompt handles the create memory pattern prompt
+func (s *MemoryBankServer) handleCreateMemoryPatternPrompt(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	s.logger.Debug("Handling create memory pattern prompt request")
+
+	patternName := request.Params.Arguments["pattern_name"]
+	patternCode := request.Params.Arguments["pattern_code"]
+	useCase := request.Params.Arguments["use_case"]
+
+	promptText := fmt.Sprintf(`I want to store this code pattern in my Memory Bank:
+
+**Pattern Name:** %s
+
+**Code/Implementation:**
+` + "```" + `
+%s
+` + "```", patternName, patternCode)
+
+	if useCase != "" {
+		promptText += fmt.Sprintf(`
+
+**Use Case:** %s`, useCase)
+	}
+
+	promptText += `
+
+Please help me:
+1. Store this pattern in Memory Bank with appropriate tags
+2. Suggest related patterns that might exist
+3. Recommend when and how to use this pattern
+4. Add it to my project's pattern library
+
+Let's create this memory entry and organize it properly.`
+
+	result := &mcp.GetPromptResult{
+		Description: "Store a reusable code pattern or solution in Memory Bank",
+		Messages: []mcp.PromptMessage{
+			{
+				Role: mcp.RoleUser,
+				Content: mcp.TextContent{
+					Type: "text",
+					Text: promptText,
+				},
+			},
+		},
+	}
+
+	s.logger.Info("Create memory pattern prompt generated successfully")
+	return result, nil
+}
+
+// handleSearchSolutionsPrompt handles the search solutions prompt
+func (s *MemoryBankServer) handleSearchSolutionsPrompt(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	s.logger.Debug("Handling search solutions prompt request")
+
+	problemDescription := request.Params.Arguments["problem_description"]
+	technology := request.Params.Arguments["technology"]
+
+	promptText := fmt.Sprintf(`I'm working on this problem and need to find relevant solutions or patterns:
+
+**Problem/Feature:** %s`, problemDescription)
+
+	if technology != "" {
+		promptText += fmt.Sprintf(`
+**Technology:** %s`, technology)
+	}
+
+	promptText += `
+
+Please help me:
+1. Search my Memory Bank for similar problems and solutions
+2. Find relevant code patterns that might apply
+3. Look for architectural decisions that relate to this
+4. Suggest implementation approaches based on what we find
+
+Let's start by searching for related memories and patterns.`
+
+	result := &mcp.GetPromptResult{
+		Description: "Find similar solutions and patterns in your Memory Bank",
+		Messages: []mcp.PromptMessage{
+			{
+				Role: mcp.RoleUser,
+				Content: mcp.TextContent{
+					Type: "text",
+					Text: promptText,
+				},
+			},
+		},
+	}
+
+	s.logger.Info("Search solutions prompt generated successfully")
+	return result, nil
+}
+
+// handleSessionReviewPrompt handles the session review prompt
+func (s *MemoryBankServer) handleSessionReviewPrompt(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	s.logger.Debug("Handling session review prompt request")
+
+	promptText := `I'd like to review my current development session and get guidance on next steps.
+
+Please help me:
+1. Review my active development session and recent progress
+2. Analyze what I've accomplished so far
+3. Identify any patterns or decisions I should document
+4. Suggest logical next steps based on my current work
+5. Recommend what memories I should create from this session
+
+Let's look at my session history and plan the next phase of development.`
+
+	result := &mcp.GetPromptResult{
+		Description: "Review your current development session and get guidance on next steps",
+		Messages: []mcp.PromptMessage{
+			{
+				Role: mcp.RoleUser,
+				Content: mcp.TextContent{
+					Type: "text",
+					Text: promptText,
+				},
+			},
+		},
+	}
+
+	s.logger.Info("Session review prompt generated successfully")
+	return result, nil
+}
+
+// Helper function for min operation
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
