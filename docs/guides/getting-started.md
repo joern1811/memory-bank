@@ -360,7 +360,7 @@ curl http://localhost:11434/api/tags
 docker run -p 8000:8000 chromadb/chroma
 
 # Verify it's running
-curl http://localhost:8000/api/v1/heartbeat
+curl http://localhost:8000/api/v2/heartbeat
 ```
 
 Memory Bank will automatically detect and use these services when available, with graceful fallback to mock providers.
@@ -470,7 +470,7 @@ memory-bank config set embedding.provider mock
 **Vector search returning no results:**
 ```bash
 # Check ChromaDB connection
-curl http://localhost:8000/api/v1/heartbeat
+curl http://localhost:8000/api/v2/heartbeat
 
 # Lower search threshold
 memory-bank search "query" --threshold 0.3

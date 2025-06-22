@@ -375,7 +375,7 @@ runner.Run(t, "TestName", func(t *testing.T, ctx context.Context, embedding port
 #### "ChromaDB connection failed"
 - **Check**: Is ChromaDB running on correct port?
   ```bash
-  curl http://localhost:8000/api/v1/heartbeat
+  curl http://localhost:8000/api/v2/heartbeat
   ```
 - **Solution**: Start ChromaDB or run tests with mocks only
 
