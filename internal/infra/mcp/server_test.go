@@ -12,7 +12,7 @@ func TestNewMemoryBankServer(t *testing.T) {
 	logger.SetLevel(logrus.ErrorLevel)
 
 	// Create server with nil services (just testing constructor)
-	server := NewMemoryBankServer(nil, nil, nil, logger)
+	server := NewMemoryBankServer(nil, nil, nil, nil, logger)
 
 	if server == nil {
 		t.Fatal("Expected non-nil server")

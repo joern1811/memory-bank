@@ -23,6 +23,7 @@ type MemoryBankServer struct {
 	memoryService  ports.MemoryService
 	projectService ports.ProjectService
 	sessionService ports.SessionService
+	taskService    ports.TaskService
 	logger         *logrus.Logger
 }
 
@@ -31,12 +32,14 @@ func NewMemoryBankServer(
 	memoryService ports.MemoryService,
 	projectService ports.ProjectService,
 	sessionService ports.SessionService,
+	taskService ports.TaskService,
 	logger *logrus.Logger,
 ) *MemoryBankServer {
 	return &MemoryBankServer{
 		memoryService:  memoryService,
 		projectService: projectService,
 		sessionService: sessionService,
+		taskService:    taskService,
 		logger:         logger,
 	}
 }
@@ -72,6 +75,34 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	)
 
 	mcpServer.AddResource(staticGuideResource, s.handleStaticGuideResource)
+
+	// Register documentation sync resources
+	gitHookResource := mcp.NewResource(
+		"script://memory-bank/git-hooks/pre-commit",
+		"Documentation Sync Pre-commit Hook",
+		mcp.WithResourceDescription("Dynamic pre-commit git hook script for documentation synchronization"),
+		mcp.WithMIMEType("text/x-shellscript"),
+	)
+
+	mcpServer.AddResource(gitHookResource, s.handleGitHookResource)
+
+	setupScriptResource := mcp.NewResource(
+		"script://memory-bank/setup/documentation-sync",
+		"Documentation Sync Setup Script",
+		mcp.WithResourceDescription("Setup script for installing documentation sync automation"),
+		mcp.WithMIMEType("text/x-shellscript"),
+	)
+
+	mcpServer.AddResource(setupScriptResource, s.handleSetupScriptResource)
+
+	configTemplateResource := mcp.NewResource(
+		"template://memory-bank/config/documentation-sync",
+		"Documentation Sync Configuration Template",
+		mcp.WithResourceDescription("Project-specific configuration template for documentation sync"),
+		mcp.WithMIMEType("text/yaml"),
+	)
+
+	mcpServer.AddResource(configTemplateResource, s.handleConfigTemplateResource)
 
 	// Register debugging session starter prompt
 	debuggingSessionPrompt := mcp.NewPrompt(
@@ -122,6 +153,45 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	)
 
 	mcpServer.AddPrompt(sessionReviewPrompt, s.handleSessionReviewPrompt)
+
+	// Register documentation sync tools
+	mcpServer.AddTool(mcp.NewTool("doc_analyze_changes",
+		mcp.WithDescription("Analyze code changes and suggest documentation updates"),
+		mcp.WithArray("changed_files", mcp.Description("List of changed file paths"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID")),
+		mcp.WithString("change_context", mcp.Description("Context about the changes (commit message, PR description, etc.)")),
+	), s.handleDocAnalyzeChangesTool)
+
+	mcpServer.AddTool(mcp.NewTool("doc_suggest_updates",
+		mcp.WithDescription("Get intelligent suggestions for documentation updates based on change type"),
+		mcp.WithString("change_type", mcp.Description("Type of change (api, cli, config, database, build)"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID")),
+		mcp.WithString("component", mcp.Description("Specific component or module affected")),
+	), s.handleDocSuggestUpdatesTool)
+
+	mcpServer.AddTool(mcp.NewTool("doc_create_mapping",
+		mcp.WithDescription("Create or update a code-to-documentation mapping"),
+		mcp.WithString("code_pattern", mcp.Description("Code file pattern or component name"), mcp.Required()),
+		mcp.WithArray("documentation_files", mcp.Description("Documentation files that should be updated"), mcp.Required()),
+		mcp.WithString("change_type", mcp.Description("Type of changes that trigger this mapping"), mcp.Required()),
+		mcp.WithString("priority", mcp.Description("Priority level (high, medium, low)")),
+		mcp.WithString("project_id", mcp.Description("Project ID")),
+	), s.handleDocCreateMappingTool)
+
+	mcpServer.AddTool(mcp.NewTool("doc_setup_automation",
+		mcp.WithDescription("Generate and install git hooks for automated documentation checks"),
+		mcp.WithString("project_path", mcp.Description("Project root path"), mcp.Required()),
+		mcp.WithBoolean("interactive", mcp.Description("Enable interactive prompts in hooks")),
+		mcp.WithBoolean("install_hooks", mcp.Description("Actually install the hooks (default: false, just generate)")),
+		mcp.WithString("project_id", mcp.Description("Project ID")),
+	), s.handleDocSetupAutomationTool)
+
+	mcpServer.AddTool(mcp.NewTool("doc_validate_consistency",
+		mcp.WithDescription("Validate documentation consistency with current codebase"),
+		mcp.WithString("project_path", mcp.Description("Project root path"), mcp.Required()),
+		mcp.WithString("project_id", mcp.Description("Project ID")),
+		mcp.WithArray("focus_areas", mcp.Description("Specific areas to validate (api, cli, config, etc.)")),
+	), s.handleDocValidateConsistencyTool)
 
 	// Register Memory operations as tools
 	mcpServer.AddTool(mcp.NewTool("memory_create",
@@ -216,6 +286,22 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithDescription("List all projects"),
 	), s.handleListProjectsTool)
 
+	mcpServer.AddTool(mcp.NewTool("project_delete",
+		mcp.WithDescription("Delete a project and all its associated memories"),
+		mcp.WithString("id", mcp.Description("Project ID")),
+		mcp.WithString("path", mcp.Description("Project path")),
+		mcp.WithBoolean("confirm", mcp.Description("Confirmation flag to prevent accidental deletion"), mcp.Required()),
+	), s.handleDeleteProjectTool)
+
+	mcpServer.AddTool(mcp.NewTool("project_update",
+		mcp.WithDescription("Update project information"),
+		mcp.WithString("id", mcp.Description("Project ID")),
+		mcp.WithString("path", mcp.Description("Project path")),
+		mcp.WithString("name", mcp.Description("New project name")),
+		mcp.WithString("description", mcp.Description("New project description")),
+		mcp.WithString("new_path", mcp.Description("New project path")),
+	), s.handleUpdateProjectTool)
+
 	// Register Session operations
 	mcpServer.AddTool(mcp.NewTool("session_start",
 		mcp.WithDescription("Start a new development session"),
@@ -255,6 +341,96 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
 		mcp.WithString("session_id", mcp.Description("Specific session ID to abort")),
 	), s.handleAbortSessionTool)
+
+	// Register Task operations as tools
+	mcpServer.AddTool(mcp.NewTool("task_create",
+		mcp.WithDescription("Create a new task"),
+		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
+		mcp.WithString("title", mcp.Description("Task title"), mcp.Required()),
+		mcp.WithString("description", mcp.Description("Task description"), mcp.Required()),
+		mcp.WithString("priority", mcp.Description("Task priority (low, medium, high, urgent)")),
+		mcp.WithString("due_date", mcp.Description("Due date (ISO 8601 format)")),
+		mcp.WithString("assignee", mcp.Description("Assignee username")),
+		mcp.WithNumber("estimated_hours", mcp.Description("Estimated hours to complete")),
+		mcp.WithString("parent_task", mcp.Description("Parent task ID for subtasks")),
+		mcp.WithArray("dependencies", mcp.Description("Task dependency IDs")),
+		mcp.WithArray("tags", mcp.Description("Task tags")),
+	), s.handleCreateTaskTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_get",
+		mcp.WithDescription("Get a specific task by ID"),
+		mcp.WithString("id", mcp.Description("Task ID"), mcp.Required()),
+	), s.handleGetTaskTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_update",
+		mcp.WithDescription("Update an existing task"),
+		mcp.WithString("id", mcp.Description("Task ID"), mcp.Required()),
+		mcp.WithString("title", mcp.Description("New title")),
+		mcp.WithString("description", mcp.Description("New description")),
+		mcp.WithString("status", mcp.Description("New status (todo, in_progress, done, blocked)")),
+		mcp.WithString("priority", mcp.Description("New priority (low, medium, high, urgent)")),
+		mcp.WithString("due_date", mcp.Description("Due date (ISO 8601 format)")),
+		mcp.WithBoolean("clear_due_date", mcp.Description("Clear the due date")),
+		mcp.WithString("assignee", mcp.Description("Assignee username")),
+		mcp.WithNumber("estimated_hours", mcp.Description("Estimated hours")),
+		mcp.WithNumber("actual_hours", mcp.Description("Actual hours spent")),
+		mcp.WithArray("tags", mcp.Description("Task tags")),
+	), s.handleUpdateTaskTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_delete",
+		mcp.WithDescription("Delete a task"),
+		mcp.WithString("id", mcp.Description("Task ID"), mcp.Required()),
+	), s.handleDeleteTaskTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_list",
+		mcp.WithDescription("List tasks with filters"),
+		mcp.WithString("project_id", mcp.Description("Project ID to filter by")),
+		mcp.WithString("status", mcp.Description("Status to filter by")),
+		mcp.WithString("priority", mcp.Description("Priority to filter by")),
+		mcp.WithString("assignee", mcp.Description("Assignee to filter by")),
+		mcp.WithString("due_before", mcp.Description("Due before date (ISO 8601)")),
+		mcp.WithString("due_after", mcp.Description("Due after date (ISO 8601)")),
+		mcp.WithBoolean("is_overdue", mcp.Description("Filter overdue tasks")),
+		mcp.WithString("parent_task", mcp.Description("Parent task ID for subtasks")),
+		mcp.WithArray("tags", mcp.Description("Tags to filter by")),
+		mcp.WithNumber("limit", mcp.Description("Maximum number of results")),
+		mcp.WithString("sort_by", mcp.Description("Sort by field (priority, due_date, created_at, updated_at, title)")),
+		mcp.WithString("sort_order", mcp.Description("Sort order (asc, desc)")),
+	), s.handleListTasksTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_add_dependency",
+		mcp.WithDescription("Add a dependency to a task"),
+		mcp.WithString("task_id", mcp.Description("Task ID"), mcp.Required()),
+		mcp.WithString("dependency_id", mcp.Description("Dependency task ID"), mcp.Required()),
+	), s.handleAddTaskDependencyTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_remove_dependency",
+		mcp.WithDescription("Remove a dependency from a task"),
+		mcp.WithString("task_id", mcp.Description("Task ID"), mcp.Required()),
+		mcp.WithString("dependency_id", mcp.Description("Dependency task ID"), mcp.Required()),
+	), s.handleRemoveTaskDependencyTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_add_subtask",
+		mcp.WithDescription("Add a subtask to a parent task"),
+		mcp.WithString("parent_id", mcp.Description("Parent task ID"), mcp.Required()),
+		mcp.WithString("subtask_id", mcp.Description("Subtask ID"), mcp.Required()),
+	), s.handleAddSubtaskTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_remove_subtask",
+		mcp.WithDescription("Remove a subtask from a parent task"),
+		mcp.WithString("parent_id", mcp.Description("Parent task ID"), mcp.Required()),
+		mcp.WithString("subtask_id", mcp.Description("Subtask ID"), mcp.Required()),
+	), s.handleRemoveSubtaskTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_statistics",
+		mcp.WithDescription("Get task statistics for a project"),
+		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
+	), s.handleTaskStatisticsTool)
+
+	mcpServer.AddTool(mcp.NewTool("task_efficiency_report",
+		mcp.WithDescription("Get task efficiency report for a project"),
+		mcp.WithString("project_id", mcp.Description("Project ID"), mcp.Required()),
+	), s.handleTaskEfficiencyReportTool)
 
 	// Version tool
 	mcpServer.AddTool(mcp.NewTool("version",
@@ -819,6 +995,170 @@ func (s *MemoryBankServer) handleGetProject(ctx context.Context, params json.Raw
 	}
 
 	s.logger.WithField("project_id", project.ID).Info("Project retrieved successfully")
+	return response, nil
+}
+
+// DeleteProjectRequest represents a request to delete a project
+type DeleteProjectRequest struct {
+	ID      *string `json:"id,omitempty"`
+	Path    *string `json:"path,omitempty"`
+	Confirm bool    `json:"confirm"`
+}
+
+// DeleteProjectResponse represents the response from deleting a project
+type DeleteProjectResponse struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Message string `json:"message"`
+}
+
+func (s *MemoryBankServer) handleDeleteProject(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling project/delete request")
+
+	var req DeleteProjectRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	if !req.Confirm {
+		return nil, fmt.Errorf("deletion not confirmed: set confirm=true to proceed")
+	}
+
+	// Get project first to validate it exists and get info for response
+	var project *domain.Project
+	var err error
+
+	if req.ID != nil {
+		projectID := domain.ProjectID(*req.ID)
+		project, err = s.projectService.GetProject(ctx, projectID)
+	} else if req.Path != nil {
+		project, err = s.projectService.GetProjectByPath(ctx, *req.Path)
+	} else {
+		return nil, fmt.Errorf("either id or path is required")
+	}
+
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to get project for deletion")
+		return nil, fmt.Errorf("project not found: %w", err)
+	}
+
+	// Delete the project
+	err = s.projectService.DeleteProject(ctx, project.ID)
+	if err != nil {
+		s.logger.WithError(err).WithField("project_id", project.ID).Error("Failed to delete project")
+		return nil, fmt.Errorf("failed to delete project: %w", err)
+	}
+
+	response := DeleteProjectResponse{
+		ID:      string(project.ID),
+		Name:    project.Name,
+		Path:    project.Path,
+		Message: fmt.Sprintf("Project '%s' and all its memories deleted successfully", project.Name),
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"project_id": project.ID,
+		"name":       project.Name,
+		"path":       project.Path,
+	}).Info("Project deleted successfully")
+
+	return response, nil
+}
+
+// UpdateProjectRequest represents a request to update a project
+type UpdateProjectRequest struct {
+	ID          *string `json:"id,omitempty"`
+	Path        *string `json:"path,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+	NewPath     *string `json:"new_path,omitempty"`
+}
+
+// UpdateProjectResponse represents the response from updating a project
+type UpdateProjectResponse struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Description string `json:"description"`
+	Message     string `json:"message"`
+}
+
+func (s *MemoryBankServer) handleUpdateProject(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	s.logger.Debug("Handling project/update request")
+
+	var req UpdateProjectRequest
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid request parameters: %w", err)
+	}
+
+	// Get project first to validate it exists
+	var project *domain.Project
+	var err error
+
+	if req.ID != nil {
+		projectID := domain.ProjectID(*req.ID)
+		project, err = s.projectService.GetProject(ctx, projectID)
+	} else if req.Path != nil {
+		project, err = s.projectService.GetProjectByPath(ctx, *req.Path)
+	} else {
+		return nil, fmt.Errorf("either id or path is required")
+	}
+
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to get project for update")
+		return nil, fmt.Errorf("project not found: %w", err)
+	}
+
+	// Check if any update fields were provided
+	if req.Name == nil && req.Description == nil && req.NewPath == nil {
+		return nil, fmt.Errorf("at least one field must be specified to update (name, description, or new_path)")
+	}
+
+	// Track what changed for logging
+	var changes []string
+
+	// Update fields if provided
+	if req.Name != nil && *req.Name != project.Name {
+		project.Name = *req.Name
+		changes = append(changes, "name")
+	}
+	if req.Description != nil && *req.Description != project.Description {
+		project.Description = *req.Description
+		changes = append(changes, "description")
+	}
+	if req.NewPath != nil && *req.NewPath != project.Path {
+		project.Path = *req.NewPath
+		changes = append(changes, "path")
+	}
+
+	// Only update if there are actual changes
+	if len(changes) == 0 {
+		return nil, fmt.Errorf("no changes detected")
+	}
+
+	// Update the project
+	err = s.projectService.UpdateProject(ctx, project)
+	if err != nil {
+		s.logger.WithError(err).WithField("project_id", project.ID).Error("Failed to update project")
+		return nil, fmt.Errorf("failed to update project: %w", err)
+	}
+
+	response := UpdateProjectResponse{
+		ID:          string(project.ID),
+		Name:        project.Name,
+		Path:        project.Path,
+		Description: project.Description,
+		Message:     fmt.Sprintf("Project '%s' updated successfully (%s)", project.Name, strings.Join(changes, ", ")),
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"project_id": project.ID,
+		"name":       project.Name,
+		"path":       project.Path,
+		"changes":    changes,
+	}).Info("Project updated successfully")
+
 	return response, nil
 }
 
@@ -1837,6 +2177,14 @@ func (s *MemoryBankServer) handleInitProjectTool(ctx context.Context, request mc
 
 func (s *MemoryBankServer) handleGetProjectTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return s.wrapHandler(ctx, request, s.handleGetProject)
+}
+
+func (s *MemoryBankServer) handleDeleteProjectTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleDeleteProject)
+}
+
+func (s *MemoryBankServer) handleUpdateProjectTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return s.wrapHandler(ctx, request, s.handleUpdateProject)
 }
 
 func (s *MemoryBankServer) handleListProjectsTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -3270,6 +3618,339 @@ Let's look at my session history and plan the next phase of development.`
 
 	s.logger.Info("Session review prompt generated successfully")
 	return result, nil
+}
+
+// Documentation Sync Tool Handlers
+
+// handleDocAnalyzeChangesTool analyzes code changes and suggests documentation updates
+func (s *MemoryBankServer) handleDocAnalyzeChangesTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Debug("Handling doc_analyze_changes tool request")
+
+	// Extract arguments directly - request.Params.Arguments should be a map[string]interface{}
+	arguments, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Invalid arguments format",
+				},
+			},
+		}, nil
+	}
+
+	changedFiles, _ := arguments["changed_files"].([]interface{})
+	projectID, _ := arguments["project_id"].(string)
+	changeContext, _ := arguments["change_context"].(string)
+
+	if len(changedFiles) == 0 {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "No changed files provided for analysis.",
+				},
+			},
+		}, nil
+	}
+
+	// Convert interface{} slice to string slice
+	files := make([]string, len(changedFiles))
+	for i, f := range changedFiles {
+		if str, ok := f.(string); ok {
+			files[i] = str
+		}
+	}
+
+	// Classify changes
+	changeTypes := s.classifyFileChanges(files)
+	
+	// Search Memory Bank for relevant documentation mappings
+	mappings := s.searchDocumentationMappings(ctx, changeTypes, projectID)
+	
+	// Generate analysis report
+	analysis := s.generateChangeAnalysis(files, changeTypes, mappings, changeContext)
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: analysis,
+			},
+		},
+	}, nil
+}
+
+// handleDocSuggestUpdatesTool provides intelligent documentation update suggestions
+func (s *MemoryBankServer) handleDocSuggestUpdatesTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Debug("Handling doc_suggest_updates tool request")
+
+	arguments, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Invalid arguments format",
+				},
+			},
+		}, nil
+	}
+
+	changeType, _ := arguments["change_type"].(string)
+	projectID, _ := arguments["project_id"].(string)
+	component, _ := arguments["component"].(string)
+
+	if changeType == "" {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Change type is required for documentation suggestions.",
+				},
+			},
+		}, nil
+	}
+
+	// Search for relevant templates and patterns
+	suggestions := s.generateDocumentationSuggestions(ctx, changeType, component, projectID)
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: suggestions,
+			},
+		},
+	}, nil
+}
+
+// handleDocCreateMappingTool creates documentation mappings
+func (s *MemoryBankServer) handleDocCreateMappingTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Debug("Handling doc_create_mapping tool request")
+
+	arguments, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Invalid arguments format",
+				},
+			},
+		}, nil
+	}
+
+	codePattern, _ := arguments["code_pattern"].(string)
+	docFilesInterface, _ := arguments["documentation_files"].([]interface{})
+	changeType, _ := arguments["change_type"].(string)
+	priority, _ := arguments["priority"].(string)
+	projectID, _ := arguments["project_id"].(string)
+
+	if codePattern == "" || len(docFilesInterface) == 0 || changeType == "" {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Code pattern, documentation files, and change type are required.",
+				},
+			},
+		}, nil
+	}
+
+	// Convert documentation files
+	docFiles := make([]string, len(docFilesInterface))
+	for i, f := range docFilesInterface {
+		if str, ok := f.(string); ok {
+			docFiles[i] = str
+		}
+	}
+
+	if priority == "" {
+		priority = "medium"
+	}
+
+	// Create the mapping memory
+	mappingContent := fmt.Sprintf("Code Pattern: %s\nChange Type: %s\nPriority: %s\nDocumentation Files: %s",
+		codePattern, changeType, priority, strings.Join(docFiles, ", "))
+
+	projectIDDomain := domain.ProjectID(projectID)
+	memoryType := domain.MemoryType("doc_mapping")
+	
+	memoryRequest := ports.CreateMemoryRequest{
+		ProjectID: projectIDDomain,
+		Type:      memoryType,
+		Title:     fmt.Sprintf("Documentation mapping: %s → %s", codePattern, changeType),
+		Content:   mappingContent,
+		Tags:      domain.Tags{"mapping", changeType, priority},
+	}
+
+	memory, err := s.memoryService.CreateMemory(ctx, memoryRequest)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to create documentation mapping")
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Failed to create documentation mapping: %v", err),
+				},
+			},
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Documentation mapping created successfully (ID: %s)\nCode Pattern: %s\nChange Type: %s\nDocumentation Files: %s",
+					string(memory.ID), codePattern, changeType, strings.Join(docFiles, ", ")),
+			},
+		},
+	}, nil
+}
+
+// handleDocSetupAutomationTool generates and optionally installs git hooks
+func (s *MemoryBankServer) handleDocSetupAutomationTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Debug("Handling doc_setup_automation tool request")
+
+	arguments, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Invalid arguments format",
+				},
+			},
+		}, nil
+	}
+
+	projectPath, _ := arguments["project_path"].(string)
+	interactive, _ := arguments["interactive"].(bool)
+	installHooks, _ := arguments["install_hooks"].(bool)
+	projectID, _ := arguments["project_id"].(string)
+
+	if projectPath == "" {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Project path is required for automation setup.",
+				},
+			},
+		}, nil
+	}
+
+	// Generate setup instructions and scripts
+	setupGuide := s.generateSetupAutomation(projectPath, interactive, installHooks, projectID)
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: setupGuide,
+			},
+		},
+	}, nil
+}
+
+// handleDocValidateConsistencyTool validates documentation consistency
+func (s *MemoryBankServer) handleDocValidateConsistencyTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	s.logger.Debug("Handling doc_validate_consistency tool request")
+
+	arguments, ok := request.Params.Arguments.(map[string]interface{})
+	if !ok {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Invalid arguments format",
+				},
+			},
+		}, nil
+	}
+
+	projectPath, _ := arguments["project_path"].(string)
+	projectID, _ := arguments["project_id"].(string)
+	focusAreasInterface, _ := arguments["focus_areas"].([]interface{})
+
+	if projectPath == "" {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Project path is required for consistency validation.",
+				},
+			},
+		}, nil
+	}
+
+	// Convert focus areas
+	var focusAreas []string
+	for _, area := range focusAreasInterface {
+		if str, ok := area.(string); ok {
+			focusAreas = append(focusAreas, str)
+		}
+	}
+
+	// Perform validation
+	validationReport := s.validateDocumentationConsistency(ctx, projectPath, projectID, focusAreas)
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: validationReport,
+			},
+		},
+	}, nil
+}
+
+// Documentation Sync Resource Handlers
+
+// handleGitHookResource generates dynamic git hook scripts
+func (s *MemoryBankServer) handleGitHookResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	s.logger.Debug("Handling git hook resource request")
+
+	hookScript := s.generateGitHookScript()
+
+	return []mcp.ResourceContents{
+		mcp.TextResourceContents{
+			URI:      request.Params.URI,
+			MIMEType: "text/x-shellscript",
+			Text:     hookScript,
+		},
+	}, nil
+}
+
+// handleSetupScriptResource generates setup script
+func (s *MemoryBankServer) handleSetupScriptResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	s.logger.Debug("Handling setup script resource request")
+
+	setupScript := s.generateSetupScript()
+
+	return []mcp.ResourceContents{
+		mcp.TextResourceContents{
+			URI:      request.Params.URI,
+			MIMEType: "text/x-shellscript",
+			Text:     setupScript,
+		},
+	}, nil
+}
+
+// handleConfigTemplateResource generates configuration template
+func (s *MemoryBankServer) handleConfigTemplateResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	s.logger.Debug("Handling config template resource request")
+
+	configTemplate := s.generateConfigTemplate()
+
+	return []mcp.ResourceContents{
+		mcp.TextResourceContents{
+			URI:      request.Params.URI,
+			MIMEType: "text/yaml",
+			Text:     configTemplate,
+		},
+	}, nil
 }
 
 // Helper function for min operation
