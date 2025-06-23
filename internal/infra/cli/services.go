@@ -21,6 +21,7 @@ type ServiceContainer struct {
 	MemoryService  *app.MemoryService
 	ProjectService *app.ProjectService
 	SessionService *app.SessionService
+	TaskService    ports.TaskService
 	Logger         *logrus.Logger
 	Config         *config.Config
 }
@@ -135,11 +136,13 @@ func NewServiceContainerWithOptions(configPath string, quiet bool) (*ServiceCont
 	memoryService := app.NewMemoryService(memoryRepo, embeddingProvider, vectorStore, logger)
 	projectService := app.NewProjectService(projectRepo, logger)
 	sessionService := app.NewSessionService(sessionRepo, projectRepo, logger)
+	taskService := app.NewTaskService(memoryService, logger)
 
 	return &ServiceContainer{
 		MemoryService:  memoryService,
 		ProjectService: projectService,
 		SessionService: sessionService,
+		TaskService:    taskService,
 		Logger:         logger,
 		Config:         cfg,
 	}, nil
