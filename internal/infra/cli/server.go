@@ -129,10 +129,11 @@ func runMCPServer(ctx context.Context, logger *logrus.Logger) error {
 	memoryService := app.NewMemoryService(memoryRepo, embeddingProvider, vectorStore, logger)
 	projectService := app.NewProjectService(projectRepo, logger)
 	sessionService := app.NewSessionService(sessionRepo, projectRepo, logger)
+	taskService := app.NewTaskService(memoryService, logger)
 
 	// Initialize MCP server
 	mcpServer := server.NewMCPServer("memory-bank", serverVersion)
-	memoryBankServer := mcp.NewMemoryBankServer(memoryService, projectService, sessionService, logger)
+	memoryBankServer := mcp.NewMemoryBankServer(memoryService, projectService, sessionService, taskService, logger)
 	memoryBankServer.RegisterMethods(mcpServer)
 
 	logger.Info("Memory Bank MCP Server started successfully")
