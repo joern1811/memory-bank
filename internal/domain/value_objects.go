@@ -19,6 +19,26 @@ const (
 	SessionStatusPaused    SessionStatus = "paused"
 )
 
+// TaskStatus represents the status of a task
+type TaskStatus string
+
+const (
+	TaskStatusTodo       TaskStatus = "todo"
+	TaskStatusInProgress TaskStatus = "in_progress"
+	TaskStatusDone       TaskStatus = "done"
+	TaskStatusBlocked    TaskStatus = "blocked"
+)
+
+// Priority represents the priority level of a task
+type Priority string
+
+const (
+	PriorityLow    Priority = "low"
+	PriorityMedium Priority = "medium"
+	PriorityHigh   Priority = "high"
+	PriorityUrgent Priority = "urgent"
+)
+
 // ProgressEntry represents a single progress entry in a session
 type ProgressEntry struct {
 	Timestamp string `json:"timestamp"`
@@ -39,6 +59,7 @@ const (
 	MemoryTypeCode          MemoryType = "code"
 	MemoryTypeDocumentation MemoryType = "documentation"
 	MemoryTypeSession       MemoryType = "session"
+	MemoryTypeTask          MemoryType = "task"
 )
 
 // Tags represents a collection of tags for categorization

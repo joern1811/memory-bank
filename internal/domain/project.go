@@ -69,6 +69,13 @@ type Session struct {
 	Tags            Tags            `json:"tags,omitempty"`
 	Summary         string          `json:"summary,omitempty"`
 	SessionDuration *time.Duration  `json:"duration,omitempty"`
+	// Task Management Extensions
+	Priority        Priority        `json:"priority,omitempty"`
+	DueDate         *time.Time      `json:"due_date,omitempty"`
+	Assignee        string          `json:"assignee,omitempty"`
+	EstimatedHours  *int            `json:"estimated_hours,omitempty"`
+	ActualHours     *int            `json:"actual_hours,omitempty"`
+	Dependencies    []SessionID     `json:"dependencies,omitempty"`
 }
 
 // NewSession creates a new development session
@@ -82,7 +89,19 @@ func NewSession(projectID ProjectID, name, taskDescription string) *Session {
 		Progress:        make([]ProgressEntry, 0),
 		Status:          SessionStatusActive,
 		Tags:            make(Tags, 0),
+		Priority:        PriorityMedium, // Default priority
+		Dependencies:    make([]SessionID, 0),
 	}
+}
+
+// NewSessionWithTaskInfo creates a new development session with task management info
+func NewSessionWithTaskInfo(projectID ProjectID, name, taskDescription string, priority Priority, dueDate *time.Time, assignee string, estimatedHours *int) *Session {
+	session := NewSession(projectID, name, taskDescription)
+	session.Priority = priority
+	session.DueDate = dueDate
+	session.Assignee = assignee
+	session.EstimatedHours = estimatedHours
+	return session
 }
 
 // LogProgress adds a progress entry to the session
