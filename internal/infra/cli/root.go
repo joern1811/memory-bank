@@ -30,7 +30,7 @@ func Execute() {
 
 func init() {
 	// Global flags can be added here
-	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.memory-bank.yaml)")
+	rootCmd.PersistentFlags().StringP("config", "c", "", "config file (default is $HOME/.config/memory-bank/config.yaml)")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
 
 	// Add version flag to root command
