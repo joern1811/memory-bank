@@ -71,7 +71,7 @@ var gitScanCommitsCmd = &cobra.Command{
 			for _, action := range actions {
 				// Try to find task by ID (assuming task IDs are Memory IDs)
 				taskID := domain.MemoryID(action.TaskID)
-				
+
 				// Check if TaskService is available for intelligent updates
 				if services.TaskService != nil {
 					// Try to get existing task
@@ -81,18 +81,18 @@ var gitScanCommitsCmd = &cobra.Command{
 						updateReq := ports.UpdateTaskRequest{
 							TaskID: taskID,
 						}
-						
+
 						// Update status if specified
 						if action.NewStatus != nil {
 							updateReq.Status = action.NewStatus
 						}
-						
+
 						// Set assignee based on commit author (with intelligent recognition)
 						assignee := normalizeAuthorToAssignee(commit.Author, commit.Email)
 						if assignee != "unknown" && assignee != existingTask.Assignee {
 							updateReq.Assignee = &assignee
 						}
-						
+
 						// Time tracking: estimate effort based on commit data
 						if commit.FilesCount > 0 {
 							// Simple heuristic: 15 minutes per file touched, max 4 hours
@@ -105,7 +105,7 @@ var gitScanCommitsCmd = &cobra.Command{
 								updateReq.ActualHours = &actualHours
 							}
 						}
-						
+
 						// Update task
 						_, err := services.TaskService.UpdateTask(ctx, updateReq)
 						if err != nil {
@@ -121,19 +121,19 @@ var gitScanCommitsCmd = &cobra.Command{
 							fmt.Printf("✅ Updated task %s (%s) from commit %s\n", action.TaskID, actionDesc, commit.Hash[:8])
 							progressCount++
 						}
-						
+
 						// Also create a progress memory for historical tracking
 						createProgressMemory(services, project.ID, action, commit)
 						continue
 					}
 				}
-				
+
 				// If task not found by direct ID, try branch-based recognition
 				branchTaskID := extractTaskIDFromBranch(commit.Branch)
 				if branchTaskID != "" && branchTaskID == action.TaskID {
 					fmt.Printf("🔗 Recognized task %s from branch %s\n", branchTaskID, commit.Branch)
 				}
-				
+
 				// Fallback: create progress memory entry (original behavior)
 				if createProgressMemory(services, project.ID, action, commit) {
 					progressCount++
@@ -188,7 +188,7 @@ fi
 `
 
 		hookPath := filepath.Join(".git", "hooks", "post-commit")
-		
+
 		// Write hook file
 		err := os.WriteFile(hookPath, []byte(hookContent), 0755)
 		if err != nil {
@@ -197,7 +197,7 @@ fi
 
 		fmt.Printf("✅ Installed post-commit hook at %s\n", hookPath)
 		fmt.Println("📝 Now, commits with task references (e.g., 'fix #task-123') will automatically track progress")
-		
+
 		return nil
 	},
 }
@@ -296,7 +296,7 @@ func getCurrentGitBranch() (string, error) {
 func extractTaskIDFromBranch(branch string) string {
 	// Common branch patterns:
 	// - feature/task-123
-	// - fix/task-456  
+	// - fix/task-456
 	// - task/123
 	// - 123-some-description
 	patterns := []string{
@@ -329,34 +329,34 @@ func extractTaskActionsFromCommit(message string) []TaskAction {
 	// Intelligent keyword detection for status changes
 	statusKeywords := map[string]domain.TaskStatus{
 		// Completion keywords
-		"complete":   domain.TaskStatusDone,
-		"completed":  domain.TaskStatusDone,
-		"finish":     domain.TaskStatusDone,
-		"finished":   domain.TaskStatusDone,
-		"done":       domain.TaskStatusDone,
-		"close":      domain.TaskStatusDone,
-		"closed":     domain.TaskStatusDone,
-		"closes":     domain.TaskStatusDone,
-		"resolve":    domain.TaskStatusDone,
-		"resolved":   domain.TaskStatusDone,
-		"resolves":   domain.TaskStatusDone,
-		"implement":  domain.TaskStatusDone,
+		"complete":    domain.TaskStatusDone,
+		"completed":   domain.TaskStatusDone,
+		"finish":      domain.TaskStatusDone,
+		"finished":    domain.TaskStatusDone,
+		"done":        domain.TaskStatusDone,
+		"close":       domain.TaskStatusDone,
+		"closed":      domain.TaskStatusDone,
+		"closes":      domain.TaskStatusDone,
+		"resolve":     domain.TaskStatusDone,
+		"resolved":    domain.TaskStatusDone,
+		"resolves":    domain.TaskStatusDone,
+		"implement":   domain.TaskStatusDone,
 		"implemented": domain.TaskStatusDone,
 
-		// Start/Progress keywords  
-		"start":      domain.TaskStatusInProgress,
-		"started":    domain.TaskStatusInProgress,
-		"begin":      domain.TaskStatusInProgress,
-		"working":    domain.TaskStatusInProgress,
-		"wip":        domain.TaskStatusInProgress,
-		"progress":   domain.TaskStatusInProgress,
-		"update":     domain.TaskStatusInProgress,
-		"updated":    domain.TaskStatusInProgress,
-		"fix":        domain.TaskStatusInProgress,
-		"fixing":     domain.TaskStatusInProgress,
-		"improve":    domain.TaskStatusInProgress,
-		"improving":  domain.TaskStatusInProgress,
-		"refactor":   domain.TaskStatusInProgress,
+		// Start/Progress keywords
+		"start":       domain.TaskStatusInProgress,
+		"started":     domain.TaskStatusInProgress,
+		"begin":       domain.TaskStatusInProgress,
+		"working":     domain.TaskStatusInProgress,
+		"wip":         domain.TaskStatusInProgress,
+		"progress":    domain.TaskStatusInProgress,
+		"update":      domain.TaskStatusInProgress,
+		"updated":     domain.TaskStatusInProgress,
+		"fix":         domain.TaskStatusInProgress,
+		"fixing":      domain.TaskStatusInProgress,
+		"improve":     domain.TaskStatusInProgress,
+		"improving":   domain.TaskStatusInProgress,
+		"refactor":    domain.TaskStatusInProgress,
 		"refactoring": domain.TaskStatusInProgress,
 	}
 
@@ -405,10 +405,10 @@ func extractTaskActionsFromCommit(message string) []TaskAction {
 		foundStatusKeyword := false
 		for keyword, status := range statusKeywords {
 			// Look for keyword near the task reference
-			keywordPattern := fmt.Sprintf(`\b%s\b.*(?:task-?%s|#%s)\b|\b(?:task-?%s|#%s)\b.*\b%s\b`, 
+			keywordPattern := fmt.Sprintf(`\b%s\b.*(?:task-?%s|#%s)\b|\b(?:task-?%s|#%s)\b.*\b%s\b`,
 				keyword, taskID, taskID, taskID, taskID, keyword)
 			matched, _ := regexp.MatchString(keywordPattern, lowerMessage)
-			
+
 			if matched || strings.Contains(lowerMessage, keyword) {
 				action.Action = keyword
 				action.NewStatus = &status
@@ -443,17 +443,17 @@ func extractTaskIDsFromCommit(message string) []string {
 // createProgressMemory creates a memory entry for git progress tracking
 func createProgressMemory(services *ServiceContainer, projectID domain.ProjectID, action TaskAction, commit GitCommit) bool {
 	ctx := context.Background()
-	
+
 	progressMemory := fmt.Sprintf("Git commit %s: %s", commit.Hash[:8], commit.Message)
-	
+
 	actionDesc := action.Action
 	if action.NewStatus != nil {
 		actionDesc = fmt.Sprintf("%s → %s", action.Action, string(*action.NewStatus))
 	}
-	
-	contextInfo := fmt.Sprintf("Commit: %s, Author: %s (%s), Date: %s, Action: %s, Files: %d", 
+
+	contextInfo := fmt.Sprintf("Commit: %s, Author: %s (%s), Date: %s, Action: %s, Files: %d",
 		commit.Hash, commit.Author, commit.Email, commit.Date, actionDesc, commit.FilesCount)
-	
+
 	// Create a memory entry for this progress
 	_, err := services.MemoryService.CreateMemory(ctx, ports.CreateMemoryRequest{
 		ProjectID: projectID,
@@ -463,12 +463,12 @@ func createProgressMemory(services *ServiceContainer, projectID domain.ProjectID
 		Context:   contextInfo,
 		Tags:      domain.Tags{"git-progress", "task-" + action.TaskID, "action-" + action.Action},
 	})
-	
+
 	if err != nil {
 		fmt.Printf("Warning: Failed to create progress memory for task %s: %v\n", action.TaskID, err)
 		return false
 	}
-	
+
 	return true
 }
 

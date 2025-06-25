@@ -18,35 +18,35 @@ import (
 func setupTestDashboard(t *testing.T) (*ServiceContainer, *domain.Project) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	// Use in-memory database
 	db, err := database.NewSQLiteDatabase(":memory:", logger)
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
-	
+
 	// Initialize repositories
 	memoryRepo := database.NewSQLiteMemoryRepository(db, logger)
 	projectRepo := database.NewSQLiteProjectRepository(db, logger)
 	sessionRepo := database.NewSQLiteSessionRepository(db, logger)
-	
+
 	// Use mock providers for testing
 	embeddingProvider := embedding.NewMockEmbeddingProvider(768, logger)
 	vectorStore := vector.NewMockVectorStore(logger)
-	
+
 	// Initialize services
 	memoryService := app.NewMemoryService(memoryRepo, embeddingProvider, vectorStore, logger)
 	projectService := app.NewProjectService(projectRepo, logger)
 	sessionService := app.NewSessionService(sessionRepo, projectRepo, logger)
 	taskService := app.NewTaskService(memoryService, logger)
-	
+
 	services := &ServiceContainer{
 		MemoryService:  memoryService,
 		ProjectService: projectService,
 		SessionService: sessionService,
 		TaskService:    taskService,
 	}
-	
+
 	// Create test project
 	ctx := context.Background()
 	project, err := projectService.InitializeProject(ctx, "/test/dashboard", ports.InitializeProjectRequest{
@@ -56,13 +56,13 @@ func setupTestDashboard(t *testing.T) (*ServiceContainer, *domain.Project) {
 	if err != nil {
 		t.Fatalf("Failed to create test project: %v", err)
 	}
-	
+
 	return services, project
 }
 
 func createTestData(t *testing.T, services *ServiceContainer, project *domain.Project) {
 	ctx := context.Background()
-	
+
 	// Create various memory types
 	memories := []ports.CreateMemoryRequest{
 		{
@@ -87,14 +87,14 @@ func createTestData(t *testing.T, services *ServiceContainer, project *domain.Pr
 			Tags:      domain.Tags{"database", "error"},
 		},
 	}
-	
+
 	for _, req := range memories {
 		_, err := services.MemoryService.CreateMemory(ctx, req)
 		if err != nil {
 			t.Fatalf("Failed to create test memory: %v", err)
 		}
 	}
-	
+
 	// Create tasks with different statuses
 	tasks := []struct {
 		title       string
@@ -108,11 +108,11 @@ func createTestData(t *testing.T, services *ServiceContainer, project *domain.Pr
 		{"Setup monitoring", domain.PriorityLow, "todo", "bob.smith", "Setup application monitoring"},
 		{"Fix performance bug", domain.PriorityUrgent, "blocked", "alice.jones", "Investigate slow query"},
 	}
-	
+
 	for _, task := range tasks {
 		// Create task memory with status in context
 		context := "Status: " + task.status + ", Priority: " + string(task.priority) + ", Assignee: " + task.assignee
-		
+
 		_, err := services.MemoryService.CreateMemory(ctx, ports.CreateMemoryRequest{
 			ProjectID: project.ID,
 			Type:      domain.MemoryTypeTask,
@@ -125,7 +125,7 @@ func createTestData(t *testing.T, services *ServiceContainer, project *domain.Pr
 			t.Fatalf("Failed to create test task: %v", err)
 		}
 	}
-	
+
 	// Create sessions
 	sessions := []struct {
 		name        string
@@ -152,7 +152,7 @@ func createTestData(t *testing.T, services *ServiceContainer, project *domain.Pr
 			[]string{"Identified slow queries", "Added database indexes"},
 		},
 	}
-	
+
 	for _, sessionData := range sessions {
 		session, err := services.SessionService.StartSession(ctx, ports.StartSessionRequest{
 			ProjectID:       project.ID,
@@ -161,7 +161,7 @@ func createTestData(t *testing.T, services *ServiceContainer, project *domain.Pr
 		if err != nil {
 			t.Fatalf("Failed to create test session: %v", err)
 		}
-		
+
 		// Add progress entries
 		for _, progress := range sessionData.progress {
 			err = services.SessionService.LogProgress(ctx, session.ID, progress)
@@ -169,7 +169,7 @@ func createTestData(t *testing.T, services *ServiceContainer, project *domain.Pr
 				t.Fatalf("Failed to log session progress: %v", err)
 			}
 		}
-		
+
 		// Update session status
 		if sessionData.status != domain.SessionStatusActive {
 			switch sessionData.status {
@@ -188,13 +188,13 @@ func createTestData(t *testing.T, services *ServiceContainer, project *domain.Pr
 
 func TestDashboardCmd(t *testing.T) {
 	services, project := setupTestDashboard(t)
-	
+
 	// Create test data
 	createTestData(t, services, project)
-	
+
 	// Test the dashboard functionality directly instead of trying to mock global functions
 	ctx := context.Background()
-	
+
 	// Test the showDashboard function directly
 	output := captureOutput(func() {
 		err := showDashboard(ctx, services, project)
@@ -202,16 +202,16 @@ func TestDashboardCmd(t *testing.T) {
 			t.Errorf("Failed to show dashboard: %v", err)
 		}
 	})
-	
+
 	// Verify dashboard content
 	expectedContent := []string{
 		"Memory Bank Dashboard",
 		project.Name,
 		"Task Overview",
-		"Recent Sessions", 
+		"Recent Sessions",
 		"Memory Statistics",
 	}
-	
+
 	for _, content := range expectedContent {
 		if !strings.Contains(output, content) {
 			t.Errorf("Expected '%s' in dashboard output, got: %s", content, output)
@@ -222,9 +222,9 @@ func TestDashboardCmd(t *testing.T) {
 func TestShowTaskOverview(t *testing.T) {
 	services, project := setupTestDashboard(t)
 	createTestData(t, services, project)
-	
+
 	ctx := context.Background()
-	
+
 	// Test task overview function directly
 	output := captureOutput(func() {
 		err := showTaskOverview(ctx, services, project.ID)
@@ -232,7 +232,7 @@ func TestShowTaskOverview(t *testing.T) {
 			t.Errorf("Failed to show task overview: %v", err)
 		}
 	})
-	
+
 	// Verify task overview content
 	expectedContent := []string{
 		"Task Overview",
@@ -240,7 +240,7 @@ func TestShowTaskOverview(t *testing.T) {
 		"Done:",
 		"Todo:",
 	}
-	
+
 	for _, content := range expectedContent {
 		if !strings.Contains(output, content) {
 			t.Errorf("Expected '%s' in task overview output, got: %s", content, output)
@@ -251,16 +251,16 @@ func TestShowTaskOverview(t *testing.T) {
 func TestShowTaskOverview_NoTasks(t *testing.T) {
 	services, project := setupTestDashboard(t)
 	// Don't create test data - test empty state
-	
+
 	ctx := context.Background()
-	
+
 	output := captureOutput(func() {
 		err := showTaskOverview(ctx, services, project.ID)
 		if err != nil {
 			t.Errorf("Failed to show task overview: %v", err)
 		}
 	})
-	
+
 	if !strings.Contains(output, "No tasks found") {
 		t.Errorf("Expected 'No tasks found' message in output, got: %s", output)
 	}
@@ -272,16 +272,16 @@ func TestShowTaskOverview_NoTasks(t *testing.T) {
 func TestShowRecentSessions(t *testing.T) {
 	services, project := setupTestDashboard(t)
 	createTestData(t, services, project)
-	
+
 	ctx := context.Background()
-	
+
 	output := captureOutput(func() {
 		err := showRecentSessions(ctx, services, project.ID)
 		if err != nil {
 			t.Errorf("Failed to show recent sessions: %v", err)
 		}
 	})
-	
+
 	// Verify sessions content (names may be truncated in display)
 	expectedContent := []string{
 		"Recent Sessions",
@@ -293,7 +293,7 @@ func TestShowRecentSessions(t *testing.T) {
 		"Duration",
 		"Progress",
 	}
-	
+
 	for _, content := range expectedContent {
 		if !strings.Contains(output, content) {
 			t.Errorf("Expected '%s' in sessions output, got: %s", content, output)
@@ -304,16 +304,16 @@ func TestShowRecentSessions(t *testing.T) {
 func TestShowMemoryStats(t *testing.T) {
 	services, project := setupTestDashboard(t)
 	createTestData(t, services, project)
-	
+
 	ctx := context.Background()
-	
+
 	output := captureOutput(func() {
 		err := showMemoryStats(ctx, services, project.ID)
 		if err != nil {
 			t.Errorf("Failed to show memory stats: %v", err)
 		}
 	})
-	
+
 	// Verify memory statistics content
 	expectedContent := []string{
 		"Memory Statistics",
@@ -323,7 +323,7 @@ func TestShowMemoryStats(t *testing.T) {
 		"🐛 error_solution:",
 		"📋 task:",
 	}
-	
+
 	for _, content := range expectedContent {
 		if !strings.Contains(output, content) {
 			t.Errorf("Expected '%s' in memory stats output, got: %s", content, output)
@@ -344,7 +344,7 @@ func TestExtractStatusFromContext(t *testing.T) {
 		{"Some other context without status", "unknown"},
 		{"Status: completed, Priority: low", "done"}, // completed maps to done
 	}
-	
+
 	for _, tc := range testCases {
 		result := extractStatusFromContext(tc.context)
 		if result != tc.expected {
@@ -366,7 +366,7 @@ func TestGetStatusEmoji(t *testing.T) {
 		{"unknown", "❓"},
 		{"invalid", "❓"},
 	}
-	
+
 	for _, tc := range testCases {
 		result := getStatusEmoji(tc.status)
 		if result != tc.expected {
@@ -387,7 +387,7 @@ func TestGetSessionStatusEmoji(t *testing.T) {
 		{domain.SessionStatusAborted, "❌"},
 		{"invalid", "❓"},
 	}
-	
+
 	for _, tc := range testCases {
 		result := getSessionStatusEmoji(tc.status)
 		if result != tc.expected {
@@ -408,7 +408,7 @@ func TestFormatDuration(t *testing.T) {
 		{5 * time.Minute, "5m"},
 		{125 * time.Minute, "2h5m"},
 	}
-	
+
 	for _, tc := range testCases {
 		result := formatDuration(tc.duration)
 		if result != tc.expected {

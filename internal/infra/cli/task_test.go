@@ -21,35 +21,35 @@ import (
 func setupTestTaskCLI(t *testing.T) (*ServiceContainer, *domain.Project) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	// Use in-memory database
 	db, err := database.NewSQLiteDatabase(":memory:", logger)
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
-	
+
 	// Initialize repositories
 	memoryRepo := database.NewSQLiteMemoryRepository(db, logger)
 	projectRepo := database.NewSQLiteProjectRepository(db, logger)
 	sessionRepo := database.NewSQLiteSessionRepository(db, logger)
-	
+
 	// Use mock providers for testing
 	embeddingProvider := embedding.NewMockEmbeddingProvider(768, logger)
 	vectorStore := vector.NewMockVectorStore(logger)
-	
+
 	// Initialize services
 	memoryService := app.NewMemoryService(memoryRepo, embeddingProvider, vectorStore, logger)
 	projectService := app.NewProjectService(projectRepo, logger)
 	sessionService := app.NewSessionService(sessionRepo, projectRepo, logger)
 	taskService := app.NewTaskService(memoryService, logger)
-	
+
 	services := &ServiceContainer{
 		MemoryService:  memoryService,
 		ProjectService: projectService,
 		SessionService: sessionService,
 		TaskService:    taskService,
 	}
-	
+
 	// Create test project
 	ctx := context.Background()
 	project, err := projectService.InitializeProject(ctx, "/test/path", ports.InitializeProjectRequest{
@@ -59,7 +59,7 @@ func setupTestTaskCLI(t *testing.T) (*ServiceContainer, *domain.Project) {
 	if err != nil {
 		t.Fatalf("Failed to create test project: %v", err)
 	}
-	
+
 	return services, project
 }
 
@@ -67,12 +67,12 @@ func captureOutput(f func()) string {
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
-	
+
 	f()
-	
+
 	w.Close()
 	os.Stdout = old
-	
+
 	var buf bytes.Buffer
 	io.Copy(&buf, r)
 	return buf.String()
@@ -81,7 +81,7 @@ func captureOutput(f func()) string {
 func TestCreateTaskCmd(t *testing.T) {
 	services, project := setupTestTaskCLI(t)
 	ctx := context.Background()
-	
+
 	// Test create task functionality directly instead of command execution
 	task, err := services.TaskService.CreateTask(ctx, ports.CreateTaskRequest{
 		ProjectID:   project.ID,
@@ -95,7 +95,7 @@ func TestCreateTaskCmd(t *testing.T) {
 		t.Errorf("Failed to create task: %v", err)
 		return
 	}
-	
+
 	// Verify task was created successfully
 	if task == nil {
 		t.Error("Expected task to be created")
@@ -111,7 +111,7 @@ func TestCreateTaskCmd(t *testing.T) {
 
 func TestListTasksCmd(t *testing.T) {
 	services, project := setupTestTaskCLI(t)
-	
+
 	// Create some test tasks first
 	ctx := context.Background()
 	tasks := []struct {
@@ -123,7 +123,7 @@ func TestListTasksCmd(t *testing.T) {
 		{"Task 2", domain.PriorityMedium, "jane.doe"},
 		{"Task 3", domain.PriorityLow, "bob.smith"},
 	}
-	
+
 	for _, task := range tasks {
 		_, err := services.TaskService.CreateTask(ctx, ports.CreateTaskRequest{
 			ProjectID:   project.ID,
@@ -136,28 +136,28 @@ func TestListTasksCmd(t *testing.T) {
 			t.Fatalf("Failed to create test task: %v", err)
 		}
 	}
-	
+
 	// Test uses services directly instead of mocking global functions
-	
+
 	// Test list tasks functionality directly
 	retrievedTasks, err := services.TaskService.GetTasksByProject(ctx, project.ID)
 	if err != nil {
 		t.Errorf("Failed to list tasks: %v", err)
 		return
 	}
-	
+
 	output := "ID\tTitle"
 	for _, task := range retrievedTasks {
 		output += "\n" + string(task.Memory.ID) + "\t" + task.Memory.Title
 	}
-	
+
 	// Verify all tasks are listed
 	for _, task := range tasks {
 		if !strings.Contains(output, task.title) {
 			t.Errorf("Expected task '%s' in output, got: %s", task.title, output)
 		}
 	}
-	
+
 	// Verify table format
 	if !strings.Contains(output, "ID") || !strings.Contains(output, "Title") {
 		t.Errorf("Expected table headers in output, got: %s", output)
@@ -166,7 +166,7 @@ func TestListTasksCmd(t *testing.T) {
 
 func TestGetTaskCmd(t *testing.T) {
 	services, project := setupTestTaskCLI(t)
-	
+
 	// Create a test task first
 	ctx := context.Background()
 	task, err := services.TaskService.CreateTask(ctx, ports.CreateTaskRequest{
@@ -180,30 +180,30 @@ func TestGetTaskCmd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test task: %v", err)
 	}
-	
+
 	// Test uses services directly
-	
+
 	// Test get task functionality directly
 	retrievedTask, err := services.TaskService.GetTask(ctx, task.Memory.ID)
 	if err != nil {
 		t.Errorf("Failed to get task: %v", err)
 		return
 	}
-	
+
 	output := retrievedTask.Memory.Title + " " + retrievedTask.Memory.Content + " " + string(retrievedTask.Priority) + " " + retrievedTask.Assignee
 	for _, tag := range retrievedTask.Memory.Tags {
 		output += " " + tag
 	}
-	
+
 	// Verify task details are displayed (assignee might be in context, not as separate field)
 	expectedDetails := []string{
 		"Test Task",
-		"Test Description", 
+		"Test Description",
 		"medium",
 		"test",
 		"example",
 	}
-	
+
 	for _, detail := range expectedDetails {
 		if !strings.Contains(output, detail) {
 			t.Errorf("Expected '%s' in output, got: %s", detail, output)
@@ -213,7 +213,7 @@ func TestGetTaskCmd(t *testing.T) {
 
 func TestUpdateTaskCmd(t *testing.T) {
 	services, project := setupTestTaskCLI(t)
-	
+
 	// Create a test task first
 	ctx := context.Background()
 	task, err := services.TaskService.CreateTask(ctx, ports.CreateTaskRequest{
@@ -225,16 +225,16 @@ func TestUpdateTaskCmd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test task: %v", err)
 	}
-	
+
 	// Test uses services directly
-	
+
 	// Test update task functionality directly
 	title := "Updated Task"
 	description := "Updated Description"
 	priority := domain.PriorityUrgent
 	status := domain.TaskStatusInProgress
 	assignee := "jane.doe"
-	
+
 	updatedTask, err := services.TaskService.UpdateTask(ctx, ports.UpdateTaskRequest{
 		TaskID:      task.Memory.ID,
 		Title:       &title,
@@ -247,15 +247,15 @@ func TestUpdateTaskCmd(t *testing.T) {
 		t.Errorf("Failed to update task: %v", err)
 		return
 	}
-	
+
 	output := "Task updated successfully"
-	
+
 	if !strings.Contains(output, "Task updated successfully") {
 		t.Errorf("Expected success message in output, got: %s", output)
 	}
-	
+
 	// Verify the task was actually updated (updatedTask already contains the result)
-	
+
 	if updatedTask.Memory.Title != "Updated Task" {
 		t.Errorf("Expected updated title 'Updated Task', got: %s", updatedTask.Memory.Title)
 	}
@@ -266,7 +266,7 @@ func TestUpdateTaskCmd(t *testing.T) {
 
 func TestDeleteTaskCmd(t *testing.T) {
 	services, project := setupTestTaskCLI(t)
-	
+
 	// Create a test task first
 	ctx := context.Background()
 	task, err := services.TaskService.CreateTask(ctx, ports.CreateTaskRequest{
@@ -278,22 +278,22 @@ func TestDeleteTaskCmd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test task: %v", err)
 	}
-	
+
 	// Test uses services directly
-	
+
 	// Test delete task functionality directly
 	err = services.TaskService.DeleteTask(ctx, task.Memory.ID)
 	if err != nil {
 		t.Errorf("Failed to delete task: %v", err)
 		return
 	}
-	
+
 	output := "Task deleted successfully"
-	
+
 	if !strings.Contains(output, "Task deleted successfully") {
 		t.Errorf("Expected success message in output, got: %s", output)
 	}
-	
+
 	// Verify the task was actually deleted
 	_, err = services.TaskService.GetTask(ctx, task.Memory.ID)
 	if err == nil {
@@ -303,12 +303,12 @@ func TestDeleteTaskCmd(t *testing.T) {
 
 func TestTaskStatsCmd(t *testing.T) {
 	services, project := setupTestTaskCLI(t)
-	
+
 	// Create some test tasks with different properties
 	ctx := context.Background()
 	estimatedHours1 := 8
 	estimatedHours2 := 16
-	
+
 	tasks := []ports.CreateTaskRequest{
 		{
 			ProjectID:      project.ID,
@@ -334,35 +334,35 @@ func TestTaskStatsCmd(t *testing.T) {
 			Assignee:    "john.doe",
 		},
 	}
-	
+
 	for _, req := range tasks {
 		_, err := services.TaskService.CreateTask(ctx, req)
 		if err != nil {
 			t.Fatalf("Failed to create test task: %v", err)
 		}
 	}
-	
+
 	// Test uses services directly instead of mocking global functions
-	
+
 	// Test task stats functionality directly
 	stats, err := services.TaskService.GetTaskStatistics(ctx, project.ID)
 	if err != nil {
 		t.Errorf("Failed to get task statistics: %v", err)
 		return
 	}
-	
+
 	output := fmt.Sprintf("Total Tasks: %d\nTodo: %d\nTotal Hours: %d", stats.TotalTasks, stats.TodoTasks, stats.TotalHours)
 	for assignee, count := range stats.TasksByAssignee {
 		output += fmt.Sprintf("\n%s: %d", assignee, count)
 	}
-	
+
 	// Verify statistics are displayed (hours and assignee stats may not be fully implemented)
 	expectedStats := []string{
 		"Total Tasks: 3",
-		"Todo: 3", // All tasks start as todo
+		"Todo: 3",        // All tasks start as todo
 		"Total Hours: 0", // Hours calculation may not be implemented yet
 	}
-	
+
 	for _, stat := range expectedStats {
 		if !strings.Contains(output, stat) {
 			t.Errorf("Expected '%s' in output, got: %s", stat, output)
