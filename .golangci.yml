@@ -4,20 +4,15 @@ run:
   timeout: 5m
   issues-exit-code: 1
   tests: true
-  skip-dirs:
-    - vendor
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*_test\\.go$"
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
 
 linters-settings:
   govet:
-    check-shadowing: true
     enable:
       - atomic
       - bools
@@ -74,7 +69,7 @@ linters-settings:
     statements: 50
 
   godot:
-    check-all: false
+    scope: declarations
 
   godox:
     keywords:
@@ -165,6 +160,11 @@ linters:
     - typecheck
 
 issues:
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*_test\\.go$"
+  exclude-dirs:
+    - vendor
   exclude-rules:
     - path: _test\.go
       linters:
