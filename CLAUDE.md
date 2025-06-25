@@ -111,20 +111,13 @@ Create `.mcp.json` in your project root:
 ```
 
 **Option 2 - User scope** (for all your projects):
-Add to `~/.claude/settings.json`:
+Use Claude Code CLI:
 
-```json
-{
-  "mcpServers": {
-    "memory-bank": {
-      "command": "memory-bank", 
-      "args": [],
-      "env": {
-        "MEMORY_BANK_DB_PATH": "~/memory_bank.db"
-      }
-    }
-  }
-}
+```bash
+claude mcp add memory-bank \
+  -e MEMORY_BANK_DB_PATH=~/memory_bank.db \
+  --scope user \
+  -- memory-bank
 ```
 
 ### Testing & Development
@@ -201,52 +194,83 @@ go build ./cmd/memory-bank
 
 ### Memory Bank Protocol
 
-Add this to your project's `CLAUDE.md` file:
+Use these MANDATORY protocols in your project's `CLAUDE.md` file for maximum Memory Bank effectiveness:
 
 ```markdown
-## Memory Bank Integration
+## Memory Bank Integration - MANDATORY PROTOCOLS
 
-### Required Behaviors
-When Memory Bank MCP tools are available, Claude MUST:
+### MANDATORY: Pre-Task Search Protocol
+Before ANY implementation task, Claude MUST execute this exact sequence:
 
-1. **START SESSIONS**: Begin with `memory_search` to understand context
-2. **BEFORE TASKS**: Search for existing implementations
-3. **DURING DEVELOPMENT**: Document decisions and patterns
-4. **AFTER SOLVING**: Store solutions with prevention strategies
-5. **COMPLEX WORK**: Use sessions for multi-step tasks
+1. **IMMEDIATE SEARCH**: Execute `memory_search "relevant keywords"` using 2-3 semantic terms
+2. **ENHANCED SEARCH**: If <3 relevant results, use `memory_enhanced-search` with broader terms
+3. **FACETED SEARCH**: For complex features, use `memory_faceted-search` with filters
+4. **PATTERN CHECK**: Search specifically for patterns: `memory_search "pattern-type patterns" --type pattern`
 
-### Session Management Protocol
-For complex tasks (3+ files, new features, debugging), Claude MUST:
+### MANDATORY: Decision Documentation Protocol
+Execute `memory_create` IMMEDIATELY when making these decisions:
 
-1. **Start Session**: Use `session_start` with descriptive title and project context
-2. **Log Progress**: Use `session_log` at key milestones with specific progress updates
-3. **Complete Session**: Use `session_complete` with summary of outcomes and lessons learned
+**Decision Triggers (AUTOMATIC EXECUTION REQUIRED):**
+- Technology/library choice (>30 seconds consideration)
+- Architecture pattern selection
+- API design decisions
+- Database schema choices
+- Security approach decisions
 
-**Session Usage Examples:**
+**Decision Template (EXACT FORMAT):**
 ```
-# Start complex task
-session_start "Implementing JWT authentication system" --project my_project
-
-# Log key progress points
-session_log "Created JWT middleware with token validation"
-session_log "Added login/logout endpoints with proper error handling" 
-session_log "Implemented protected route middleware"
-
-# Complete with summary
-session_complete "Successfully implemented JWT authentication with middleware, endpoints, and route protection. All tests passing."
+memory_create --type decision --title "[Decision]: [Concise description]" --content "
+CONTEXT: [Why this decision was needed]
+EVALUATED OPTIONS: 
+1. [Option 1] - [pros/cons]
+2. [Option 2] - [pros/cons]
+CHOSEN: [Selected option] 
+RATIONALE: [Why this option was selected]
+TRADE-OFFS: [What we're giving up]
+VALIDATION: [How we'll verify this was right]
+" --tags "decision,[relevant-tech],[component]" --project PROJECT_NAME
 ```
 
-### Memory Types
-- `decision`: Architectural choices with rationale
-- `pattern`: Reusable solutions with examples
-- `error_solution`: Bug fixes with prevention
-- `code`: Useful snippets with context
+### MANDATORY: Session Management Protocol
+**Session Start Triggers (REQUIRED):**
+- Modifying 3+ files in single task
+- New feature implementation (>2 hour estimated work)
+- Complex debugging (multiple investigation steps)
+- Architectural decisions affecting multiple components
 
-### Tagging Strategy
-- Technology: `go`, `javascript`, `react`, `api`
-- Domain: `auth`, `database`, `frontend`, `backend`
-- Type: `pattern`, `decision`, `error`, `optimization`
-- Complexity: `simple`, `medium`, `complex`
+**Required Session Logging:**
+```
+session_start "Specific descriptive title" --project PROJECT_NAME
+
+# At key milestones
+session_log "COMPLETED: [specific accomplishment with technical details]"
+session_log "DECISION POINT: [decision context] - evaluating [specific options]"  
+session_log "RESOLVED: [specific problem] - solution: [specific solution]"
+
+# At completion
+session_complete "[summary] - [key learnings] - [time taken] - [follow-up needed]"
+```
+
+### MANDATORY: Pattern Storage Protocol
+After successfully implementing ANY reusable solution:
+
+```
+memory_create --type pattern --title "[Pattern]: [Pattern name]" --content "
+PURPOSE: [What problem this solves]
+IMPLEMENTATION: [Key implementation details]
+USAGE: [When and how to use this]
+EXAMPLE: [Code example or reference]
+DEPENDENCIES: [Required libraries/setup]
+GOTCHAS: [Things to watch out for]
+" --tags "pattern,[tech-stack],[domain]" --project PROJECT_NAME
+```
+
+### Execution Rules
+1. **NO ASSUMPTIONS**: Always search before implementing
+2. **IMMEDIATE DOCUMENTATION**: Document decisions when made, not later
+3. **SPECIFIC TAGGING**: Use consistent, specific tags
+4. **ACCURATE TIME TRACKING**: Record actual time spent
+5. **ERROR CAPTURE**: Document ALL errors encountered
 ```
 
 
