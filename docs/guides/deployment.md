@@ -1,6 +1,6 @@
-# Memory Bank Deployment Guide
+# Production Deployment Guide
 
-This guide covers deploying Memory Bank as an MCP server for Claude Desktop and Claude Code integration.
+Guide for deploying Memory Bank as an MCP server with Claude Code in production environments.
 
 ## Table of Contents
 
@@ -129,34 +129,25 @@ export MEMORY_BANK_LOG_LEVEL="info"
 
 Memory Bank integrates with Claude via the Model Context Protocol (MCP).
 
-### Claude Desktop Configuration
+### Claude Code Configuration (Primary Integration)
 
-Add to your Claude Desktop config file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "memory-bank": {
-      "command": "memory-bank",
-      "args": [],
-      "env": {
-        "MEMORY_BANK_DB_PATH": "~/memory_bank.db"
-      }
-    }
-  }
-}
-```
-
-### Claude Code Configuration
-
-#### Option 1: CLI Commands (Recommended)
+#### Option 1: Claude Code CLI (Recommended)
 
 ```bash
-# Add project-scoped server (shared with team)
-claude mcp add memory-bank -s project memory-bank
+# Global for all projects
+claude mcp add memory-bank \
+  -e MEMORY_BANK_DB_PATH=~/memory_bank.db \
+  --scope user \
+  -- memory-bank
+
+# Project-specific (for teams)
+claude mcp add memory-bank \
+  -e MEMORY_BANK_DB_PATH=./memory_bank.db \
+  --scope local \
+  -- memory-bank
+
+# Verify configuration
+claude mcp list
 
 # Add user-scoped server (personal use)
 claude mcp add memory-bank -s user memory-bank
