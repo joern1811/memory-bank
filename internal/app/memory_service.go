@@ -1010,11 +1010,11 @@ func (s *MemoryService) CleanupEmbeddings(ctx context.Context, projectID domain.
 	}
 
 	result := &ports.CleanupResult{
-		TotalMemories:     len(memories),
-		MemoriesProcessed: 0,
+		TotalMemories:       len(memories),
+		MemoriesProcessed:   0,
 		EmbeddingsGenerated: 0,
-		Errors:           0,
-		ErrorMessages:    []string{},
+		Errors:              0,
+		ErrorMessages:       []string{},
 	}
 
 	// Reset all embedding flags first
@@ -1032,7 +1032,7 @@ func (s *MemoryService) CleanupEmbeddings(ctx context.Context, projectID domain.
 	// Regenerate embeddings for all memories
 	for _, memory := range memories {
 		result.MemoriesProcessed++
-		
+
 		if err := s.RegenerateEmbedding(ctx, memory.ID); err != nil {
 			result.Errors++
 			errorMsg := fmt.Sprintf("Memory %s: %v", memory.ID, err)
@@ -1046,7 +1046,7 @@ func (s *MemoryService) CleanupEmbeddings(ctx context.Context, projectID domain.
 	s.logger.WithFields(logrus.Fields{
 		"total_memories":       result.TotalMemories,
 		"embeddings_generated": result.EmbeddingsGenerated,
-		"errors":              result.Errors,
+		"errors":               result.Errors,
 	}).Info("Embedding cleanup completed")
 
 	return result, nil

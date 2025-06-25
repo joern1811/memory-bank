@@ -150,7 +150,7 @@ func (s *taskService) UpdateTask(ctx context.Context, req ports.UpdateTaskReques
 	if updated {
 		// Update the context with current task state
 		task.Context = fmt.Sprintf("Task Status: %s, Priority: %s", task.Status, task.Priority)
-		
+
 		err := s.memoryService.UpdateMemory(ctx, task.Memory)
 		if err != nil {
 			s.logger.WithError(err).Error("Failed to update task memory")
@@ -199,7 +199,7 @@ func (s *taskService) ListTasks(ctx context.Context, filters ports.TaskFilters) 
 	tasks := make([]*domain.Task, 0, len(memories))
 	for _, memory := range memories {
 		task := s.memoryToTask(memory)
-		
+
 		// Apply task-specific filters
 		if s.matchesTaskFilters(task, filters) {
 			tasks = append(tasks, task)
@@ -243,7 +243,7 @@ func (s *taskService) AddTaskDependency(ctx context.Context, taskID, dependencyI
 	}
 
 	task.AddDependency(dependencyID)
-	
+
 	_, err = s.UpdateTask(ctx, ports.UpdateTaskRequest{
 		TaskID: taskID,
 	})
@@ -257,7 +257,7 @@ func (s *taskService) RemoveTaskDependency(ctx context.Context, taskID, dependen
 	}
 
 	task.RemoveDependency(dependencyID)
-	
+
 	_, err = s.UpdateTask(ctx, ports.UpdateTaskRequest{
 		TaskID: taskID,
 	})
@@ -461,7 +461,7 @@ func (s *taskService) GetTaskEfficiencyReport(ctx context.Context, projectID dom
 	for _, task := range tasks {
 		if task.EstimatedHours != nil && task.ActualHours != nil && *task.EstimatedHours > 0 {
 			report.TotalTasksWithEstimates++
-			
+
 			efficiency := float64(*task.EstimatedHours) / float64(*task.ActualHours)
 			efficiencySum += efficiency
 
@@ -523,10 +523,10 @@ func (s *taskService) memoryToTask(memory *domain.Memory) *domain.Task {
 	}
 
 	// For now, we'll use simple defaults
-	// In a full implementation, we'd need to store task metadata 
+	// In a full implementation, we'd need to store task metadata
 	// in a separate table or extend the Memory model
 	// We can parse some info from the context field if needed
-	
+
 	return task
 }
 
@@ -570,7 +570,7 @@ func (s *taskService) updateTaskField(ctx context.Context, taskID domain.MemoryI
 
 	// Update the context with the field information
 	task.Context = fmt.Sprintf("%s: %v", field, value)
-	
+
 	// Update the memory
 	err = s.memoryService.UpdateMemory(ctx, task.Memory)
 	return err

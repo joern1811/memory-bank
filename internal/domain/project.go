@@ -70,12 +70,12 @@ type Session struct {
 	Summary         string          `json:"summary,omitempty"`
 	SessionDuration *time.Duration  `json:"duration,omitempty"`
 	// Task Management Extensions
-	Priority        Priority        `json:"priority,omitempty"`
-	DueDate         *time.Time      `json:"due_date,omitempty"`
-	Assignee        string          `json:"assignee,omitempty"`
-	EstimatedHours  *int            `json:"estimated_hours,omitempty"`
-	ActualHours     *int            `json:"actual_hours,omitempty"`
-	Dependencies    []SessionID     `json:"dependencies,omitempty"`
+	Priority       Priority    `json:"priority,omitempty"`
+	DueDate        *time.Time  `json:"due_date,omitempty"`
+	Assignee       string      `json:"assignee,omitempty"`
+	EstimatedHours *int        `json:"estimated_hours,omitempty"`
+	ActualHours    *int        `json:"actual_hours,omitempty"`
+	Dependencies   []SessionID `json:"dependencies,omitempty"`
 }
 
 // NewSession creates a new development session

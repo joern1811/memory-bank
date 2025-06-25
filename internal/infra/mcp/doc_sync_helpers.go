@@ -83,11 +83,11 @@ func (s *MemoryBankServer) searchDocumentationMappings(ctx context.Context, chan
 			id := domain.ProjectID(projectID)
 			projectIDPtr = &id
 		}
-		
+
 		var memoryType *domain.MemoryType
 		docMappingType := domain.MemoryType("doc_mapping")
 		memoryType = &docMappingType
-		
+
 		searchRequest := ports.SemanticSearchRequest{
 			Query:     fmt.Sprintf("documentation mapping %s", changeType),
 			ProjectID: projectIDPtr,
@@ -136,7 +136,7 @@ func (s *MemoryBankServer) generateChangeAnalysis(files []string, changeTypes []
 	analysis.WriteString("## Documentation Impact\n")
 	for _, changeType := range changeTypes {
 		analysis.WriteString(fmt.Sprintf("### %s Changes\n", strings.Title(changeType)))
-		
+
 		switch changeType {
 		case "api":
 			analysis.WriteString("**Likely affected documentation:**\n")
@@ -205,17 +205,17 @@ func (s *MemoryBankServer) generateDocumentationSuggestions(ctx context.Context,
 
 	// Search for relevant templates
 	templateQuery := fmt.Sprintf("documentation template %s", changeType)
-	
+
 	var projectIDPtr *domain.ProjectID
 	if projectID != "" {
 		id := domain.ProjectID(projectID)
 		projectIDPtr = &id
 	}
-	
+
 	var memoryType *domain.MemoryType
 	docTemplateType := domain.MemoryType("doc_template")
 	memoryType = &docTemplateType
-	
+
 	searchRequest := ports.SemanticSearchRequest{
 		Query:     templateQuery,
 		ProjectID: projectIDPtr,
@@ -235,7 +235,7 @@ func (s *MemoryBankServer) generateDocumentationSuggestions(ctx context.Context,
 
 	// Default suggestions based on change type
 	suggestions.WriteString("## Suggested Updates\n")
-	
+
 	switch changeType {
 	case "api":
 		suggestions.WriteString("### API Changes Checklist\n")
@@ -245,7 +245,7 @@ func (s *MemoryBankServer) generateDocumentationSuggestions(ctx context.Context,
 		suggestions.WriteString("- [ ] Test all documented API calls\n")
 		suggestions.WriteString("- [ ] Update integration guides\n")
 		suggestions.WriteString("- [ ] Check for breaking changes and document them\n")
-		
+
 	case "cli":
 		suggestions.WriteString("### CLI Changes Checklist\n")
 		suggestions.WriteString("- [ ] Update command reference documentation\n")
@@ -254,7 +254,7 @@ func (s *MemoryBankServer) generateDocumentationSuggestions(ctx context.Context,
 		suggestions.WriteString("- [ ] Update installation/setup instructions\n")
 		suggestions.WriteString("- [ ] Test all documented commands\n")
 		suggestions.WriteString("- [ ] Update shell completion if applicable\n")
-		
+
 	case "config":
 		suggestions.WriteString("### Configuration Changes Checklist\n")
 		suggestions.WriteString("- [ ] Update configuration documentation\n")
@@ -263,7 +263,7 @@ func (s *MemoryBankServer) generateDocumentationSuggestions(ctx context.Context,
 		suggestions.WriteString("- [ ] Verify setup/installation guides\n")
 		suggestions.WriteString("- [ ] Update default configuration examples\n")
 		suggestions.WriteString("- [ ] Document migration steps if needed\n")
-		
+
 	case "database":
 		suggestions.WriteString("### Database Changes Checklist\n")
 		suggestions.WriteString("- [ ] Update schema documentation\n")
@@ -272,7 +272,7 @@ func (s *MemoryBankServer) generateDocumentationSuggestions(ctx context.Context,
 		suggestions.WriteString("- [ ] Verify setup instructions\n")
 		suggestions.WriteString("- [ ] Update backup/restore procedures\n")
 		suggestions.WriteString("- [ ] Document performance implications\n")
-		
+
 	case "build":
 		suggestions.WriteString("### Build/Deploy Changes Checklist\n")
 		suggestions.WriteString("- [ ] Update build instructions\n")
@@ -281,7 +281,7 @@ func (s *MemoryBankServer) generateDocumentationSuggestions(ctx context.Context,
 		suggestions.WriteString("- [ ] Check development setup guide\n")
 		suggestions.WriteString("- [ ] Update dependency information\n")
 		suggestions.WriteString("- [ ] Verify troubleshooting sections\n")
-		
+
 	default:
 		suggestions.WriteString("### General Documentation Checklist\n")
 		suggestions.WriteString("- [ ] Review README for accuracy\n")
@@ -395,11 +395,11 @@ func (s *MemoryBankServer) validateDocumentationConsistency(ctx context.Context,
 		id := domain.ProjectID(projectID)
 		projectIDPtr = &id
 	}
-	
+
 	var memoryType *domain.MemoryType
 	docMappingType := domain.MemoryType("doc_mapping")
 	memoryType = &docMappingType
-	
+
 	searchRequest := ports.SemanticSearchRequest{
 		Query:     "documentation mapping",
 		ProjectID: projectIDPtr,
@@ -416,7 +416,7 @@ func (s *MemoryBankServer) validateDocumentationConsistency(ctx context.Context,
 	if len(mappings) > 0 {
 		report.WriteString("## Found Documentation Mappings\n")
 		for _, mapping := range mappings {
-			report.WriteString(fmt.Sprintf("- **%s**: %s\n", mapping.Memory.Title, 
+			report.WriteString(fmt.Sprintf("- **%s**: %s\n", mapping.Memory.Title,
 				strings.ReplaceAll(mapping.Memory.Content, "\n", " ")))
 		}
 		report.WriteString("\n")

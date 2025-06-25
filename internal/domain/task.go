@@ -7,15 +7,15 @@ import (
 // Task represents a task or to-do item stored as a memory
 type Task struct {
 	*Memory
-	Status         TaskStatus  `json:"status"`
-	Priority       Priority    `json:"priority"`
-	DueDate        *time.Time  `json:"due_date,omitempty"`
-	Assignee       string      `json:"assignee,omitempty"`
-	Dependencies   []MemoryID  `json:"dependencies,omitempty"`
-	EstimatedHours *int        `json:"estimated_hours,omitempty"`
-	ActualHours    *int        `json:"actual_hours,omitempty"`
-	ParentTask     *MemoryID   `json:"parent_task,omitempty"`
-	Subtasks       []MemoryID  `json:"subtasks,omitempty"`
+	Status         TaskStatus `json:"status"`
+	Priority       Priority   `json:"priority"`
+	DueDate        *time.Time `json:"due_date,omitempty"`
+	Assignee       string     `json:"assignee,omitempty"`
+	Dependencies   []MemoryID `json:"dependencies,omitempty"`
+	EstimatedHours *int       `json:"estimated_hours,omitempty"`
+	ActualHours    *int       `json:"actual_hours,omitempty"`
+	ParentTask     *MemoryID  `json:"parent_task,omitempty"`
+	Subtasks       []MemoryID `json:"subtasks,omitempty"`
 }
 
 // NewTask creates a new task memory

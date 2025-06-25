@@ -20,7 +20,7 @@ var cleanupCmd = &cobra.Command{
 This is useful when the embedding system was broken or collection configuration changed.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		
+
 		// Initialize services
 		services, err := GetServicesForCLI(cmd)
 		if err != nil {
@@ -38,7 +38,7 @@ This is useful when the embedding system was broken or collection configuration 
 
 		if !dryRun {
 			fmt.Println("🚀 Starting embedding cleanup...")
-			
+
 			// Perform cleanup via service layer (hexagonal architecture)
 			result, err := services.MemoryService.CleanupEmbeddings(ctx, domain.ProjectID(projectID))
 			if err != nil {
@@ -98,6 +98,6 @@ This is useful when the embedding system was broken or collection configuration 
 func init() {
 	cleanupCmd.Flags().Bool("dry-run", false, "show what would be done without making changes")
 	cleanupCmd.Flags().StringP("project", "p", "default", "project ID to clean up (default: default)")
-	
+
 	rootCmd.AddCommand(cleanupCmd)
 }

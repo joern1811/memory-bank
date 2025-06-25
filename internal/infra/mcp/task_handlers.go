@@ -16,7 +16,7 @@ import (
 
 func (s *MemoryBankServer) handleCreateTaskTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	s.logger.Debug("Handling task_create tool request")
-	
+
 	argsMap, ok := request.Params.Arguments.(map[string]interface{})
 	if !ok {
 		return &mcp.CallToolResult{
@@ -28,7 +28,7 @@ func (s *MemoryBankServer) handleCreateTaskTool(ctx context.Context, request mcp
 	projectID, _ := argsMap["project_id"].(string)
 	title, _ := argsMap["title"].(string)
 	description, _ := argsMap["description"].(string)
-	
+
 	if projectID == "" || title == "" || description == "" {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "project_id, title, and description are required"}},
@@ -83,7 +83,7 @@ func (s *MemoryBankServer) handleCreateTaskTool(ctx context.Context, request mcp
 	// Use TaskService for full functionality
 	var task *domain.Task
 	var err error
-	
+
 	if s.taskService != nil {
 		task, err = s.taskService.CreateTask(ctx, req)
 		if err != nil {
@@ -106,7 +106,7 @@ func (s *MemoryBankServer) handleCreateTaskTool(ctx context.Context, request mcp
 				Content: []mcp.Content{mcp.TextContent{Type: "text", Text: "Failed to create task: " + fallbackErr.Error()}},
 			}, nil
 		}
-		
+
 		response, _ := json.MarshalIndent(memory, "", "  ")
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{mcp.TextContent{Type: "text", Text: string(response)}},
@@ -121,7 +121,7 @@ func (s *MemoryBankServer) handleCreateTaskTool(ctx context.Context, request mcp
 
 func (s *MemoryBankServer) handleGetTaskTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	s.logger.Debug("Handling task_get tool request")
-	
+
 	argsMap, ok := request.Params.Arguments.(map[string]interface{})
 	if !ok {
 		return &mcp.CallToolResult{
@@ -194,45 +194,45 @@ func (s *MemoryBankServer) handleUpdateTaskTool(ctx context.Context, request mcp
 		if title, ok := argsMap["title"].(string); ok && title != "" {
 			req.Title = &title
 		}
-		
+
 		if description, ok := argsMap["description"].(string); ok && description != "" {
 			req.Description = &description
 		}
-		
+
 		if status, ok := argsMap["status"].(string); ok && status != "" {
 			taskStatus := domain.TaskStatus(status)
 			req.Status = &taskStatus
 		}
-		
+
 		if priority, ok := argsMap["priority"].(string); ok && priority != "" {
 			taskPriority := domain.Priority(priority)
 			req.Priority = &taskPriority
 		}
-		
+
 		if assignee, ok := argsMap["assignee"].(string); ok && assignee != "" {
 			req.Assignee = &assignee
 		}
-		
+
 		if dueDateStr, ok := argsMap["due_date"].(string); ok && dueDateStr != "" {
 			if dueDate, err := time.Parse("2006-01-02", dueDateStr); err == nil {
 				req.DueDate = &dueDate
 			}
 		}
-		
+
 		if clearDueDate, ok := argsMap["clear_due_date"].(bool); ok && clearDueDate {
 			req.ClearDueDate = true
 		}
-		
+
 		if estimatedHours, ok := argsMap["estimated_hours"].(float64); ok {
 			hours := int(estimatedHours)
 			req.EstimatedHours = &hours
 		}
-		
+
 		if actualHours, ok := argsMap["actual_hours"].(float64); ok {
 			hours := int(actualHours)
 			req.ActualHours = &hours
 		}
-		
+
 		if tagsInterface, ok := argsMap["tags"]; ok {
 			if tagsList, ok := tagsInterface.([]interface{}); ok {
 				var tags domain.Tags
@@ -268,50 +268,50 @@ func (s *MemoryBankServer) handleUpdateTaskTool(ctx context.Context, request mcp
 
 	// Update basic fields
 	updated := false
-	
+
 	if title, ok := argsMap["title"].(string); ok && title != "" {
 		memory.Title = title
 		updated = true
 	}
-	
+
 	if description, ok := argsMap["description"].(string); ok && description != "" {
 		memory.Content = description
 		updated = true
 	}
-	
+
 	// Build context with task information
 	contextParts := []string{}
-	
+
 	if status, ok := argsMap["status"].(string); ok && status != "" {
 		contextParts = append(contextParts, "Status: "+status)
 		updated = true
 	}
-	
+
 	if priority, ok := argsMap["priority"].(string); ok && priority != "" {
 		contextParts = append(contextParts, "Priority: "+priority)
 		updated = true
 	}
-	
+
 	if assignee, ok := argsMap["assignee"].(string); ok && assignee != "" {
 		contextParts = append(contextParts, "Assignee: "+assignee)
 		updated = true
 	}
-	
+
 	if estimatedHours, ok := argsMap["estimated_hours"].(float64); ok && estimatedHours > 0 {
 		contextParts = append(contextParts, fmt.Sprintf("Estimated: %.0fh", estimatedHours))
 		updated = true
 	}
-	
+
 	if actualHours, ok := argsMap["actual_hours"].(float64); ok && actualHours > 0 {
 		contextParts = append(contextParts, fmt.Sprintf("Actual: %.0fh", actualHours))
 		updated = true
 	}
-	
+
 	if dueDate, ok := argsMap["due_date"].(string); ok && dueDate != "" {
 		contextParts = append(contextParts, "Due: "+dueDate)
 		updated = true
 	}
-	
+
 	if clearDueDate, ok := argsMap["clear_due_date"].(bool); ok && clearDueDate {
 		contextParts = append(contextParts, "Due date cleared")
 		updated = true
@@ -325,7 +325,7 @@ func (s *MemoryBankServer) handleUpdateTaskTool(ctx context.Context, request mcp
 			memory.Context = strings.Join(contextParts, ", ")
 		}
 	}
-	
+
 	// Update tags if provided
 	if tags, ok := argsMap["tags"].([]interface{}); ok {
 		memory.Tags = make(domain.Tags, 0, len(tags))
@@ -355,7 +355,7 @@ func (s *MemoryBankServer) handleUpdateTaskTool(ctx context.Context, request mcp
 
 func (s *MemoryBankServer) handleDeleteTaskTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	s.logger.Debug("Handling task_delete tool request")
-	
+
 	argsMap, ok := request.Params.Arguments.(map[string]interface{})
 	if !ok {
 		return &mcp.CallToolResult{
@@ -395,7 +395,7 @@ func (s *MemoryBankServer) handleDeleteTaskTool(ctx context.Context, request mcp
 
 func (s *MemoryBankServer) handleListTasksTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	s.logger.Debug("Handling task_list tool request")
-	
+
 	argsMap, ok := request.Params.Arguments.(map[string]interface{})
 	if !ok {
 		argsMap = make(map[string]interface{})
@@ -517,7 +517,7 @@ func (s *MemoryBankServer) handleRemoveSubtaskTool(ctx context.Context, request 
 
 func (s *MemoryBankServer) handleTaskStatisticsTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	s.logger.Debug("Handling task_statistics tool request")
-	
+
 	argsMap, ok := request.Params.Arguments.(map[string]interface{})
 	if !ok {
 		argsMap = make(map[string]interface{})

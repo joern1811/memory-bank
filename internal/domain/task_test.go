@@ -174,9 +174,9 @@ func TestTaskParentTaskManagement(t *testing.T) {
 
 func TestTaskPriorityUpdate(t *testing.T) {
 	task := NewTask(ProjectID("test"), "Test", "Description", PriorityLow)
-	
+
 	task.UpdatePriority(PriorityUrgent)
-	
+
 	if task.Priority != PriorityUrgent {
 		t.Errorf("Expected priority %s, got %s", PriorityUrgent, task.Priority)
 	}
@@ -184,9 +184,9 @@ func TestTaskPriorityUpdate(t *testing.T) {
 
 func TestTaskEstimateUpdate(t *testing.T) {
 	task := NewTask(ProjectID("test"), "Test", "Description", PriorityMedium)
-	
+
 	task.UpdateEstimate(16)
-	
+
 	if task.EstimatedHours == nil {
 		t.Error("Expected estimated hours to be set")
 	}
@@ -197,9 +197,9 @@ func TestTaskEstimateUpdate(t *testing.T) {
 
 func TestTaskActualHoursLogging(t *testing.T) {
 	task := NewTask(ProjectID("test"), "Test", "Description", PriorityMedium)
-	
+
 	task.LogActualHours(12)
-	
+
 	if task.ActualHours == nil {
 		t.Error("Expected actual hours to be set")
 	}

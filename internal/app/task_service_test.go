@@ -28,11 +28,11 @@ func (m *mockMemoryService) CreateMemory(ctx context.Context, req ports.CreateMe
 	memory := domain.NewMemory(req.ProjectID, req.Type, req.Title, req.Content, req.Context)
 	memory.ID = domain.MemoryID(generateTestID(m.nextID))
 	m.nextID++
-	
+
 	if req.Tags != nil {
 		memory.Tags = req.Tags
 	}
-	
+
 	m.memories[memory.ID] = memory
 	return memory, nil
 }
@@ -65,7 +65,7 @@ func (m *mockMemoryService) DeleteMemory(ctx context.Context, id domain.MemoryID
 func (m *mockMemoryService) ListMemories(ctx context.Context, req ports.ListMemoriesRequest) ([]*domain.Memory, error) {
 	var result []*domain.Memory
 	count := 0
-	
+
 	for _, memory := range m.memories {
 		// Apply filters
 		if req.ProjectID != nil && memory.ProjectID != *req.ProjectID {
@@ -86,15 +86,15 @@ func (m *mockMemoryService) ListMemories(ctx context.Context, req ports.ListMemo
 				continue
 			}
 		}
-		
+
 		result = append(result, memory)
 		count++
-		
+
 		if req.Limit > 0 && count >= req.Limit {
 			break
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -148,10 +148,10 @@ func TestTaskService_CreateTask(t *testing.T) {
 	mockMemoryService := newMockMemoryService()
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel) // Reduce log noise in tests
-	
+
 	taskService := NewTaskService(mockMemoryService, logger)
 	ctx := context.Background()
-	
+
 	projectID := domain.ProjectID("test-project")
 	req := ports.CreateTaskRequest{
 		ProjectID:   projectID,
@@ -160,12 +160,12 @@ func TestTaskService_CreateTask(t *testing.T) {
 		Priority:    domain.PriorityHigh,
 		Tags:        domain.Tags{"test", "example"},
 	}
-	
+
 	task, err := taskService.CreateTask(ctx, req)
 	if err != nil {
 		t.Fatalf("Failed to create task: %v", err)
 	}
-	
+
 	if task == nil {
 		t.Fatal("Expected task to be created")
 	}
@@ -187,10 +187,10 @@ func TestTaskService_CreateTaskWithDetails(t *testing.T) {
 	mockMemoryService := newMockMemoryService()
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	taskService := NewTaskService(mockMemoryService, logger)
 	ctx := context.Background()
-	
+
 	dueDate := time.Now().Add(24 * time.Hour)
 	estimatedHours := 8
 	req := ports.CreateTaskRequest{
@@ -203,12 +203,12 @@ func TestTaskService_CreateTaskWithDetails(t *testing.T) {
 		EstimatedHours: &estimatedHours,
 		Tags:           domain.Tags{"test"},
 	}
-	
+
 	task, err := taskService.CreateTask(ctx, req)
 	if err != nil {
 		t.Fatalf("Failed to create task: %v", err)
 	}
-	
+
 	if task.DueDate == nil || !task.DueDate.Equal(dueDate) {
 		t.Errorf("Expected due date %v, got %v", dueDate, task.DueDate)
 	}
@@ -224,10 +224,10 @@ func TestTaskService_GetTask(t *testing.T) {
 	mockMemoryService := newMockMemoryService()
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	taskService := NewTaskService(mockMemoryService, logger)
 	ctx := context.Background()
-	
+
 	// Create a task first
 	req := ports.CreateTaskRequest{
 		ProjectID:   domain.ProjectID("test-project"),
@@ -235,18 +235,18 @@ func TestTaskService_GetTask(t *testing.T) {
 		Description: "Test Description",
 		Priority:    domain.PriorityMedium,
 	}
-	
+
 	createdTask, err := taskService.CreateTask(ctx, req)
 	if err != nil {
 		t.Fatalf("Failed to create task: %v", err)
 	}
-	
+
 	// Get the task
 	retrievedTask, err := taskService.GetTask(ctx, createdTask.Memory.ID)
 	if err != nil {
 		t.Fatalf("Failed to get task: %v", err)
 	}
-	
+
 	if retrievedTask.Memory.ID != createdTask.Memory.ID {
 		t.Errorf("Expected task ID %s, got %s", createdTask.Memory.ID, retrievedTask.Memory.ID)
 	}
@@ -259,10 +259,10 @@ func TestTaskService_GetTask_NotFound(t *testing.T) {
 	mockMemoryService := newMockMemoryService()
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	taskService := NewTaskService(mockMemoryService, logger)
 	ctx := context.Background()
-	
+
 	_, err := taskService.GetTask(ctx, domain.MemoryID("nonexistent"))
 	if err == nil {
 		t.Error("Expected error when getting nonexistent task")
@@ -273,10 +273,10 @@ func TestTaskService_DeleteTask(t *testing.T) {
 	mockMemoryService := newMockMemoryService()
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	taskService := NewTaskService(mockMemoryService, logger)
 	ctx := context.Background()
-	
+
 	// Create a task first
 	req := ports.CreateTaskRequest{
 		ProjectID:   domain.ProjectID("test-project"),
@@ -284,18 +284,18 @@ func TestTaskService_DeleteTask(t *testing.T) {
 		Description: "Test Description",
 		Priority:    domain.PriorityMedium,
 	}
-	
+
 	createdTask, err := taskService.CreateTask(ctx, req)
 	if err != nil {
 		t.Fatalf("Failed to create task: %v", err)
 	}
-	
+
 	// Delete the task
 	err = taskService.DeleteTask(ctx, createdTask.Memory.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete task: %v", err)
 	}
-	
+
 	// Verify task is deleted
 	_, err = taskService.GetTask(ctx, createdTask.Memory.ID)
 	if err == nil {
@@ -307,12 +307,12 @@ func TestTaskService_ListTasks(t *testing.T) {
 	mockMemoryService := newMockMemoryService()
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	taskService := NewTaskService(mockMemoryService, logger)
 	ctx := context.Background()
-	
+
 	projectID := domain.ProjectID("test-project")
-	
+
 	// Create multiple tasks
 	tasks := []ports.CreateTaskRequest{
 		{
@@ -336,37 +336,37 @@ func TestTaskService_ListTasks(t *testing.T) {
 			Priority:    domain.PriorityLow,
 		},
 	}
-	
+
 	for _, req := range tasks {
 		_, err := taskService.CreateTask(ctx, req)
 		if err != nil {
 			t.Fatalf("Failed to create task: %v", err)
 		}
 	}
-	
+
 	// Test listing all tasks for project
 	allTasks, err := taskService.GetTasksByProject(ctx, projectID)
 	if err != nil {
 		t.Fatalf("Failed to list tasks: %v", err)
 	}
-	
+
 	if len(allTasks) != 2 {
 		t.Errorf("Expected 2 tasks for project, got %d", len(allTasks))
 	}
-	
+
 	// Test listing with filters (testing basic filtering functionality)
 	highPriority := domain.PriorityHigh
 	filters := ports.TaskFilters{
 		ProjectID: &projectID,
 		Priority:  &highPriority,
 	}
-	
+
 	highPriorityTasks, err := taskService.ListTasks(ctx, filters)
 	if err != nil {
 		t.Fatalf("Failed to list filtered tasks: %v", err)
 	}
-	
-	// Note: The mock doesn't fully simulate priority filtering, 
+
+	// Note: The mock doesn't fully simulate priority filtering,
 	// so we just verify the method works without errors
 	// In a real integration test, this would properly filter by priority
 	if len(highPriorityTasks) >= 0 {
@@ -379,16 +379,16 @@ func TestTaskService_GetTaskStatistics(t *testing.T) {
 	mockMemoryService := newMockMemoryService()
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	
+
 	taskService := NewTaskService(mockMemoryService, logger)
 	ctx := context.Background()
-	
+
 	projectID := domain.ProjectID("test-project")
-	
+
 	// Create tasks with different properties
 	estimatedHours1 := 8
 	estimatedHours2 := 16
-	
+
 	tasks := []ports.CreateTaskRequest{
 		{
 			ProjectID:      projectID,
@@ -400,7 +400,7 @@ func TestTaskService_GetTaskStatistics(t *testing.T) {
 		},
 		{
 			ProjectID:      projectID,
-			Title:          "Task 2", 
+			Title:          "Task 2",
 			Description:    "Description 2",
 			Priority:       domain.PriorityMedium,
 			Assignee:       "jane.doe",
@@ -414,30 +414,30 @@ func TestTaskService_GetTaskStatistics(t *testing.T) {
 			Assignee:    "john.doe",
 		},
 	}
-	
+
 	for _, req := range tasks {
 		_, err := taskService.CreateTask(ctx, req)
 		if err != nil {
 			t.Fatalf("Failed to create task: %v", err)
 		}
 	}
-	
+
 	stats, err := taskService.GetTaskStatistics(ctx, projectID)
 	if err != nil {
 		t.Fatalf("Failed to get task statistics: %v", err)
 	}
-	
+
 	if stats.TotalTasks != 3 {
 		t.Errorf("Expected 3 total tasks, got %d", stats.TotalTasks)
 	}
-	
+
 	// Note: The mock service doesn't fully simulate task context parsing,
 	// so detailed statistics won't match exactly. In integration tests with
 	// a real database, these would work correctly.
 	if stats.TodoTasks == 3 {
 		t.Logf("All tasks are in todo status as expected")
 	}
-	
+
 	// Verify statistics structure exists
 	if stats.TasksByPriority == nil {
 		t.Error("Expected TasksByPriority map to be initialized")

@@ -108,10 +108,10 @@ func (s *MemoryBankServer) RegisterMethods(mcpServer *server.MCPServer) {
 	debuggingSessionPrompt := mcp.NewPrompt(
 		"start-debugging-session",
 		mcp.WithPromptDescription("Start a structured debugging session with memory-guided problem solving"),
-		mcp.WithArgument("error_message", 
+		mcp.WithArgument("error_message",
 			mcp.ArgumentDescription("The error message or problem description you're trying to debug"),
 			mcp.RequiredArgument()),
-		mcp.WithArgument("context", 
+		mcp.WithArgument("context",
 			mcp.ArgumentDescription("Additional context about when/how the error occurs (optional)")),
 	)
 
@@ -2467,13 +2467,13 @@ func (s *MemoryBankServer) checkSystemHealth(ctx context.Context, verbose bool) 
 	// Add configuration if verbose
 	if verbose {
 		health.Configuration = map[string]interface{}{
-			"ollama_base_url":      getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
-			"ollama_model":         getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
-			"chromadb_base_url":    getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
-			"chromadb_collection":  getEnvOrDefault("CHROMADB_COLLECTION", "memory_bank"),
-			"chromadb_data_path":   getEnvOrDefault("CHROMADB_DATA_PATH", "./chromadb_data"),
-			"chromadb_auto_start":  getEnvOrDefault("CHROMADB_AUTO_START", "false"),
-			"database_path":        getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
+			"ollama_base_url":     getEnvOrDefault("OLLAMA_BASE_URL", "http://localhost:11434"),
+			"ollama_model":        getEnvOrDefault("OLLAMA_MODEL", "nomic-embed-text"),
+			"chromadb_base_url":   getEnvOrDefault("CHROMADB_BASE_URL", "http://localhost:8000"),
+			"chromadb_collection": getEnvOrDefault("CHROMADB_COLLECTION", "memory_bank"),
+			"chromadb_data_path":  getEnvOrDefault("CHROMADB_DATA_PATH", "./chromadb_data"),
+			"chromadb_auto_start": getEnvOrDefault("CHROMADB_AUTO_START", "false"),
+			"database_path":       getEnvOrDefault("MEMORY_BANK_DB_PATH", "./memory_bank.db"),
 		}
 	}
 
@@ -2723,11 +2723,11 @@ func (s *MemoryBankServer) generateProjectIntegrationGuide(ctx context.Context) 
 
 	// Analyze project structure and technology stack
 	projectAnalysis := s.analyzeProject(currentDir)
-	
+
 	// Get existing project and memories for context
 	var existingProject *domain.Project
 	var existingMemories []ports.MemorySearchResult
-	
+
 	// Try to find existing project by path
 	if projects, err := s.projectService.ListProjects(ctx); err == nil {
 		for _, project := range projects {
@@ -2753,7 +2753,7 @@ func (s *MemoryBankServer) generateProjectIntegrationGuide(ctx context.Context) 
 
 	// Generate customized CLAUDE.md content
 	guide := s.buildProjectGuide(currentDir, projectAnalysis, existingProject, existingMemories)
-	
+
 	return guide, nil
 }
 
@@ -2790,7 +2790,7 @@ func (s *MemoryBankServer) analyzeProject(projectPath string) ProjectAnalysis {
 		analysis.HasPackageJSON = true
 		analysis.TechStack = append(analysis.TechStack, "javascript", "node")
 		analysis.SuggestedTags = append(analysis.SuggestedTags, "javascript", "node", "npm")
-		
+
 		// Check for specific frameworks
 		if checkFile("next.config.js") || checkFile("next.config.ts") {
 			analysis.TechStack = append(analysis.TechStack, "nextjs")
@@ -2807,7 +2807,7 @@ func (s *MemoryBankServer) analyzeProject(projectPath string) ProjectAnalysis {
 		analysis.HasGoMod = true
 		analysis.TechStack = append(analysis.TechStack, "go")
 		analysis.SuggestedTags = append(analysis.SuggestedTags, "go", "backend")
-		
+
 		// Check for specific patterns
 		if checkFile("cmd") {
 			analysis.ProjectType = "cli-tool"
@@ -2822,7 +2822,7 @@ func (s *MemoryBankServer) analyzeProject(projectPath string) ProjectAnalysis {
 		analysis.HasPyProject = true
 		analysis.TechStack = append(analysis.TechStack, "python")
 		analysis.SuggestedTags = append(analysis.SuggestedTags, "python")
-		
+
 		// Check for data science patterns
 		if checkFile("notebooks") || checkFile("data") {
 			analysis.ProjectType = "data-science"
@@ -2877,7 +2877,7 @@ func (s *MemoryBankServer) buildProjectGuide(projectPath string, analysis Projec
 	guide.WriteString(fmt.Sprintf("- **Project Path**: `%s`\n", projectPath))
 	guide.WriteString(fmt.Sprintf("- **Project Type**: %s\n", analysis.ProjectType))
 	guide.WriteString(fmt.Sprintf("- **Technology Stack**: %s\n", strings.Join(analysis.TechStack, ", ")))
-	
+
 	if existingProject != nil {
 		guide.WriteString(fmt.Sprintf("- **Memory Bank Status**: ✅ Initialized (Project ID: `%s`)\n", string(existingProject.ID)))
 		guide.WriteString(fmt.Sprintf("- **Existing Memories**: %d entries\n", len(existingMemories)))
@@ -2889,18 +2889,18 @@ func (s *MemoryBankServer) buildProjectGuide(projectPath string, analysis Projec
 	// Current Status Section
 	if existingProject != nil {
 		guide.WriteString("## 📈 Current Memory Status\n\n")
-		
+
 		// Analyze existing memories by type
 		typeCount := make(map[string]int)
 		tagUsage := make(map[string]int)
-		
+
 		for _, memory := range existingMemories {
 			typeCount[string(memory.Memory.Type)]++
 			for _, tag := range memory.Memory.Tags {
 				tagUsage[tag]++
 			}
 		}
-		
+
 		if len(typeCount) > 0 {
 			guide.WriteString("### Memory Types:\n")
 			for memType, count := range typeCount {
@@ -2908,7 +2908,7 @@ func (s *MemoryBankServer) buildProjectGuide(projectPath string, analysis Projec
 			}
 			guide.WriteString("\n")
 		}
-		
+
 		if len(tagUsage) > 0 {
 			guide.WriteString("### Most Used Tags:\n")
 			// Show top 10 tags
@@ -2978,7 +2978,7 @@ func (s *MemoryBankServer) generateProjectSpecificCLAUDEmd(analysis ProjectAnaly
 	template.WriteString("## Project Configuration\n\n")
 	template.WriteString(fmt.Sprintf("- **Project Type**: %s\n", analysis.ProjectType))
 	template.WriteString(fmt.Sprintf("- **Tech Stack**: %s\n", strings.Join(analysis.TechStack, ", ")))
-	
+
 	if existingProject != nil {
 		template.WriteString(fmt.Sprintf("- **Project ID**: %s\n", string(existingProject.ID)))
 	} else {
@@ -3166,12 +3166,12 @@ func (s *MemoryBankServer) generateProjectRecommendations(analysis ProjectAnalys
 	// Memory gap analysis
 	if len(existingMemories) > 0 {
 		recommendations.WriteString("### Memory Gap Analysis\n")
-		
+
 		typeCount := make(map[string]int)
 		for _, memory := range existingMemories {
 			typeCount[string(memory.Memory.Type)]++
 		}
-		
+
 		// Check for missing important memory types
 		if typeCount["decision"] == 0 {
 			recommendations.WriteString("- ⚠️ **Missing Decisions**: Start documenting architectural decisions\n")
@@ -3508,9 +3508,9 @@ func (s *MemoryBankServer) handleCreateMemoryPatternPrompt(ctx context.Context, 
 **Pattern Name:** %s
 
 **Code/Implementation:**
-` + "```" + `
+`+"```"+`
 %s
-` + "```", patternName, patternCode)
+`+"```", patternName, patternCode)
 
 	if useCase != "" {
 		promptText += fmt.Sprintf(`
@@ -3664,10 +3664,10 @@ func (s *MemoryBankServer) handleDocAnalyzeChangesTool(ctx context.Context, requ
 
 	// Classify changes
 	changeTypes := s.classifyFileChanges(files)
-	
+
 	// Search Memory Bank for relevant documentation mappings
 	mappings := s.searchDocumentationMappings(ctx, changeTypes, projectID)
-	
+
 	// Generate analysis report
 	analysis := s.generateChangeAnalysis(files, changeTypes, mappings, changeContext)
 
@@ -3776,7 +3776,7 @@ func (s *MemoryBankServer) handleDocCreateMappingTool(ctx context.Context, reque
 
 	projectIDDomain := domain.ProjectID(projectID)
 	memoryType := domain.MemoryType("doc_mapping")
-	
+
 	memoryRequest := ports.CreateMemoryRequest{
 		ProjectID: projectIDDomain,
 		Type:      memoryType,

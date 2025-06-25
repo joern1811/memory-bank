@@ -28,7 +28,7 @@ type MemoryService interface {
 	CreateDecision(ctx context.Context, req CreateDecisionRequest) (*domain.Decision, error)
 	CreatePattern(ctx context.Context, req CreatePatternRequest) (*domain.Pattern, error)
 	CreateErrorSolution(ctx context.Context, req CreateErrorSolutionRequest) (*domain.ErrorSolution, error)
-	
+
 	// Cleanup operations
 	RegenerateEmbedding(ctx context.Context, memoryID domain.MemoryID) error
 	CleanupEmbeddings(ctx context.Context, projectID domain.ProjectID) (*CleanupResult, error)

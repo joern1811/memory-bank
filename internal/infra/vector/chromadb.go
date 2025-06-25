@@ -38,8 +38,8 @@ type ChromaDBConfig struct {
 	Tenant     string        `json:"tenant"`
 	Database   string        `json:"database"`
 	Timeout    time.Duration `json:"timeout"`
-	DataPath   string        `json:"data_path"`   // Expected ChromaDB data directory
-	AutoStart  bool          `json:"auto_start"`  // Whether to auto-start ChromaDB if not running
+	DataPath   string        `json:"data_path"`  // Expected ChromaDB data directory
+	AutoStart  bool          `json:"auto_start"` // Whether to auto-start ChromaDB if not running
 }
 
 // DefaultChromeDBConfig returns default configuration for ChromaDB
@@ -50,8 +50,8 @@ func DefaultChromeDBConfig() ChromaDBConfig {
 		Tenant:     "default_tenant",
 		Database:   "default_database",
 		Timeout:    30 * time.Second,
-		DataPath:   "./chromadb_data",  // Default data directory
-		AutoStart:  false,              // Don't auto-start by default
+		DataPath:   "./chromadb_data", // Default data directory
+		AutoStart:  false,             // Don't auto-start by default
 	}
 }
 
@@ -889,7 +889,7 @@ func (c *ChromaDBVectorStore) validateChromaDBProcessPath(expectedPath string) e
 
 	lines := strings.Split(string(output), "\n")
 	var chromaProcesses []string
-	
+
 	for _, line := range lines {
 		if strings.Contains(line, "chroma run") && strings.Contains(line, "--path") {
 			chromaProcesses = append(chromaProcesses, line)
@@ -913,8 +913,8 @@ func (c *ChromaDBVectorStore) validateChromaDBProcessPath(expectedPath string) e
 
 	// Log all found processes for debugging
 	c.logger.WithFields(logrus.Fields{
-		"expected_path":     expectedPath,
-		"found_processes":   chromaProcesses,
+		"expected_path":   expectedPath,
+		"found_processes": chromaProcesses,
 	}).Warn("ChromaDB running with different data path than expected")
 
 	return fmt.Errorf("chromadb process found but using different data path (expected: %s)", expectedPath)
@@ -954,13 +954,13 @@ func (c *ChromaDBVectorStore) startChromaDB(ctx context.Context) error {
 	}
 
 	// Try to start ChromaDB using uvx (preferred) or direct chroma command
-	cmd := exec.CommandContext(ctx, "uvx", "--from", "chromadb[server]", "chroma", "run", 
+	cmd := exec.CommandContext(ctx, "uvx", "--from", "chromadb[server]", "chroma", "run",
 		"--host", host, "--port", port, "--path", absDataPath)
-	
+
 	// Start process in background
 	if err := cmd.Start(); err != nil {
 		// Fallback to direct chroma command if uvx is not available
-		cmd = exec.CommandContext(ctx, "chroma", "run", 
+		cmd = exec.CommandContext(ctx, "chroma", "run",
 			"--host", host, "--port", port, "--path", absDataPath)
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("failed to start ChromaDB (tried uvx and direct chroma): %w", err)

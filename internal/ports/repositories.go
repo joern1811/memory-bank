@@ -25,7 +25,7 @@ type MemoryRepository interface {
 
 	// Session-related operations
 	ListBySession(ctx context.Context, sessionID domain.SessionID) ([]*domain.Memory, error)
-	
+
 	// Cleanup operations
 	ResetEmbeddingFlags(ctx context.Context, projectID string) error
 }

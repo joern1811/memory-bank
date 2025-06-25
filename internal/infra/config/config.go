@@ -132,13 +132,13 @@ func findAndLoadConfig() error {
 func overrideWithLegacyEnvVars() {
 	// Legacy environment variables mapping
 	legacyMappings := map[string]string{
-		"MEMORY_BANK_DB_PATH":    "database.path",
-		"OLLAMA_BASE_URL":        "ollama.base_url",
-		"OLLAMA_MODEL":           "ollama.model",
-		"CHROMADB_BASE_URL":      "chromadb.base_url",
-		"CHROMADB_COLLECTION":    "chromadb.collection",
-		"CHROMADB_DATA_PATH":     "chromadb.data_path",
-		"CHROMADB_AUTO_START":    "chromadb.auto_start",
+		"MEMORY_BANK_DB_PATH": "database.path",
+		"OLLAMA_BASE_URL":     "ollama.base_url",
+		"OLLAMA_MODEL":        "ollama.model",
+		"CHROMADB_BASE_URL":   "chromadb.base_url",
+		"CHROMADB_COLLECTION": "chromadb.collection",
+		"CHROMADB_DATA_PATH":  "chromadb.data_path",
+		"CHROMADB_AUTO_START": "chromadb.auto_start",
 	}
 
 	for envVar, configKey := range legacyMappings {
