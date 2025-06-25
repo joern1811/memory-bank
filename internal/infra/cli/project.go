@@ -183,7 +183,7 @@ var projectDeleteCmd = &cobra.Command{
 		fmt.Printf("Are you sure? (y/N): ")
 
 		var response string
-		fmt.Scanln(&response)
+		_, _ = fmt.Scanln(&response)
 
 		if response != "y" && response != "Y" && response != "yes" && response != "YES" {
 			fmt.Println("Deletion cancelled.")
@@ -249,10 +249,10 @@ var projectUpdateCmd = &cobra.Command{
 			if _, err := os.Stat(path); os.IsNotExist(err) {
 				fmt.Printf("⚠️  Warning: Path does not exist: %s\n", path)
 				fmt.Printf("Continue anyway? (y/N): ")
-				
+
 				var response string
-				fmt.Scanln(&response)
-				
+				_, _ = fmt.Scanln(&response)
+
 				if response != "y" && response != "Y" && response != "yes" && response != "YES" {
 					fmt.Println("Update cancelled.")
 					return nil
@@ -268,14 +268,14 @@ var projectUpdateCmd = &cobra.Command{
 		}
 
 		fmt.Printf("✅ Project '%s' updated successfully.\n", project.Name)
-		
+
 		// Show updated information
 		fmt.Printf("\nUpdated project information:\n")
 		fmt.Printf("ID:          %s\n", project.ID)
 		fmt.Printf("Name:        %s\n", project.Name)
 		fmt.Printf("Path:        %s\n", project.Path)
 		fmt.Printf("Description: %s\n", project.Description)
-		
+
 		return nil
 	},
 }

@@ -14,9 +14,9 @@ import (
 
 // DocAnalysisResult represents the result of documentation analysis
 type DocAnalysisResult struct {
-	ChangeTypes   []string
-	AffectedDocs  []string
-	Suggestions   []string
+	ChangeTypes  []string
+	AffectedDocs []string
+	Suggestions  []string
 }
 
 // DocSuggestionsResult represents documentation update suggestions
@@ -28,9 +28,9 @@ type DocSuggestionsResult struct {
 
 // DocValidationResult represents documentation validation results
 type DocValidationResult struct {
-	ValidItems   []string
-	Issues       []string
-	Suggestions  []string
+	ValidItems  []string
+	Issues      []string
+	Suggestions []string
 }
 
 // classifyFileChanges analyzes file paths and determines change types
@@ -93,7 +93,7 @@ func classifyFileChanges(files []string) []string {
 // analyzeCodeChanges performs documentation impact analysis
 func analyzeCodeChanges(ctx context.Context, memoryService ports.MemoryService, files []string) (*DocAnalysisResult, error) {
 	changeTypes := classifyFileChanges(files)
-	
+
 	result := &DocAnalysisResult{
 		ChangeTypes: changeTypes,
 	}
@@ -136,7 +136,7 @@ func analyzeCodeChanges(ctx context.Context, memoryService ports.MemoryService, 
 		switch changeType {
 		case "api":
 			result.AffectedDocs = append(result.AffectedDocs, "README.md", "docs/api/", "*.openapi.yaml")
-			result.Suggestions = append(result.Suggestions, 
+			result.Suggestions = append(result.Suggestions,
 				"Update API documentation",
 				"Verify endpoint examples",
 				"Update OpenAPI/Swagger specs")
@@ -177,8 +177,8 @@ func generateUpdateSuggestions(ctx context.Context, memoryService ports.MemorySe
 	memories, err := memoryService.SearchMemories(ctx, searchReq)
 	if err == nil {
 		for _, memory := range memories {
-			if strings.Contains(memory.Memory.Content, "checklist") || 
-			   strings.Contains(memory.Memory.Content, "update") {
+			if strings.Contains(memory.Memory.Content, "checklist") ||
+				strings.Contains(memory.Memory.Content, "update") {
 				lines := strings.Split(memory.Memory.Content, "\n")
 				for _, line := range lines {
 					line = strings.TrimSpace(line)
@@ -296,7 +296,7 @@ might need to be updated. Provides intelligent suggestions based on code pattern
 		}
 
 		ctx := context.Background()
-		
+
 		// Analyze changes
 		analysis, err := analyzeCodeChanges(ctx, services.MemoryService, files)
 		if err != nil {
@@ -306,26 +306,26 @@ might need to be updated. Provides intelligent suggestions based on code pattern
 		// Display results
 		fmt.Printf("Documentation Impact Analysis\n")
 		fmt.Printf("=============================\n\n")
-		
+
 		fmt.Printf("Analyzed files: %d\n", len(files))
 		for _, file := range files {
 			fmt.Printf("  - %s\n", file)
 		}
-		
+
 		if len(analysis.ChangeTypes) > 0 {
 			fmt.Printf("\nDetected change types:\n")
 			for _, changeType := range analysis.ChangeTypes {
 				fmt.Printf("  - %s\n", changeType)
 			}
 		}
-		
+
 		if len(analysis.AffectedDocs) > 0 {
 			fmt.Printf("\nPotentially affected documentation:\n")
 			for _, doc := range analysis.AffectedDocs {
 				fmt.Printf("  - %s\n", doc)
 			}
 		}
-		
+
 		if len(analysis.Suggestions) > 0 {
 			fmt.Printf("\nSuggestions:\n")
 			for _, suggestion := range analysis.Suggestions {
@@ -345,7 +345,7 @@ component, and historical patterns stored in Memory Bank.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		changeType, _ := cmd.Flags().GetString("change-type")
 		component, _ := cmd.Flags().GetString("component")
-		
+
 		// Get services
 		services, err := GetServicesForCLI(cmd)
 		if err != nil {
@@ -353,7 +353,7 @@ component, and historical patterns stored in Memory Bank.`,
 		}
 
 		ctx := context.Background()
-		
+
 		// Get suggestions
 		suggestions, err := generateUpdateSuggestions(ctx, services.MemoryService, changeType, component)
 		if err != nil {
@@ -363,7 +363,7 @@ component, and historical patterns stored in Memory Bank.`,
 		// Display results
 		fmt.Printf("Documentation Update Suggestions\n")
 		fmt.Printf("================================\n\n")
-		
+
 		if changeType != "" {
 			fmt.Printf("Change type: %s\n", changeType)
 		}
@@ -371,7 +371,7 @@ component, and historical patterns stored in Memory Bank.`,
 			fmt.Printf("Component: %s\n", component)
 		}
 		fmt.Println()
-		
+
 		if len(suggestions.GeneralSuggestions) > 0 {
 			fmt.Printf("General recommendations:\n")
 			for _, suggestion := range suggestions.GeneralSuggestions {
@@ -379,7 +379,7 @@ component, and historical patterns stored in Memory Bank.`,
 			}
 			fmt.Println()
 		}
-		
+
 		if len(suggestions.SpecificFiles) > 0 {
 			fmt.Printf("Specific files to update:\n")
 			for _, file := range suggestions.SpecificFiles {
@@ -387,7 +387,7 @@ component, and historical patterns stored in Memory Bank.`,
 			}
 			fmt.Println()
 		}
-		
+
 		if len(suggestions.Checklist) > 0 {
 			fmt.Printf("Documentation checklist:\n")
 			for _, item := range suggestions.Checklist {
@@ -406,11 +406,11 @@ var docCreateMappingCmd = &cobra.Command{
 This helps the system understand what documentation needs updating when code changes.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		codePattern, _ := cmd.Flags().GetString("code-pattern")
-		docFiles, _ := cmd.Flags().GetStringSlice("documentation-files") 
+		docFiles, _ := cmd.Flags().GetStringSlice("documentation-files")
 		changeType, _ := cmd.Flags().GetString("change-type")
 		priority, _ := cmd.Flags().GetString("priority")
 		projectID, _ := cmd.Flags().GetString("project")
-		
+
 		if codePattern == "" || len(docFiles) == 0 {
 			return fmt.Errorf("code-pattern and documentation-files are required")
 		}
@@ -422,11 +422,11 @@ This helps the system understand what documentation needs updating when code cha
 		}
 
 		ctx := context.Background()
-		
+
 		// Create mapping content
 		content := fmt.Sprintf("Code pattern: %s\nDocumentation files: %s\nChange type: %s\nPriority: %s",
 			codePattern, strings.Join(docFiles, ", "), changeType, priority)
-		
+
 		// Create memory entry
 		var pid domain.ProjectID
 		if projectID != "" {
@@ -441,7 +441,7 @@ This helps the system understand what documentation needs updating when code cha
 				return fmt.Errorf("project ID required (use --project flag or run from initialized project)")
 			}
 		}
-		
+
 		req := ports.CreateMemoryRequest{
 			ProjectID: pid,
 			Type:      domain.MemoryTypeDocumentation,
@@ -449,7 +449,7 @@ This helps the system understand what documentation needs updating when code cha
 			Content:   content,
 			Tags:      domain.Tags{"mapping", changeType, priority},
 		}
-		
+
 		memory, err := services.MemoryService.CreateMemory(ctx, req)
 		if err != nil {
 			return fmt.Errorf("failed to create mapping: %w", err)
@@ -474,7 +474,7 @@ Checks for outdated documentation and missing documentation for new features.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project-path")
 		focusAreas, _ := cmd.Flags().GetStringSlice("focus-areas")
-		
+
 		if projectPath == "" {
 			cwd, err := os.Getwd()
 			if err != nil {
@@ -484,7 +484,7 @@ Checks for outdated documentation and missing documentation for new features.`,
 		}
 
 		ctx := context.Background()
-		
+
 		// Validate consistency
 		result, err := validateDocumentationConsistency(ctx, projectPath, focusAreas)
 		if err != nil {
@@ -494,13 +494,13 @@ Checks for outdated documentation and missing documentation for new features.`,
 		// Display results
 		fmt.Printf("Documentation Consistency Report\n")
 		fmt.Printf("===============================\n\n")
-		
+
 		fmt.Printf("Project: %s\n", projectPath)
 		if len(focusAreas) > 0 {
 			fmt.Printf("Focus areas: %s\n", strings.Join(focusAreas, ", "))
 		}
 		fmt.Println()
-		
+
 		if len(result.ValidItems) > 0 {
 			fmt.Printf("✅ Valid documentation:\n")
 			for _, item := range result.ValidItems {
@@ -508,7 +508,7 @@ Checks for outdated documentation and missing documentation for new features.`,
 			}
 			fmt.Println()
 		}
-		
+
 		if len(result.Issues) > 0 {
 			fmt.Printf("⚠️  Issues found:\n")
 			for _, issue := range result.Issues {
@@ -516,7 +516,7 @@ Checks for outdated documentation and missing documentation for new features.`,
 			}
 			fmt.Println()
 		}
-		
+
 		if len(result.Suggestions) > 0 {
 			fmt.Printf("💡 Suggestions:\n")
 			for _, suggestion := range result.Suggestions {
@@ -537,7 +537,7 @@ Generates and optionally installs pre-commit hooks and configuration files.`,
 		projectPath, _ := cmd.Flags().GetString("project-path")
 		interactive, _ := cmd.Flags().GetBool("interactive")
 		installHooks, _ := cmd.Flags().GetBool("install-hooks")
-		
+
 		if projectPath == "" {
 			cwd, err := os.Getwd()
 			if err != nil {
@@ -548,32 +548,32 @@ Generates and optionally installs pre-commit hooks and configuration files.`,
 
 		fmt.Printf("Setting up documentation sync automation\n")
 		fmt.Printf("=======================================\n\n")
-		
+
 		fmt.Printf("Project path: %s\n", projectPath)
 		fmt.Printf("Interactive mode: %t\n", interactive)
 		fmt.Printf("Install hooks: %t\n", installHooks)
 		fmt.Println()
-		
+
 		// Check if git repository
 		gitDir := filepath.Join(projectPath, ".git")
 		if _, err := os.Stat(gitDir); os.IsNotExist(err) {
 			return fmt.Errorf("not a git repository: %s", projectPath)
 		}
-		
+
 		// Copy hook script
 		hookSource := filepath.Join(projectPath, "scripts", "git-hooks", "pre-commit-doc-sync")
 		hookTarget := filepath.Join(gitDir, "hooks", "pre-commit")
-		
+
 		if installHooks {
 			fmt.Printf("Installing pre-commit hook...\n")
-			
+
 			// Check if hook already exists
 			if _, err := os.Stat(hookTarget); err == nil {
 				fmt.Printf("Warning: Pre-commit hook already exists at %s\n", hookTarget)
 				if interactive {
 					fmt.Printf("Overwrite? (y/n): ")
 					var response string
-					fmt.Scanln(&response)
+					_, _ = fmt.Scanln(&response)
 					if response != "y" && response != "yes" {
 						fmt.Println("Skipping hook installation.")
 						return nil
@@ -583,19 +583,19 @@ Generates and optionally installs pre-commit hooks and configuration files.`,
 					return nil
 				}
 			}
-			
+
 			// Read source hook
 			hookContent, err := os.ReadFile(hookSource)
 			if err != nil {
 				return fmt.Errorf("failed to read hook source: %w", err)
 			}
-			
+
 			// Write target hook
 			err = os.WriteFile(hookTarget, hookContent, 0755)
 			if err != nil {
 				return fmt.Errorf("failed to write hook: %w", err)
 			}
-			
+
 			fmt.Printf("✅ Pre-commit hook installed at %s\n", hookTarget)
 		} else {
 			fmt.Printf("Hook script available at: %s\n", hookSource)
@@ -603,12 +603,12 @@ Generates and optionally installs pre-commit hooks and configuration files.`,
 			fmt.Printf("  cp %s %s\n", hookSource, hookTarget)
 			fmt.Printf("  chmod +x %s\n", hookTarget)
 		}
-		
+
 		// Create config file template
 		configPath := filepath.Join(projectPath, ".documentation-sync.yaml")
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			fmt.Printf("\nCreating configuration template...\n")
-			
+
 			configContent := `# Documentation Sync Configuration
 memory_bank:
   project_id: "` + filepath.Base(projectPath) + `"
@@ -632,17 +632,17 @@ workflows:
     enabled: true
     interactive: true
 `
-			
+
 			err = os.WriteFile(configPath, []byte(configContent), 0644)
 			if err != nil {
 				return fmt.Errorf("failed to create config file: %w", err)
 			}
-			
+
 			fmt.Printf("✅ Configuration template created at %s\n", configPath)
 		} else {
 			fmt.Printf("Configuration file already exists at %s\n", configPath)
 		}
-		
+
 		fmt.Printf("\n🎉 Documentation sync automation setup complete!\n")
 		fmt.Printf("\nNext steps:\n")
 		fmt.Printf("1. Review and customize %s\n", configPath)
@@ -655,29 +655,29 @@ workflows:
 
 func init() {
 	rootCmd.AddCommand(docSyncCmd)
-	
+
 	// Add subcommands
 	docSyncCmd.AddCommand(docAnalyzeCmd)
 	docSyncCmd.AddCommand(docSuggestCmd)
 	docSyncCmd.AddCommand(docCreateMappingCmd)
 	docSyncCmd.AddCommand(docValidateCmd)
 	docSyncCmd.AddCommand(docSetupCmd)
-	
+
 	// Flags for suggest-updates
 	docSuggestCmd.Flags().String("change-type", "", "type of change (api, cli, config, database, build)")
 	docSuggestCmd.Flags().String("component", "", "specific component that changed")
-	
+
 	// Flags for create-mapping
 	docCreateMappingCmd.Flags().String("code-pattern", "", "code pattern (e.g., 'src/api/**')")
 	docCreateMappingCmd.Flags().StringSlice("documentation-files", []string{}, "documentation files affected")
 	docCreateMappingCmd.Flags().String("change-type", "", "type of change this mapping applies to")
 	docCreateMappingCmd.Flags().String("priority", "medium", "priority level (low, medium, high)")
 	docCreateMappingCmd.Flags().StringP("project", "p", "", "project ID")
-	
+
 	// Flags for validate-consistency
 	docValidateCmd.Flags().String("project-path", "", "project path to analyze (default: current directory)")
 	docValidateCmd.Flags().StringSlice("focus-areas", []string{}, "specific areas to focus on (api, cli, config, etc.)")
-	
+
 	// Flags for setup-automation
 	docSetupCmd.Flags().String("project-path", "", "project path (default: current directory)")
 	docSetupCmd.Flags().Bool("interactive", false, "interactive mode for confirmations")

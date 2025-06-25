@@ -36,7 +36,7 @@ func createTaskCommand() *cobra.Command {
 	// Add subcommands using the improved service-lookup pattern
 	taskCmd.AddCommand(
 		createTaskCreateCmd(),
-		createTaskListCmd(), 
+		createTaskListCmd(),
 		createTaskGetCmd(),
 		createTaskUpdateCmd(),
 		createTaskDeleteCmd(),
@@ -170,8 +170,8 @@ func createTaskCreateCmd() *cobra.Command {
 	cmd.Flags().IntVar(&estimatedHours, "estimated-hours", 0, "Estimated hours to complete")
 	cmd.Flags().StringSliceVar(&tags, "tags", []string{}, "Task tags")
 
-	cmd.MarkFlagRequired("title")
-	cmd.MarkFlagRequired("description")
+	_ = cmd.MarkFlagRequired("title")
+	_ = cmd.MarkFlagRequired("description")
 
 	return cmd
 }
@@ -487,7 +487,7 @@ func createTaskDeleteCmd() *cobra.Command {
 				fmt.Printf("Are you sure you want to delete task %s? This action cannot be undone.\n", taskID)
 				fmt.Print("Type 'yes' to confirm: ")
 				var response string
-				fmt.Scanln(&response)
+				_, _ = fmt.Scanln(&response)
 				if strings.ToLower(response) != "yes" {
 					fmt.Println("Delete cancelled")
 					return nil
@@ -565,7 +565,7 @@ func createTaskStatsCmd() *cobra.Command {
 				fmt.Printf("Blocked: %d\n", stats.BlockedTasks)
 				fmt.Printf("Overdue: %d\n", stats.OverdueTasks)
 				fmt.Printf("Completion Rate: %.1f%%\n", stats.CompletionRate)
-				
+
 				if stats.TotalHours > 0 {
 					fmt.Printf("Total Hours: %d\n", stats.TotalHours)
 					fmt.Printf("Average Hours per Task: %.1f\n", stats.AverageHours)

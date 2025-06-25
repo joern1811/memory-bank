@@ -130,9 +130,9 @@ func showTaskOverview(ctx context.Context, services *ServiceContainer, projectID
 	if len(recentTasks) > 0 {
 		fmt.Println("Recent Tasks:")
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "ID\tTitle\tStatus\tCreated")
-		fmt.Fprintln(w, "--\t-----\t------\t-------")
-		
+		_, _ = fmt.Fprintln(w, "ID\tTitle\tStatus\tCreated")
+		_, _ = fmt.Fprintln(w, "--\t-----\t------\t-------")
+
 		for _, task := range recentTasks {
 			id := string(task.ID)
 			if len(id) > 8 {
@@ -144,11 +144,11 @@ func showTaskOverview(ctx context.Context, services *ServiceContainer, projectID
 			}
 			status := extractStatusFromContext(task.Context)
 			statusEmoji := getStatusEmoji(status)
-			
-			fmt.Fprintf(w, "%s\t%s\t%s %s\t%s\n",
+
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s %s\t%s\n",
 				id, title, statusEmoji, status, task.CreatedAt.Format("01-02"))
 		}
-		w.Flush()
+		_ = w.Flush()
 		fmt.Println()
 	}
 
@@ -175,8 +175,8 @@ func showRecentSessions(ctx context.Context, services *ServiceContainer, project
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "Name\tStatus\tDuration\tProgress")
-	fmt.Fprintln(w, "----\t------\t--------\t--------")
+	_, _ = fmt.Fprintln(w, "Name\tStatus\tDuration\tProgress")
+	_, _ = fmt.Fprintln(w, "----\t------\t--------\t--------")
 
 	for _, session := range sessions {
 		name := session.Name
@@ -188,10 +188,10 @@ func showRecentSessions(ctx context.Context, services *ServiceContainer, project
 		duration := formatDuration(session.Duration())
 		progressCount := len(session.Progress)
 
-		fmt.Fprintf(w, "%s\t%s %s\t%s\t%d entries\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s %s\t%s\t%d entries\n",
 			name, statusEmoji, session.Status, duration, progressCount)
 	}
-	w.Flush()
+	_ = w.Flush()
 	fmt.Println()
 
 	return nil
@@ -224,7 +224,7 @@ func showMemoryStats(ctx context.Context, services *ServiceContainer, projectID 
 
 	// Display statistics
 	fmt.Printf("Total Memories: %d\n", len(memories))
-	
+
 	typeEmojis := map[domain.MemoryType]string{
 		domain.MemoryTypeDecision:      "🎯",
 		domain.MemoryTypePattern:       "🔄",
