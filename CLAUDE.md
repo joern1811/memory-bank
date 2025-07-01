@@ -50,7 +50,7 @@ go build ./cmd/memory-bank
 ### Basic Usage
 ```bash
 # Start MCP server
-memory-bank
+memory-bank mcp serve
 
 # Or use CLI commands
 ./memory-bank init /path/to/project --name "My Project"
@@ -101,7 +101,7 @@ Create `.mcp.json` in your project root:
   "mcpServers": {
     "memory-bank": {
       "command": "memory-bank",
-      "args": [],
+      "args": ["mcp", "serve"],
       "env": {
         "MEMORY_BANK_DB_PATH": "./memory_bank.db"
       }

@@ -144,8 +144,8 @@ Memory Bank works out-of-the-box with mock providers when external services are 
 ### MCP Server Mode (Claude Code Integration)
 
 ```bash
-# Start MCP server (default mode)
-memory-bank
+# Start MCP server
+memory-bank mcp serve
 
 # Configure in Claude Code
 # Add to ~/.config/claude-desktop/config.json:
@@ -153,6 +153,7 @@ memory-bank
   "mcpServers": {
     "memory-bank": {
       "command": "/usr/local/bin/memory-bank",
+      "args": ["mcp", "serve"],
       "env": {
         "MEMORY_BANK_LOG_LEVEL": "info"
       }

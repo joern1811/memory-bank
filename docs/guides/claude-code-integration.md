@@ -41,7 +41,7 @@ Create `.mcp.json` in your project root:
   "mcpServers": {
     "memory-bank": {
       "command": "memory-bank",
-      "args": [],
+      "args": ["mcp", "serve"],
       "env": {
         "MEMORY_BANK_DB_PATH": "./memory_bank.db"
       }
@@ -483,7 +483,7 @@ For team environments, use shared database with project-specific configuration i
   "mcpServers": {
     "memory-bank": {
       "command": "memory-bank",
-      "args": [],
+      "args": ["mcp", "serve"],
       "env": {
         "MEMORY_BANK_DB_PATH": "/shared/team/memory_bank.db",
         "MEMORY_BANK_LOG_LEVEL": "warn"

@@ -637,28 +637,19 @@ memory-bank config set database.connection_timeout "5s"
 **Diagnosis**:
 ```bash
 # Test MCP server directly
-echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | memory-bank
-
-# Check for port conflicts
-netstat -an | grep :6277
-
-# Verify MCP protocol compliance
-memory-bank mcp validate-protocol
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | memory-bank mcp serve
 ```
 
 **Solutions**:
 ```bash
-# Start server with explicit configuration
-memory-bank server --mcp-port 6278
-
-# Check MCP client configuration
-memory-bank mcp show-client-config
-
 # Test with MCP Inspector
-npx @modelcontextprotocol/inspector memory-bank
+npx @modelcontextprotocol/inspector memory-bank mcp serve
 
 # Enable MCP debug logging
-MEMORY_BANK_LOG_LEVEL=debug memory-bank server
+MEMORY_BANK_LOG_LEVEL=debug memory-bank mcp serve
+
+# Enable verbose output
+memory-bank mcp serve --verbose
 ```
 
 ### Claude Code Integration Problems
@@ -685,6 +676,7 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"capabiliti
   "mcpServers": {
     "memory-bank": {
       "command": "/usr/local/bin/memory-bank",
+      "args": ["mcp", "serve"],
       "env": {
         "MEMORY_BANK_LOG_LEVEL": "info"
       }

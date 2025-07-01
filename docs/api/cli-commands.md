@@ -928,26 +928,31 @@ Memory Bank's CLI is designed for extensibility. Future versions may include add
 
 ## Server Mode
 
-### `server` - Start MCP Server
+### `mcp` - MCP Server Commands
+
+Commands for managing the Memory Bank MCP server.
+
+**Usage:**
+```bash
+memory-bank mcp [command]
+```
+
+**Subcommands:**
+- `serve`: Start the MCP server
+
+#### `mcp serve` - Start MCP Server
 
 Start Memory Bank in MCP server mode for Claude Code integration.
 
 **Usage:**
 ```bash
-memory-bank server [flags]
+memory-bank mcp serve [flags]
 ```
-
-**Flags:**
-- `--port`: Server port (default: auto-assigned)
-- `--host`: Server host (default: localhost)
 
 **Examples:**
 ```bash
-# Start MCP server (default mode)
-memory-bank server
-
-# Start with specific port
-memory-bank server --port 8080
+# Start MCP server
+memory-bank mcp serve
 ```
 
 ## Environment Variables

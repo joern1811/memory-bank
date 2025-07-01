@@ -165,7 +165,7 @@ claude mcp list
   "mcpServers": {
     "memory-bank": {
       "command": "memory-bank",
-      "args": [],
+      "args": ["mcp", "serve"],
       "env": {
         "MEMORY_BANK_DB_PATH": "./memory_bank.db"
       }
@@ -181,7 +181,7 @@ claude mcp list
   "mcpServers": {
     "memory-bank": {
       "command": "memory-bank",
-      "args": [],
+      "args": ["mcp", "serve"],
       "env": {
         "MEMORY_BANK_DB_PATH": "~/memory_bank.db"
       }

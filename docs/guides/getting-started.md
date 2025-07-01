@@ -408,7 +408,7 @@ Memory Bank can run as an MCP (Model Context Protocol) server for integration wi
 
 ```bash
 # Start MCP server mode
-memory-bank server
+memory-bank mcp serve
 
 # Or simply (default behavior with no arguments)
 memory-bank

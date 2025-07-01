@@ -95,7 +95,7 @@ Memory Bank supports five distinct types of knowledge:
 ### With Claude Code (MCP Protocol)
 ```bash
 # Start MCP server for Claude Code integration
-memory-bank server
+memory-bank mcp serve
 
 # Claude Code can now access your memory bank through MCP protocol
 # for storing and retrieving development knowledge during coding sessions
