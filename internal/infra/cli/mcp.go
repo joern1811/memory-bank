@@ -23,8 +23,14 @@ const (
 	serverVersion = "1.0.0"
 )
 
-var serverCmd = &cobra.Command{
-	Use:   "server",
+var mcpCmd = &cobra.Command{
+	Use:   "mcp",
+	Short: "MCP server commands",
+	Long:  `Commands for managing the Memory Bank MCP server.`,
+}
+
+var mcpServeCmd = &cobra.Command{
+	Use:   "serve",
 	Short: "Start the MCP server",
 	Long:  `Start the Memory Bank MCP server for integration with Claude Code.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -166,5 +172,6 @@ func getEnvOrDefault(key, defaultValue string) string {
 }
 
 func init() {
-	rootCmd.AddCommand(serverCmd)
+	mcpCmd.AddCommand(mcpServeCmd)
+	rootCmd.AddCommand(mcpCmd)
 }
