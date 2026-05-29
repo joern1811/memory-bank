@@ -42,6 +42,9 @@ Desktop.ini
 /dist/
 /build/
 
+# Generated shell completions (built at release time)
+/completions/
+
 # Database files
 *.db
 *.sqlite

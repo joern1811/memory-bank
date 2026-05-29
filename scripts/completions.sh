@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+rm -rf completions
+mkdir completions
+
+for sh in bash zsh fish; do
+	go run ./cmd/memory-bank completion "$sh" >"completions/memory-bank.$sh"
+done

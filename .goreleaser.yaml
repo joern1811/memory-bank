@@ -6,6 +6,7 @@ before:
   hooks:
     - go mod tidy
     - go test ./...
+    - ./scripts/completions.sh
 
 builds:
   - id: memory-bank
@@ -33,6 +34,7 @@ archives:
   - id: memory-bank
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
+      - completions/*
       - README.md
       - LICENSE
       - CHANGELOG.md
@@ -70,7 +72,7 @@ release:
     
     ### Homebrew (macOS/Linux)
     ```bash
-    brew install --cask joern1811/tap/memory-bank
+    brew install joern1811/tap/memory-bank
     ```
     
     ### Manual Installation
@@ -88,7 +90,11 @@ release:
     ./memory-bank --help
     ```
 
-homebrew_casks:
+# Homebrew Formula (not Cask): CLI tools belong in Formulas per Homebrew guidance.
+# The macOS Gatekeeper quarantine that the Cask removed is handled here in the
+# install block via an on_macos xattr step. Shell completions are generated at
+# build time by scripts/completions.sh and installed from the archive.
+brews:
   - name: memory-bank
     ids:
       - memory-bank
@@ -97,17 +103,27 @@ homebrew_casks:
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Casks
+    directory: Formula
     homepage: "https://github.com/joern1811/memory-bank"
-    binary: "memory-bank"
     description: "Semantic memory management system for Claude Code using hexagonal architecture"
     license: "MIT"
     commit_author:
       name: "Jörn Dombrowski"
       email: "joern.dombrowski@gmail.com"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     skip_upload: auto
+    install: |-
+      bin.install "memory-bank"
+      on_macos do
+        system "/usr/bin/xattr", "-dr", "com.apple.quarantine", "#{bin}/memory-bank"
+      end
+      bash_completion.install "completions/memory-bank.bash" => "memory-bank"
+      zsh_completion.install "completions/memory-bank.zsh" => "_memory-bank"
+      fish_completion.install "completions/memory-bank.fish"
+    test: |
+      system "#{bin}/memory-bank", "version"
     caveats: |
-      Memory Bank works out-of-the-box with mock providers, but for enhanced performance, 
+      Memory Bank works out-of-the-box with mock providers, but for enhanced performance,
       consider installing these optional services:
 
       For local embedding generation:
@@ -126,10 +142,3 @@ homebrew_casks:
 
       Start Memory Bank MCP server:
         memory-bank
-    hooks:
-      post:
-        install: |
-          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/memory-bank"]
-          system "#{staged_path}/memory-bank completion bash > #{HOMEBREW_PREFIX}/etc/bash_completion.d/memory-bank"
-          system "#{staged_path}/memory-bank completion zsh > #{HOMEBREW_PREFIX}/share/zsh/site-functions/_memory-bank"  
-          system "#{staged_path}/memory-bank completion fish > #{HOMEBREW_PREFIX}/share/fish/vendor_completions.d/memory-bank.fish"
